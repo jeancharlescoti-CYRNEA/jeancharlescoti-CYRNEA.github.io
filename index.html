@@ -3,14 +3,8 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#29415f">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="CYRNEA">
-<link rel="manifest" href="./manifest.webmanifest">
-<link rel="apple-touch-icon" href="./icons/icon-192.png">
-<title>CYRNEA - Assistant interne V49 navigation stable</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CYRNEA - Assistant interne V51</title>
 <style>
 :root{--bg:#f5f3ef;--card:#fff;--ink:#1d2733;--muted:#6d7680;--line:#d7d2ca;--accent:#29415f;--ok:#326047;--warn:#8b5d19;--danger:#8b3434}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink)}
@@ -88,6 +82,12 @@ input,select,textarea{font-size:18px;min-height:52px}
 .operatorOnly:before{content:"POUR VOUS";display:block;font-size:12px;font-weight:900;letter-spacing:.05em;margin-bottom:5px}
 @media(max-width:650px){body{font-size:17px}.wrap{padding:8px}.card{padding:16px}h1{font-size:25px}.choice,.btn{font-size:17px;min-height:56px}.header{align-items:flex-start}.brand{font-size:18px}.badge{font-size:11px}.phoneScript,.todo,.advice,.neutral,.notice,.warn,.stop,.readAloud{font-size:16px}}
 </style>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="CYRNEA Assistant">
+<meta name="theme-color" content="#29415f">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
 </head>
 <body>
 <div class="wrap">
@@ -1105,7 +1105,7 @@ function bookingPortalKind(){
 }
 function contractRef(){
  const c=S.result?.contract;
- if(c==="RELAIS") return "CGV RELAIS PROPRIÉTAIRE V13 CM2C";
+ if(c==="RELAIS") return "CGV RELAIS PROPRIÉTAIRE V14 CM2C";
  if(c==="PRÉSENCE PROPRIÉTAIRES") return "CGV CYRNEA PRÉSENCE — PROPRIÉTAIRES V6 CM2C";
  return "CGS CYRNEA PRÉSENCE — ENTREPRISES V5";
 }
@@ -1534,7 +1534,7 @@ function overrunRule(){
  if(m==="RELAIS SIMPLE" || m.includes("APRÈS INTEMPÉRIE") || ["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B"].includes(m))
    return {allowed:false,text:"Cette mission n’a pas de prolongation horaire. Si le cadre prévu est dépassé, arrêtez et faites requalifier la demande avant toute action supplémentaire."};
  if(m==="RELAIS" || m.includes("AVANT INTEMPÉRIE"))
-   return {allowed:true,unit:25,base:"TTC",max:2,label:"+25 € TTC par tranche de 30 min commencée, maximum 2 tranches"};
+   return {allowed:true,unit:40,base:"TTC",max:2,label:"+40 € TTC par tranche de 30 min commencée, maximum 2 tranches"};
  if(m==="VOIR PRÉSENCE" || m==="VOIR RELAIS" || m==="DÉCIDER" || m==="SUIVRE")
    return {allowed:true,unit:60,base:"TTC",max:null,label:"+60 € TTC par tranche de 30 min commencée"};
  if(["VISITE TERRAIN PILOTÉE","PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","CONTINUITÉ PROJET","PRÉSENCE LOGISTIQUE B2B"].includes(m))
@@ -1719,8 +1719,9 @@ function boot(){
 }
 boot();
 </script>
+
 <script>
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
 }
 </script>
