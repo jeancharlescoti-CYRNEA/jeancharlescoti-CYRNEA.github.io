@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CYRNEA - Assistant interne V51</title>
+<title>CYRNEA - Assistant interne V52</title>
 <style>
 :root{--bg:#f5f3ef;--card:#fff;--ink:#1d2733;--muted:#6d7680;--line:#d7d2ca;--accent:#29415f;--ok:#326047;--warn:#8b5d19;--danger:#8b3434}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink)}
@@ -200,7 +200,8 @@ function goHome(){
  save();
 }
 function home(remember=true){
- const hasActive=!!S.result && !S.finalStatus || (!!S.resumeStage && S.resumeStage!=="ACCUEIL" && !S.finalStatus);
+ const hasIdentity=!!(String(S.name||"").trim() && String(S.phone||"").trim() && String(S.email||"").trim() && String(S.city||"").trim());
+ const hasActive=!S.finalStatus && (!!S.missionId || (!!S.result && hasIdentity));
  setStage("ACCUEIL"); S.draftKey=S.draftKey||key();
  draw(`<div class="card"><h1>CYRNEA ASSISTANT</h1>
  <div class="bigQuestion">Que voulez-vous faire ?</div>
@@ -1708,6 +1709,11 @@ function boot(){
      if(S.result && (S.result.mission==="VOIR RELAIS" || S.result.mission==="VOIR PRIORITAIRE RELAIS")){
        S.result.contract="PRÉSENCE PROPRIÉTAIRES"; S.result.rest="R1";
        S.result.mission=S.result.mission.includes("PRIORITAIRE")?"VOIR PRIORITAIRE":"VOIR PRÉSENCE";
+     }
+     const ghostLegacyState=!!S.result && !S.missionId && !(String(S.name||"").trim() && String(S.phone||"").trim() && String(S.email||"").trim() && String(S.city||"").trim());
+     if(ghostLegacyState){
+       S.result=null; S.need=null; S.sub=null; S.obj=""; S.date=""; S.slot=""; S.acceptedSlot=false;
+       S.resumeStage=""; S.stage="ACCUEIL"; S.history=["ACCUEIL"];
      }
      if(!Array.isArray(S.history))S.history=["ACCUEIL"];
      REACHED_STAGES=new Set(S.history); REACHED_STAGES.add("ACCUEIL"); syncReached();
