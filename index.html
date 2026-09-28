@@ -2429,6 +2429,7 @@ function boot(){
    }catch(e){}
  }
  REACHED_STAGES=new Set(Array.isArray(S.history)?S.history:["ACCUEIL"]);REACHED_STAGES.add("ACCUEIL");syncReached(); NAV=[]; LAST_VIEW=null; drawTimeline(); home(false); updateBack();
+ if(getSyncKey())reconcileCloudMissions().then(()=>home(false)).catch(()=>{});
 }
 boot();
 </script>
