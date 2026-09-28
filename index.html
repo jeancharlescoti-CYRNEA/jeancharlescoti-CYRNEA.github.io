@@ -184,6 +184,7 @@ function gotoStage(st){
  if(st==="ARCHIVE")return archive();
 }
 const STATE_KEY="cyrnea_assistant_v53_final_20260928";
+const ACTIVE_MISSIONS_KEY="cyrnea_active_missions_v1";
 const LEGACY_STATE_KEY="cyrnea_assistant_v50";
 const PAYMENT_GATEWAY_URL="https://cyrnea-payment-gateway.jeancharles-coti.workers.dev";
 const RESERVATION_ACTIONS_URL="https://cyrnea-reservation-actions.jeancharles-coti.workers.dev";
@@ -229,7 +230,43 @@ const B2B_TALLY_MISSION={
   "RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE B2B - 109 € HT",
   "PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE B2B - 169 € HT"
 };
-function save(){localStorage.setItem(STATE_KEY,JSON.stringify(S))}
+function activeMissionKey(st=S){return String(st?.missionId||st?.draftKey||"")}
+function isActiveMissionState(st=S){
+ return !!(st && st.result && String(st.result.mission||"").trim() && String(st.result.contract||"").trim() && !st.finalStatus && st.stage!=="ARCHIVE");
+}
+function loadActiveMissionMap(){
+ try{const x=JSON.parse(localStorage.getItem(ACTIVE_MISSIONS_KEY)||"{}");return x&&typeof x==="object"&&!Array.isArray(x)?x:{}}catch(e){return {}}
+}
+function writeActiveMissionMap(map){localStorage.setItem(ACTIVE_MISSIONS_KEY,JSON.stringify(map||{}))}
+function persistActiveSnapshot(st=S){
+ if(!isActiveMissionState(st))return;
+ const id=activeMissionKey(st);
+ if(!id)return;
+ const map=loadActiveMissionMap();
+ map[id]=JSON.parse(JSON.stringify(st));
+ writeActiveMissionMap(map);
+}
+function removeActiveSnapshot(st=S){
+ const id=activeMissionKey(st);
+ if(!id)return;
+ const map=loadActiveMissionMap();
+ if(map[id]){delete map[id];writeActiveMissionMap(map)}
+}
+function activeMissionList(){
+ const map=loadActiveMissionMap();
+ return Object.entries(map).map(([id,state])=>({id,state})).filter(x=>isActiveMissionState(x.state)).sort((a,b)=>String(a.state.date||"9999").localeCompare(String(b.state.date||"9999"))||String(a.state.slot||"99:99").localeCompare(String(b.state.slot||"99:99")));
+}
+function activeMissionStatus(st){
+ if(st.overrun?.accepted && st.overrun.paymentStatus!=="PAID")return "SUPPLÉMENT À ENCAISSER";
+ if(st.paymentStatus==="PAID_PENDING_CONFIRMATION")return "PAIEMENT REÇU — À CONFIRMER";
+ if(st.decisionStatus==="ALTERNATIVE_PROPOSED")return "ALTERNATIVE EN ATTENTE";
+ if(st.stage==="CLÔTURE")return "À CLÔTURER";
+ if(st.stage==="TERRAIN")return "SUR PLACE / TERRAIN";
+ if(st.stage==="PRÊTE")return "MISSION PRÊTE";
+ if(st.stage==="RÉSERVATION")return "RÉSERVATION / PAIEMENT";
+ return st.stage||"MISSION EN COURS";
+}
+function save(){localStorage.setItem(STATE_KEY,JSON.stringify(S));persistActiveSnapshot(S)}
 function reset(){localStorage.removeItem(STATE_KEY);localStorage.removeItem(LEGACY_STATE_KEY);localStorage.removeItem(STAGE_VIEWS_KEY);location.reload()}
 function key(){return "D-"+new Date().toISOString().replace(/\D/g,"").slice(0,14)}
 function missionId(){
@@ -247,26 +284,48 @@ function goHome(){
  save();
 }
 function home(remember=true){
- const hasQualifiedMission=!!(S.result && String(S.result.mission||"").trim() && String(S.result.contract||"").trim());
- const hasClient=!!String(S.name||"").trim();
- const hasContact=!!(String(S.phone||"").trim() || String(S.email||"").trim());
- const hasActive=!S.finalStatus && hasQualifiedMission && hasClient && hasContact;
- setStage("ACCUEIL"); S.draftKey=S.draftKey||key();
+ S.draftKey=S.draftKey||key();
+ persistActiveSnapshot(S);
+ const currentId=activeMissionKey(S);
+ const active=activeMissionList();
+ setStage("ACCUEIL");
+ const cards=active.map(({id,state})=>{
+   const when=[state.date||"",displayTime4(state.slot||"")].filter(Boolean).join(" · ");
+   const amount=state.result?.price||"";
+   return `<button class="choice presence" onclick="resumeStoredMission('${esc(id)}')"><span class="missionName">${esc(state.result?.mission||"Mission en cours")} — ${esc(state.name||"Client")}</span><span class="missionGoal">${esc(activeMissionStatus(state))}${when?" · "+esc(when):""}${amount?" · "+esc(amount):""}</span></button>`;
+ }).join("");
  draw(`<div class="card"><h1>CYRNEA ASSISTANT</h1>
  <div class="bigQuestion">Que voulez-vous faire ?</div>
- ${hasActive?`<button class="choice presence" onclick="resumeActiveMission()"><span class="missionName">REPRENDRE LA MISSION EN COURS</span><span class="missionGoal">${esc(S.result?.mission||"Mission en cours")} · ${esc(S.name||"Client")}</span></button>`:""}
+ ${active.length?`<div class="guideTitle">MISSIONS ACTIVES — ${active.length}</div><div class="choices">${cards}</div>`:`<div class="neutral">Aucune mission active enregistrée.</div>`}
  <div class="grid" style="margin-top:10px">
-   <button class="choice" onclick="newMission()"><span class="missionName">NOUVELLE MISSION</span><span class="missionGoal">Repartir entièrement de zéro et recommencer la qualification.</span></button>
+   <button class="choice" onclick="newMission()"><span class="missionName">NOUVELLE MISSION</span><span class="missionGoal">Créer un nouveau dossier sans supprimer les missions actives.</span></button>
    <button class="choice" onclick="S.mode='CALLBACK';callback()"><span class="missionName">NOTER UN RAPPEL</span><span class="missionGoal">Nom, téléphone et motif en quelques secondes.</span></button>
  </div>
- <div class="operatorOnly">Ne choisissez jamais une prestation au hasard. Écoutez le client et suivez l’écran.</div>
+ <div class="operatorOnly">Les dossiers non terminés ou avec paiement restant dû restent actifs jusqu’à leur clôture définitive.</div>
  </div>`,remember);
 }
+function resumeStoredMission(id){
+ persistActiveSnapshot(S);
+ const map=loadActiveMissionMap();
+ const stored=map[id];
+ if(!stored)return alert("Cette mission active n’est plus disponible.");
+ S=JSON.parse(JSON.stringify(stored));
+ S.prep={...(S.prep||{})};
+ S.multiSlots=Array.isArray(S.multiSlots)?S.multiSlots:[];
+ S.availability={...(S.availability||{})};
+ S.overrun=S.overrun||null;
+ if(!Array.isArray(S.history))S.history=["ACCUEIL"];
+ localStorage.setItem(STATE_KEY,JSON.stringify(S));
+ localStorage.removeItem(STAGE_VIEWS_KEY);
+ STAGE_VIEWS={};NAV=[];LAST_VIEW=null;
+ REACHED_STAGES=new Set(S.history);REACHED_STAGES.add("ACCUEIL");syncReached();
+ resumeActiveMission();
+}
 function newMission(){
+ persistActiveSnapshot(S);
  localStorage.removeItem(STATE_KEY); localStorage.removeItem(LEGACY_STATE_KEY); localStorage.removeItem(STAGE_VIEWS_KEY); STAGE_VIEWS={}; REACHED_STAGES=new Set(["ACCUEIL"]);
- S={stage:"ACCUEIL",mode:"FULL",universe:null,caller:null,name:"",phone:"",email:"",city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",acceptedSlot:false,draftKey:key(),missionId:"",prep:{},facts:"",incident:"",terrainMedia:[],arrivalAt:"",departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,paymentMethod:"",paymentState:"",specialPending:false,resumeStage:"",history:["ACCUEIL"]};
+ S={stage:"ACCUEIL",mode:"FULL",universe:null,caller:null,name:"",phone:"",email:"",city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",acceptedSlot:false,draftKey:key(),missionId:"",prep:{},facts:"",incident:"",terrainMedia:[],terrainDraft:null,arrivalAt:"",arrivalEpochMs:null,departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,paymentMethod:"",paymentState:"",specialPending:false,resumeStage:"",history:["ACCUEIL"]};
  NAV=[]; LAST_VIEW=null;
- home(false);
  identify();
  updateBack(); save();
 }
@@ -2261,7 +2320,7 @@ function finalizeArchive(){
  S.finalStatus=document.getElementById("fs")?.value||S.finalStatus||"MISSION CLÔTURÉE";
  save();archive();
 }
-function archive(){setStage("ARCHIVE");save();const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la PWA conserve l’état opérationnel du dossier. L’archive iCloud reste le stockage documentaire de fond ; sur le terrain, vous travaillez depuis l’assistant.</div><div class="toolbar"><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
+function archive(){setStage("ARCHIVE");save();removeActiveSnapshot(S);const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la PWA conserve l’état opérationnel du dossier. L’archive iCloud reste le stockage documentaire de fond ; sur le terrain, vous travaillez depuis l’assistant.</div><div class="toolbar"><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
 function exportJSON(){let b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(S.missionId||"CYRNEA-DEMO")+".json";a.click();URL.revokeObjectURL(a.href)}
 function boot(){
  try{STAGE_VIEWS=JSON.parse(localStorage.getItem(STAGE_VIEWS_KEY)||"{}")||{}}catch(e){STAGE_VIEWS={}}
