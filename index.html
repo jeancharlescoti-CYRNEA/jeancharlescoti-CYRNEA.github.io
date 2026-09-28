@@ -1951,7 +1951,7 @@ function clientSmsHref(){
  const phone=clientContactNumber();
  return phone?"sms:"+phone:"#";
 }
-async async function copyOverrunMessage(){
+async async async function copyOverrunMessage(){
  const el=document.querySelector(".readAloud");
  const message=String(el?.textContent||"").trim();
  if(!message)return alert("Aucun texte à copier.");
