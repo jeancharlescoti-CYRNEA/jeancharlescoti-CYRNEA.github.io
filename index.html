@@ -1931,23 +1931,28 @@ function clientContactNumber(){
 }
 function clientPhoneDisplay(){
  const phone=clientContactNumber();
- if(/^\\+33\\d{9}$/.test(phone)){
+ if(/^\+33\d{9}$/.test(phone)){
    const d="0"+phone.slice(3);
    return (d.match(/.{1,2}/g)||[]).join(" ");
  }
  return String(S.phone||"").trim();
 }
-async function contactClientForOverrun(kind,message){
+function clientCallHref(){
  const phone=clientContactNumber();
- if(!phone)return alert("Aucun numéro client n’est enregistré dans le dossier.");
- if(kind==="CALL"){
-   window.location.href="tel:"+phone;
-   return;
+ return phone?"tel:"+phone:"#";
+}
+function clientSmsHref(){
+ const phone=clientContactNumber();
+ return phone?"sms:"+phone:"#";
+}
+async function copyOverrunMessage(message){
+ if(!message)return;
+ try{
+   await navigator.clipboard.writeText(message);
+   alert("Texte copié. Collez-le dans Messages.");
+ }catch(_){
+   prompt("Copiez ce texte puis collez-le dans Messages :",message);
  }
- if(message && navigator.clipboard?.writeText){
-   try{await navigator.clipboard.writeText(message)}catch(_){}
- }
- window.location.href="sms:"+phone;
 }
 function overrunGuide(){
  const r=overrunRule();
@@ -1960,10 +1965,11 @@ function overrunGuide(){
      <div class="row"><b>Client</b><span>${esc(S.name||"-")}</span></div>
      <div class="row"><b>Téléphone</b><span>${esc(phone||"NON RENSEIGNÉ")}</span></div>
      <div class="toolbar">
-       <button class="btn primary" onclick="contactClientForOverrun('CALL','')">APPELER LE CLIENT</button>
-       <button class="btn ghost" onclick="contactClientForOverrun('SMS',${JSON.stringify(msg)})">ENVOYER UN SMS — TEXTE COPIÉ</button>
+       <a class="btn primary" href="${esc(clientCallHref())}">APPELER LE CLIENT</a>
+       <a class="btn ghost" href="${esc(clientSmsHref())}">OUVRIR MESSAGES</a>
+       <button class="btn ghost" onclick="copyOverrunMessage(${JSON.stringify(msg)})">COPIER LE TEXTE</button>
      </div>
-     <div class="muted">Sur iPhone, APPELER ouvre Téléphone. Sur Mac, le lien d’appel peut être pris en charge par FaceTime. Pour le SMS, le texte ci-dessus est copié puis Messages s’ouvre sur le numéro du client.</div>
+     <div class="muted">APPELER utilise le lien téléphone natif. OUVRIR MESSAGES utilise le lien SMS natif. COPIER LE TEXTE permet de coller le message prêt à envoyer.</div>
      <button class="btn ghost" onclick="terrain()">RETOUR AU TERRAIN</button>
    </div>`);
  }
@@ -1976,8 +1982,9 @@ function overrunGuide(){
    <div class="row"><b>Client</b><span>${esc(S.name||"-")}</span></div>
    <div class="row"><b>Téléphone</b><span>${esc(phone||"NON RENSEIGNÉ")}</span></div>
    <div class="toolbar">
-     <button class="btn primary" onclick="contactClientForOverrun('CALL','')">APPELER LE CLIENT</button>
-     <button class="btn ghost" onclick="contactClientForOverrun('SMS',${JSON.stringify(msg)})">ENVOYER UN SMS — TEXTE COPIÉ</button>
+     <a class="btn primary" href="${esc(clientCallHref())}">APPELER LE CLIENT</a>
+     <a class="btn ghost" href="${esc(clientSmsHref())}">OUVRIR MESSAGES</a>
+     <button class="btn ghost" onclick="copyOverrunMessage(${JSON.stringify(msg)})">COPIER LE TEXTE</button>
    </div>
    <div class="toolbar"><button class="btn primary" onclick="saveOverrun(${r.unit},'${r.base}',${r.max||'null'})">ACCORD CLIENT OBTENU → ENREGISTRER</button><button class="btn ghost" onclick="terrain()">NE PAS PROLONGER</button></div>
  </div>`);
