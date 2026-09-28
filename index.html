@@ -1951,7 +1951,7 @@ function clientSmsHref(){
  const phone=clientContactNumber();
  return phone?"sms:"+phone:"#";
 }
-async function copyOverrunMessage(){
+async async function copyOverrunMessage(){
  const el=document.querySelector(".readAloud");
  const message=String(el?.textContent||"").trim();
  if(!message)return alert("Aucun texte à copier.");
@@ -1961,6 +1961,16 @@ async function copyOverrunMessage(){
  }catch(_){
    prompt("Copiez ce texte puis collez-le dans Messages :",message);
  }
+}
+async function openMessagesWithOverrunText(){
+ const phone=clientContactNumber();
+ if(!phone)return alert("Aucun numéro client n’est enregistré dans le dossier.");
+ const el=document.querySelector(".readAloud");
+ const message=String(el?.textContent||"").trim();
+ if(message && navigator.clipboard?.writeText){
+   try{await navigator.clipboard.writeText(message)}catch(_){}
+ }
+ window.location.href="sms:"+phone;
 }
 function overrunGuide(){
  const r=overrunRule();
@@ -1974,7 +1984,7 @@ function overrunGuide(){
      <div class="row"><b>Téléphone</b><span>${esc(phone||"NON RENSEIGNÉ")}</span></div>
      <div class="toolbar">
        <a class="btn primary" href="${esc(clientCallHref())}">APPELER LE CLIENT</a>
-       <a class="btn ghost" href="${esc(clientSmsHref())}">OUVRIR MESSAGES</a>
+       <button class="btn ghost" onclick="openMessagesWithOverrunText()">OUVRIR MESSAGES + COPIER LE TEXTE</button>
        <button class="btn ghost" onclick="copyOverrunMessage()">COPIER LE TEXTE</button>
      </div>
      <div class="muted">Aucune prolongation n’est enregistrée sur cette mission. Retour au terrain uniquement après requalification.</div>
@@ -1992,7 +2002,7 @@ function overrunGuide(){
    <div class="row"><b>Téléphone</b><span>${esc(phone||"NON RENSEIGNÉ")}</span></div>
    <div class="toolbar">
      <a class="btn primary" href="${esc(clientCallHref())}">APPELER LE CLIENT</a>
-     <a class="btn ghost" href="${esc(clientSmsHref())}">OUVRIR MESSAGES</a>
+     <button class="btn ghost" onclick="openMessagesWithOverrunText()">OUVRIR MESSAGES + COPIER LE TEXTE</button>
      <button class="btn ghost" onclick="copyOverrunMessage()">COPIER LE TEXTE</button>
    </div>
    <div class="field"><label>Mode de confirmation du client</label><select id="overrunAgreement">
@@ -2033,6 +2043,100 @@ function markOverrunPaid(){
  closeMission();
 }
 
+function extraMomentRule(){
+ const m=baseMissionName(S.result?.mission||"");
+ if(m==="SUIVRE") return {unit:300,base:"TTC",name:"moment"};
+ if(m==="CONTINUITÉ PROJET") return {unit:420,base:"HT",name:"jalon"};
+ return null;
+}
+function extraMomentInfo(){
+ const r=extraMomentRule();
+ if(!r)return;
+ const next=S.passage+1;
+ if(next>5){
+   return draw(`<div class="card"><h1>Passage supplémentaire</h1><div class="stop"><b>À PARTIR DU 6e</b><br>Devis, requalification ou refus si la demande devient récurrente. Ne pas lancer un nouveau passage automatiquement.</div><button class="btn ghost" onclick="restitution()">RETOUR</button></div>`);
+ }
+ draw(`<div class="card"><h1>${next}e ${esc(r.name)} lié</h1>
+   <div class="notice"><b>SUPPLÉMENT</b>+${r.unit} € ${r.base} pour ce ${r.name}, même dossier et même objet.</div>
+   <div class="readAloud">Un ${next}e ${r.name} est possible dans le même dossier et pour le même objet, avec un supplément de ${r.unit} € ${r.base}. Il devra être validé avant ce nouveau passage.</div>
+   <div class="warn">Ne pas partir sur ce nouveau passage tant que le créneau, le supplément et la réservation / validation correspondante ne sont pas confirmés.</div>
+   <button class="btn ghost" onclick="restitution()">RETOUR</button>
+ </div>`);
+}
+function terrain(){
+ setStage("TERRAIN");
+ let rules=[];
+ if(S.result.mission.includes("APRÈS INTEMPÉRIE"))rules=["Vérifier AVANT toute manipulation : pas d'eau","Pas d'humidité anormale","Pas d'odeur de brûlé","Pas d'échauffement","Pas de dommage visible","Un seul réarmement simple maximum si prévu"];
+ else if(S.result.mission.includes("VOIR"))rules=["Observer uniquement le périmètre prévu","Séparer OBSERVÉ / DÉCLARÉ / DOCUMENT / NON VÉRIFIABLE","Aucun diagnostic / conformité / cause"];
+ else if(S.result.mission==="DÉCIDER"||S.result.mission.includes("PRÉSENCE PROJET"))rules=["Suivre le cahier des charges","Poser uniquement les questions convenues","Aucune décision ou signature pour le client"];
+ else rules=["Exécuter uniquement l'objet prévu","Ne pas élargir la mission","Documenter uniquement les preuves utiles"];
+ if(needsWaitGuard())rules.push("Si tiers / professionnel absent ou en retard : attente incident maximum 15 minutes");
+
+ const facts=terrainFactOptions();
+
+ draw(`<div class="card"><h1>Sur place — passage ${S.passage}</h1><div class="operatorOnly">Suivez l’ordre : arrivée → contrôles → actions prévues → preuves utiles → contrôle de sortie. Si la situation diffère, n’improvisez pas.</div>
+ <div class="todo"><b>À FAIRE SUR PLACE</b>Cochez uniquement ce que vous avez réellement vérifié, fait ou observé. Les coches servent directement à fabriquer la restitution.</div>
+ ${S.arrivalAt
+   ? `<div class="notice"><b>ARRIVÉE HORODATÉE</b>${esc(S.arrivalAt)}</div>`
+   : `<button class="btn primary" onclick="markArrival()">J’ARRIVE SUR PLACE — HORODATER</button>`}
+ <div class="advice"><b>CONSEIL</b>Les cases ci-dessous sont vos contrôles internes. Le client n’a rien à cocher ici.</div>
+
+ <div class="row"><b>${esc(S.missionId)}</b><span>${esc(S.result.mission)}</span></div>
+ <div class="toolbar"><button class="btn ghost" onclick="missionDesk()">DOSSIER MISSION</button></div>
+
+ <div class="checkZone">
+   <div class="checkIntro">GARDE-FOUS À COCHER</div>
+   ${rules.map(x=>`<label class="check"><input type="checkbox" name="terrainGuard"> <span>J’ai vérifié / appliqué : <b>${esc(x)}</b></span></label>`).join("")}
+ </div>
+
+ <div class="checkZone">
+   <div class="checkIntro">FAITS / ACTIONS UTILES — PLUSIEURS CHOIX POSSIBLES</div>
+   ${facts.map(x=>`<label class="check"><input type="checkbox" name="terrainFact" value="${esc(x)}"> <span>${esc(x)}</span></label>`).join("")}
+   <button class="btn ghost" onclick="document.getElementById('factOtherWrap').classList.toggle('hidden')">+ AUTRE FAIT — EXCEPTION</button>
+   <div class="field hidden" id="factOtherWrap"><label>Autre fait — quelques mots</label><input id="factOther" maxlength="140" placeholder="Uniquement si aucune case ne convient."></div>
+ </div>
+
+ <div class="field">
+   <label>PHOTOS / PREUVES TERRAIN (SI UTILES)</label>
+   <input id="terrainMedia" type="file" accept="image/*,video/*,.pdf" capture="environment" multiple>
+   <div class="muted">Sur iPhone : prendre directement une photo/vidéo ou choisir une pièce existante. Le prototype mémorise seulement les noms ; la production devra stocker les fichiers réels.</div>
+ </div>
+
+ <div class="field" id="incidentZone">
+   <label>INCIDENT / LIMITE ÉVENTUEL — UN CHOIX PRINCIPAL</label>
+   <select id="incidentSelect" onchange="toggleIncidentOther()">
+     <option value="">— Choisir —</option>
+     <option value="AUCUN">AUCUN INCIDENT / AUCUNE LIMITE</option>
+     <option value="Tiers / professionnel absent">Tiers / professionnel absent</option>
+     <option value="Accès impossible ou partiel">Accès impossible ou partiel</option>
+     <option value="Retard important du tiers / professionnel">Retard important du tiers / professionnel</option>
+     <option value="Demande nouvelle hors mission">Demande nouvelle hors mission</option>
+     <option value="Information indispensable manquante">Information indispensable manquante</option>
+     <option value="Situation de sécurité / danger">Situation de sécurité / danger</option>
+     <option value="SITUATION DIFFÉRENTE / DOUTE">SITUATION DIFFÉRENTE / J’AI UN DOUTE</option>
+     <option value="Élément prévu non observable / non vérifiable">Élément prévu non observable / non vérifiable</option>
+     <option value="AUTRE">AUTRE — à préciser</option>
+   </select>
+ </div>
+ <div class="field hidden" id="incidentOtherWrap">
+   <label>Précisez l’incident / la limite</label>
+   <textarea id="incidentOther" placeholder="Décrire uniquement le fait constaté, sans interprétation."></textarea>
+ </div>
+
+ <div class="stop"><b>LA SITUATION EST DIFFÉRENTE / J'AI UN DOUTE</b><br>Ne pas improviser · constater · ne pas aggraver · documenter · requalifier avant élargissement.<br><br><button class="btn danger" onclick="triggerDoubt()">J’AI UN DOUTE / SITUATION DIFFÉRENTE</button></div>
+ <div class="warn"><b>LE TEMPS PRÉVU EST DÉPASSÉ ?</b><br>Ne prolongez jamais de vous-même. L’assistant applique la règle de la mission.<br><br><button class="btn ghost" onclick="overrunGuide()">TEMPS / CADRE DÉPASSÉ</button>${S.overrun?.accepted?`<div class="notice" style="margin-top:10px"><b>PROLONGATION ACCEPTÉE</b>+${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(String(S.overrun.tranches))} tranche(s).</div>`:""}</div>
+
+ <div class="checkZone">
+   <div class="checkIntro">AVANT DE QUITTER LES LIEUX — CONTRÔLES CRITIQUES</div>
+   <label class="check"><input type="checkbox" name="exitCheck"><span>Accès / clés / badge laissés conformément à la mission</span></label>
+   <label class="check"><input type="checkbox" name="exitCheck"><span>Portes / ouvrants / équipements simples laissés dans l’état prévu</span></label>
+   <label class="check"><input type="checkbox" name="exitCheck"><span>Tiers / professionnel : situation connue ou incident documenté si applicable</span></label>
+   <label class="check"><input type="checkbox" name="exitCheck"><span>Preuves utiles / photos nécessaires prises ou absence justifiée</span></label>
+ </div>
+
+ <button class="btn primary" onclick="collectTerrain()">J’AI TERMINÉ SUR PLACE</button>
+ </div>`)
+}
 function restitution(){
  setStage("RESTITUTION");
  const interim=S.result.multi&&S.passage<3;
