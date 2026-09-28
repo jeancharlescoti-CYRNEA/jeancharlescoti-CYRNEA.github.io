@@ -173,7 +173,10 @@ function gotoStage(st){
  if(st==="QUALIFICATION")return identify();
  if(st==="CADRAGE")return S.result?showResult():needs();
  if(st==="CRÉNEAU")return slot();
- if(st==="RÉSERVATION")return bookingHandoff();
+ if(st==="RÉSERVATION"){
+   if(S.paymentStatus==="PAID_PENDING_CONFIRMATION" || S.decisionStatus==="ALTERNATIVE_PROPOSED") return postPaymentDecision();
+   return bookingHandoff();
+ }
  if(st==="PRÊTE")return S.prep?.addr?ready():preparationMission();
  if(st==="TERRAIN")return terrain();
  if(st==="RESTITUTION")return restitution();
@@ -1983,7 +1986,7 @@ function closeMission(){
  <button class="btn primary" onclick="S.finalStatus=document.getElementById('fs').value;save();archive()">ARCHIVER LE DOSSIER</button>
  </div>`);
 }
-function archive(){setStage("ARCHIVE");save();draw(`<div class="card"><h1>Mission archivée</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div><div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">Mission terminée : appel → préparation → terrain → restitution → clôture.<br><br><b>En production, aucun fichier technique ne sera à télécharger :</b> le dossier mission sera classé automatiquement dans l’archive CYRNEA. Sur le terrain, vous travaillez depuis l’assistant ; l’archive iCloud reste le stockage de fond, pas l’interface de travail.</div><div class="toolbar"><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
+function archive(){setStage("ARCHIVE");save();const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div><div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>En production, aucun fichier technique ne sera à télécharger :</b> le dossier mission sera classé automatiquement dans l’archive CYRNEA. Sur le terrain, vous travaillez depuis l’assistant ; l’archive iCloud reste le stockage de fond, pas l’interface de travail.</div><div class="toolbar"><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
 function exportJSON(){let b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(S.missionId||"CYRNEA-DEMO")+".json";a.click();URL.revokeObjectURL(a.href)}
 function boot(){
  try{STAGE_VIEWS=JSON.parse(localStorage.getItem(STAGE_VIEWS_KEY)||"{}")||{}}catch(e){STAGE_VIEWS={}}
