@@ -975,7 +975,7 @@ function multiPassagePricing(){
   if(S.result.isQuote){
     passages.forEach(p=>{
       p.surcharge=0;
-      p.label=p.sunday?"Dimanche / jour férié":p.night?"Nuit à partir de 21 h":p.priority?"Prioritaire sous 24 h":p.evening?"Soir à partir de 19 h":"Standard";
+      p.label=p.sunday?"Dimanche / jour férié":p.night?"Nuit à partir de 21 h":p.priority?"Prioritaire sous 24 h":p.evening?"Soir 19 h–20 h 59":"Standard";
     });
     S.multiSlots=passages;
     S.date=passages[0].date;
@@ -999,7 +999,8 @@ function multiPassagePricing(){
   let total=base;
   passages.forEach(p=>{
     let add=0,label="Standard";
-    if(p.priority||p.evening){add=unitPriority;label=p.priority?"Prioritaire sous 24 h":"Soir à partir de 19 h";}
+    if(p.priority){add=unitPriority;label="Prioritaire sous 24 h";}
+    if(m==="CONTINUITÉ PROJET" && p.evening){add=unitPriority;label="Soir 19 h–20 h 59";}
     if(m==="CONTINUITÉ PROJET" && p.night){add=unitSunday;label="Nuit à partir de 21 h";}
     if(p.sunday){add=unitSunday;label="Dimanche / jour férié";}
     p.surcharge=add;
@@ -1053,23 +1054,23 @@ function availabilityPricing(){
 
   if(["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","PRÉSENCE LOGISTIQUE B2B"].includes(m)){
     const base=(m==="PRÉSENCE LOGISTIQUE B2B")?169:109;
-    const add=(sunday||night)?60:(priority||evening)?40:0;
+    const add=sunday?60:priority?40:0;
     S.result.price=(base+add)+" € HT";
-    S.result.availabilityLabel=sunday?"Dimanche / jour férié":night?"Nuit à partir de 21 h":priority?"Prioritaire sous 24 h":evening?"Soir 19 h–20 h 59":"Standard";
+    S.result.availabilityLabel=sunday?"Dimanche / jour férié":priority?"Prioritaire sous 24 h":"Standard";
     return;
   }
 
   if(m==="RELAIS SIMPLE" || m==="RELAIS" || m.includes("INTEMPÉRIE")){
     const base=(m==="RELAIS SIMPLE"||m.includes("APRÈS INTEMPÉRIE"))?109:169;
-    const add=sunday?60:(priority||evening)?40:0;
+    const add=sunday?60:priority?40:0;
     S.result.price=(base+add)+" € TTC";
-    S.result.availabilityLabel=sunday?"Dimanche / jour férié":priority?"Prioritaire sous 24 h":evening?"Soir à partir de 19 h":"Standard";
+    S.result.availabilityLabel=sunday?"Dimanche / jour férié":priority?"Prioritaire sous 24 h":"Standard";
     return;
   }
 
   if(m==="VOIR RELAIS"){
     let price=260,label="Standard";
-    if(priority||evening){price=350;label=priority?"Prioritaire sous 24 h":"Soir à partir de 19 h";}
+    if(priority){price=350;label="Prioritaire sous 24 h";}
     if(sunday){price=380;label="Dimanche / jour férié";}
     S.result.price=price+" € TTC";
     S.result.mission=priority?"VOIR PRIORITAIRE RELAIS":"VOIR RELAIS";
@@ -1078,7 +1079,7 @@ function availabilityPricing(){
   }
   if(m==="VOIR PRÉSENCE"){
     let price=260,label="Standard";
-    if(priority||evening){price=350;label=priority?"Prioritaire sous 24 h":"Soir à partir de 19 h";}
+    if(priority){price=350;label="Prioritaire sous 24 h";}
     if(sunday){price=380;label="Dimanche / jour férié";}
     S.result.price=price+" € TTC";
     S.result.mission=priority?"VOIR PRIORITAIRE":"VOIR PRÉSENCE";
@@ -1087,13 +1088,13 @@ function availabilityPricing(){
   }
   if(m==="DÉCIDER"){
     let price=480,label="Standard";
-    if(priority||evening){price=570;label=priority?"Prioritaire sous 24 h":"Soir à partir de 19 h";}
+    if(priority){price=570;label="Prioritaire sous 24 h";}
     if(sunday){price=600;label="Dimanche / jour férié";}
     S.result.price=price+" € TTC"; S.result.availabilityLabel=label; return;
   }
   if(m==="SUIVRE"){
     let add=0,label="Standard";
-    if(priority||evening){add=90;label=(priority?"Prioritaire sous 24 h":"Soir à partir de 19 h")+" — passage concerné";}
+    if(priority){add=90;label="Prioritaire sous 24 h — passage concerné";}
     if(sunday){add=120;label="Dimanche / jour férié — passage concerné";}
     S.result.price=(980+add)+" € TTC";
     S.result.availabilityLabel=label;
