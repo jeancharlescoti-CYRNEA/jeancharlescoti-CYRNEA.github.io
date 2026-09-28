@@ -1926,20 +1926,44 @@ function overrunRule(){
    return {allowed:true,unit:75,base:"HT",max:null,label:"+75 € HT par tranche de 30 min commencée"};
  return {allowed:false,text:"Aucune prolongation automatique n’est prévue pour cette mission. Arrêtez et faites requalifier avant d’élargir le périmètre."};
 }
+function clientContactNumber(){
+ return String(S.phone||"").replace(/[^+\\d]/g,"");
+}
+function contactClientForOverrun(kind,message){
+ const phone=clientContactNumber();
+ if(!phone)return alert("Aucun numéro client n’est enregistré dans le dossier.");
+ if(kind==="CALL") window.location.href="tel:"+phone;
+ else window.location.href="sms:"+phone+"?body="+encodeURIComponent(message);
+}
 function overrunGuide(){
  const r=overrunRule();
+ const phone=String(S.phone||"").trim();
  if(!r.allowed){
+   const msg="La mission prévue arrive à sa limite. Je dois faire confirmer la suite avant de continuer. Je n’effectue aucune action supplémentaire sans nouvelle validation.";
    return draw(`<div class="card"><h1>Temps / cadre dépassé</h1>
      <div class="stop"><b>NE PAS CONTINUER AUTOMATIQUEMENT</b><br>${esc(r.text)}</div>
-     <div class="readAloud">La mission prévue arrive à sa limite. Je dois faire confirmer la suite avant de continuer.</div>
+     <div class="readAloud">${esc(msg)}</div>
+     <div class="row"><b>Client</b><span>${esc(S.name||"-")}</span></div>
+     <div class="row"><b>Téléphone</b><span>${esc(phone||"NON RENSEIGNÉ")}</span></div>
+     <div class="toolbar">
+       <button class="btn primary" onclick="contactClientForOverrun('CALL','')">APPELER LE CLIENT</button>
+       <button class="btn ghost" onclick="contactClientForOverrun('SMS',${JSON.stringify(msg)})">ENVOYER UN SMS</button>
+     </div>
      <button class="btn ghost" onclick="terrain()">RETOUR AU TERRAIN</button>
    </div>`);
  }
  const maxAttr=r.max?` max="${r.max}"`:"";
+ const msg="La mission nécessite une prolongation dans le même objet. Le supplément est de "+r.unit+" € "+r.base+" par tranche de 30 minutes commencée"+(r.max?" (maximum "+r.max+" tranches)":"")+". Souhaitez-vous expressément que je poursuive ?";
  draw(`<div class="card"><h1>Prolongation imprévue</h1>
    <div class="warn"><b>RÈGLE</b><br>${esc(r.label)}. Uniquement si l’objet reste exactement le même et après accord exprès du client.</div>
    <div class="field"><label>Nombre de tranches de 30 min commencées</label><input id="overrunN" type="number" min="1"${maxAttr} value="1"></div>
-   <div class="readAloud">La mission nécessite une prolongation dans le même objet. Le supplément est de ${esc(r.unit+" € "+r.base)} par tranche de 30 minutes commencée. Souhaitez-vous expressément que je poursuive ?</div>
+   <div class="readAloud">${esc(msg)}</div>
+   <div class="row"><b>Client</b><span>${esc(S.name||"-")}</span></div>
+   <div class="row"><b>Téléphone</b><span>${esc(phone||"NON RENSEIGNÉ")}</span></div>
+   <div class="toolbar">
+     <button class="btn primary" onclick="contactClientForOverrun('CALL','')">APPELER LE CLIENT</button>
+     <button class="btn ghost" onclick="contactClientForOverrun('SMS',${JSON.stringify(msg)})">ENVOYER UN SMS</button>
+   </div>
    <div class="toolbar"><button class="btn primary" onclick="saveOverrun(${r.unit},'${r.base}',${r.max||'null'})">ACCORD CLIENT OBTENU → ENREGISTRER</button><button class="btn ghost" onclick="terrain()">NE PAS PROLONGER</button></div>
  </div>`);
 }
