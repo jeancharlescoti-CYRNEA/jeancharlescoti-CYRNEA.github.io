@@ -877,6 +877,9 @@ function validateMissionTimeRules(dateStr,timeStr,label="créneau"){
   const check=validateFutureSlot(dateStr,timeStr,label);
   if(!check.ok)return check;
   const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
+  if(!isB2B && check.dt.getHours()>=19){
+    return {ok:false,msg:"RELAIS / PRÉSENCE Propriétaires : départ à partir de 19 h indisponible. Choisissez un horaire entre 08 h 00 et 18 h 45."};
+  }
   if(isB2B && check.dt.getHours()>=21 && !nightAllowedForMission(S.result?.mission)){
     return {ok:false,msg:"NUIT à partir de 21 h indisponible pour cette mission B2B. La nuit est réservée à PRÉSENCE PROJET, PRÉSENCE PROJET ÉTENDUE et CONTINUITÉ PROJET."};
   }
