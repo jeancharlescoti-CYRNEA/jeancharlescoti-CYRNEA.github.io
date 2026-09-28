@@ -2251,6 +2251,7 @@ function closeMission(){
  </select></div>
  <div class="notice">${S.result.contract.startsWith("PRÉSENCE")?"H5 / restitution finale à envoyer.":"Restitution RELAIS à envoyer."}</div>
  <button class="btn primary" onclick="finalizeArchive()">ARCHIVER LE DOSSIER</button>
+ ${ov&&ov.paymentStatus!=="PAID"?`<button class="btn ghost" style="margin-top:10px" onclick="goHome()">CONSERVER EN ATTENTE DE PAIEMENT → ACCUEIL</button><div class="muted">La mission est terminée sur le terrain, mais le dossier reste actif en CLÔTURE jusqu’à réception du supplément.</div>`:""}
  </div>`);
 }
 function finalizeArchive(){
