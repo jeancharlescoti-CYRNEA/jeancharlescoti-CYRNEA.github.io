@@ -460,14 +460,40 @@ async function configureCloudSync(){
 async function manualCloudSync(){
  if(!getSyncKey())return configureCloudSync();
  try{
-   persistActiveSnapshot(S);
-   const result=await reconcileCloudMissions();
-   home(false);
-   if(result?.conflicts){
-     alert("Synchronisation terminée — "+String(result.count||0)+" mission(s). "+String(result.conflicts)+" conflit(s) détecté(s) : la version centrale a été conservée pour éviter un écrasement.");
-   }else{
-     alert("Synchronisation terminée — "+String(result?.count||0)+" mission(s) active(s).");
+   // 1. Envoyer d'abord TOUTES les missions actives de cet appareil.
+   const localMap=loadActiveMissionMap();
+   let sent=0;
+   for(const st of Object.values(localMap)){
+     if(isActiveMissionState(st)){
+       await pushMissionToCloud(st);
+       sent++;
+     }
    }
+
+   // 2. Relire ensuite la base centrale et appliquer son état final.
+   const remote=await pullCloudMissions();
+   const finalMap={};
+   for(const item of remote){
+     const st=item?.payload;
+     if(!st||typeof st!=="object")continue;
+     const id=String(item.id||activeMissionKey(st)||st.missionId||"");
+     if(!id||st._deleted)continue;
+     finalMap[id]=st;
+   }
+   writeActiveMissionMap(finalMap);
+
+   // 3. Si le dossier actuellement ouvert existe dans le cloud, le mettre à jour.
+   const currentId=activeMissionKey(S);
+   if(currentId && finalMap[currentId]){
+     S=JSON.parse(JSON.stringify(finalMap[currentId]));
+     localStorage.setItem(STATE_KEY,JSON.stringify(S));
+   }else if(currentId && !finalMap[currentId]){
+     localStorage.removeItem(STATE_KEY);
+     localStorage.removeItem(STAGE_VIEWS_KEY);
+   }
+
+   home(false);
+   alert("Synchronisation terminée — "+sent+" envoyée(s), "+Object.keys(finalMap).length+" mission(s) centrale(s).");
  }catch(e){
    alert("Synchronisation impossible — "+String(e?.message||e));
  }
