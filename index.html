@@ -774,9 +774,32 @@ function localDateTime(dateStr,timeStr){
   const [hh,mm]=timeStr.split(":").map(Number);
   return new Date(y,m-1,d,hh,mm,0,0);
 }
+function isQuarterHour(timeStr){
+  const m=String(timeStr||"").match(/^(\d{2}):(\d{2})$/);
+  if(!m)return false;
+  const hh=Number(m[1]), mm=Number(m[2]);
+  return hh>=0&&hh<=23&&mm>=0&&mm<=59&&mm%15===0;
+}
+function nextQuarterInfo(){
+  const n=new Date();
+  const q=new Date(n);
+  q.setSeconds(0,0);
+  const add=(15-(q.getMinutes()%15))%15;
+  q.setMinutes(q.getMinutes()+add);
+  if(q.getTime()<=n.getTime())q.setMinutes(q.getMinutes()+15);
+  return {
+    date:`${q.getFullYear()}-${pad2(q.getMonth()+1)}-${pad2(q.getDate())}`,
+    time:`${pad2(q.getHours())}:${pad2(q.getMinutes())}`
+  };
+}
+function nightAllowedForMission(mission){
+  const m=baseMissionName(String(mission||""));
+  return ["PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","CONTINUITÉ PROJET"].includes(m);
+}
 function validateFutureSlot(dateStr,timeStr,label="créneau"){
   const normalized=normalizeTime4(timeStr);
-  if(!/^\d{2}:\d{2}$/.test(normalized)) return {ok:false,msg:`Heure invalide pour ${label}. Utilisez toujours 4 chiffres au format HH:MM, par exemple 09:00 ou 14:30.`};
+  if(!/^\d{2}:\d{2}$/.test(normalized)) return {ok:false,msg:`Heure invalide pour ${label}. Utilisez le format HH:MM.`};
+  if(!isQuarterHour(normalized)) return {ok:false,msg:`Heure invalide pour ${label}. Choisissez 00, 15, 30 ou 45 minutes.`};
   timeStr=normalized;
   const dt=localDateTime(dateStr,timeStr);
   if(!dt) return {ok:false,msg:`Date et heure requises pour ${label}.`};
@@ -786,6 +809,15 @@ function validateFutureSlot(dateStr,timeStr,label="créneau"){
   }
   return {ok:true,dt};
 }
+function validateMissionTimeRules(dateStr,timeStr,label="créneau"){
+  const check=validateFutureSlot(dateStr,timeStr,label);
+  if(!check.ok)return check;
+  const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
+  if(isB2B && check.dt.getHours()>=21 && !nightAllowedForMission(S.result?.mission)){
+    return {ok:false,msg:"NUIT à partir de 21 h indisponible pour cette mission B2B. La nuit est réservée à PRÉSENCE PROJET, PRÉSENCE PROJET ÉTENDUE et CONTINUITÉ PROJET."};
+  }
+  return check;
+}
 function autoConstraints(dateStr,timeStr){
   const dt=localDateTime(dateStr,timeStr);
   if(!dt) return {priority:false,evening:false,night:false,sunday:false};
@@ -793,9 +825,9 @@ function autoConstraints(dateStr,timeStr){
   const diff=dt.getTime()-now.getTime();
   const priority=diff>0 && diff<24*60*60*1000;
   const hour=dt.getHours();
-  const evening=hour>=19;
   const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
-  const night=isB2B && hour>=21;
+  const evening=isB2B ? (hour>=19 && hour<21) : hour>=19;
+  const night=isB2B && hour>=21 && nightAllowedForMission(S.result?.mission);
   const sunday=dt.getDay()===0 || isFrenchPublicHoliday(dateStr);
   return {priority,evening,night,sunday};
 }
