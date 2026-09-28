@@ -898,7 +898,7 @@ function autoConstraints(dateStr,timeStr){
   const priority=diff>0 && diff<24*60*60*1000;
   const hour=dt.getHours();
   const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
-  const evening=isB2B ? (hour>=19 && hour<21) : hour>=19;
+  const evening=isB2B && hour>=19 && hour<21;
   const night=isB2B && hour>=21 && nightAllowedForMission(S.result?.mission);
   const sunday=dt.getDay()===0 || isFrenchPublicHoliday(dateStr);
   return {priority,evening,night,sunday};
@@ -1035,7 +1035,8 @@ function availabilityPricing(){
   let m=baseMissionName(S.result.mission);
   refreshCalendarConstraints();
   let priority=!!document.getElementById("prio24")?.checked;
-  let evening=!!document.getElementById("evening")?.checked;
+  const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES";
+  let evening=isB2B && !!document.getElementById("evening")?.checked;
   let sunday=!!document.getElementById("sunholiday")?.checked;
   const automatic=autoConstraints(S.date,S.slot);
   const night=!!automatic.night;
@@ -1211,7 +1212,7 @@ function slot(){
        ${timeDropdownHtml(`sl${i}`)}
        <div class="muted" style="margin-bottom:6px">Contraintes détectées automatiquement selon la date, l’heure et l’heure actuelle :</div>
        <label class="check"><input type="checkbox" id="prio24_${i}" disabled> <span>Demandé sous 24 h — ${pri}</span></label>
-       <label class="check"><input type="checkbox" id="evening_${i}" disabled> <span>${isB2B?"Soir 19 h–20 h 59":"Soir à partir de 19 h"} — ${pri}</span></label>
+       ${isB2B?`<label class="check"><input type="checkbox" id="evening_${i}" disabled> <span>Soir 19 h–20 h 59 — ${pri}</span></label>`:""}
        ${isB2B?`<label class="check"><input type="checkbox" id="night_${i}" disabled> <span>Nuit à partir de 21 h — ${sun}</span></label>`:""}
        <label class="check"><input type="checkbox" id="sunholiday_${i}" disabled> <span>Dimanche ou jour férié — ${sun}</span></label>
      </div>`;
@@ -1240,14 +1241,14 @@ function slot(){
 
  ${supportsPriority()?`<div class="checkZone"><div class="checkIntro">CONTRAINTE DE DISPONIBILITÉ</div>
  <label class="check"><input type="checkbox" id="prio24" disabled> <span><b>Intervention sous 24 h</b> — détectée automatiquement selon l’heure réelle.</span></label>
- <label class="check"><input type="checkbox" id="evening" disabled> <span>${S.result?.contract==="PRÉSENCE ENTREPRISES"?"Soir 19 h–20 h 59":"Créneau en soirée à partir de 19 h"} — détecté automatiquement.</span></label>
+ ${S.result?.contract==="PRÉSENCE ENTREPRISES"?`<label class="check"><input type="checkbox" id="evening" disabled> <span>Soir 19 h–20 h 59 — détecté automatiquement.</span></label>`:""}
  ${S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="night" disabled> <span>Nuit à partir de 21 h — détectée automatiquement.</span></label>`:""}
  <label class="check"><input type="checkbox" id="sunholiday" disabled> <span>Dimanche ou jour férié — détecté automatiquement.</span></label>
  <div class="muted">Les contraintes ne se cumulent pas : le tarif correspondant à la contrainte la plus élevée s’applique. Pour RELAIS / logistique B2B simple : sous 24 h = même majoration que soirée ; dimanche/jour férié reste la contrainte supérieure.</div>
  </div>`:
  `<div class="checkZone"><div class="checkIntro">CONTRAINTE DE CRÉNEAU</div>
  <label class="check"><input type="checkbox" id="prio24" disabled> <span><b>Intervention sous 24 h</b> — détectée automatiquement selon l’heure réelle.</span></label>
- <label class="check"><input type="checkbox" id="evening" disabled> <span>${S.result?.contract==="PRÉSENCE ENTREPRISES"?"Soir 19 h–20 h 59":"Créneau en soirée à partir de 19 h"} — détecté automatiquement.</span></label>
+ ${S.result?.contract==="PRÉSENCE ENTREPRISES"?`<label class="check"><input type="checkbox" id="evening" disabled> <span>Soir 19 h–20 h 59 — détecté automatiquement.</span></label>`:""}
  ${S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="night" disabled> <span>Nuit à partir de 21 h — détectée automatiquement.</span></label>`:""}
  <label class="check"><input type="checkbox" id="sunholiday" disabled> <span>Dimanche ou jour férié — détecté automatiquement.</span></label>
  <div class="muted">Les contraintes ne se cumulent pas.</div></div>`}
