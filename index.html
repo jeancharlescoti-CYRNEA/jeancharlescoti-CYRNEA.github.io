@@ -1929,15 +1929,29 @@ function overrunRule(){
 function clientContactNumber(){
  return String(S.phone||"").replace(/[^+\\d]/g,"");
 }
-function contactClientForOverrun(kind,message){
+function clientPhoneDisplay(){
+ const phone=clientContactNumber();
+ if(/^\\+33\\d{9}$/.test(phone)){
+   const d="0"+phone.slice(3);
+   return (d.match(/.{1,2}/g)||[]).join(" ");
+ }
+ return String(S.phone||"").trim();
+}
+async function contactClientForOverrun(kind,message){
  const phone=clientContactNumber();
  if(!phone)return alert("Aucun numéro client n’est enregistré dans le dossier.");
- if(kind==="CALL") window.location.href="tel:"+phone;
- else window.location.href="sms:"+phone+"?body="+encodeURIComponent(message);
+ if(kind==="CALL"){
+   window.location.href="tel:"+phone;
+   return;
+ }
+ if(message && navigator.clipboard?.writeText){
+   try{await navigator.clipboard.writeText(message)}catch(_){}
+ }
+ window.location.href="sms:"+phone;
 }
 function overrunGuide(){
  const r=overrunRule();
- const phone=String(S.phone||"").trim();
+ const phone=clientPhoneDisplay();
  if(!r.allowed){
    const msg="La mission prévue arrive à sa limite. Je dois faire confirmer la suite avant de continuer. Je n’effectue aucune action supplémentaire sans nouvelle validation.";
    return draw(`<div class="card"><h1>Temps / cadre dépassé</h1>
@@ -1947,8 +1961,9 @@ function overrunGuide(){
      <div class="row"><b>Téléphone</b><span>${esc(phone||"NON RENSEIGNÉ")}</span></div>
      <div class="toolbar">
        <button class="btn primary" onclick="contactClientForOverrun('CALL','')">APPELER LE CLIENT</button>
-       <button class="btn ghost" onclick="contactClientForOverrun('SMS',${JSON.stringify(msg)})">ENVOYER UN SMS</button>
+       <button class="btn ghost" onclick="contactClientForOverrun('SMS',${JSON.stringify(msg)})">ENVOYER UN SMS — TEXTE COPIÉ</button>
      </div>
+     <div class="muted">Sur iPhone, APPELER ouvre Téléphone. Sur Mac, le lien d’appel peut être pris en charge par FaceTime. Pour le SMS, le texte ci-dessus est copié puis Messages s’ouvre sur le numéro du client.</div>
      <button class="btn ghost" onclick="terrain()">RETOUR AU TERRAIN</button>
    </div>`);
  }
@@ -1962,7 +1977,7 @@ function overrunGuide(){
    <div class="row"><b>Téléphone</b><span>${esc(phone||"NON RENSEIGNÉ")}</span></div>
    <div class="toolbar">
      <button class="btn primary" onclick="contactClientForOverrun('CALL','')">APPELER LE CLIENT</button>
-     <button class="btn ghost" onclick="contactClientForOverrun('SMS',${JSON.stringify(msg)})">ENVOYER UN SMS</button>
+     <button class="btn ghost" onclick="contactClientForOverrun('SMS',${JSON.stringify(msg)})">ENVOYER UN SMS — TEXTE COPIÉ</button>
    </div>
    <div class="toolbar"><button class="btn primary" onclick="saveOverrun(${r.unit},'${r.base}',${r.max||'null'})">ACCORD CLIENT OBTENU → ENREGISTRER</button><button class="btn ghost" onclick="terrain()">NE PAS PROLONGER</button></div>
  </div>`);
