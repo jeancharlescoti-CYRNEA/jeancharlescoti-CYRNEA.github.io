@@ -837,14 +837,16 @@ function setAutoConstraint(prefix,dateId,timeId){
   const c=autoConstraints(date,time);
   const p=document.getElementById(`prio24${prefix}`);
   const e=document.getElementById(`evening${prefix}`);
-  const s=document.getElementById(`sunholiday${prefix}`);
+  const n=document.getElementById(`night${prefix}`);
+  const sh=document.getElementById(`sunholiday${prefix}`);
   if(p){p.checked=c.priority;p.disabled=true}
   if(e){e.checked=c.evening;e.disabled=true}
-  if(s){s.checked=c.sunday;s.disabled=true}
+  if(n){n.checked=c.night;n.disabled=true}
+  if(sh){sh.checked=c.sunday;sh.disabled=true}
 }
 function refreshCalendarConstraints(){
   const today=todayLocalISO();
-  const nowHM=currentLocalHM();
+  const next=nextQuarterInfo();
   const pairs=[
     ["d","sl",""],
     ["d1","sl1","_1"],
@@ -855,7 +857,19 @@ function refreshCalendarConstraints(){
     const d=document.getElementById(dId), t=document.getElementById(tId);
     if(!d||!t) return;
     d.min=today;
-    if(d.value===today) t.min=nowHM; else t.removeAttribute("min");
+    t.step=900;
+    if(d.value && d.value<today){d.value="";t.value="";}
+    if(d.value===today){
+      if(next.date===today){
+        t.min=next.time;
+        if(t.value && t.value<next.time)t.value="";
+      }else{
+        t.min="23:59";
+        if(t.value)t.value="";
+      }
+    }else{
+      t.removeAttribute("min");
+    }
     setAutoConstraint(prefix,dId,tId);
   });
 }
@@ -887,7 +901,7 @@ function multiPassagePricing(){
   const m=baseMissionName(S.result.mission);
   const passages=[1,2,3].map(readMultiPassage).filter(Boolean);
   for(const p of passages){
-    const check=validateFutureSlot(p.date,p.time,`le passage / jalon ${p.index}`);
+    const check=validateMissionTimeRules(p.date,p.time,`le passage / jalon ${p.index}`);
     if(!check.ok) return alert(check.msg);
   }
   if(!passages.length) return alert("Le premier passage / jalon doit être renseigné.");
@@ -1048,7 +1062,7 @@ function centralAvailabilityPrototypeCheck(slots){
   // Production: this hook must query the single CYRNEA agenda source
   // and reject any occupied/unavailable slot before manual confirmation.
   for(const s of slots){
-    const check=validateFutureSlot(s.date,s.time,s.label||"ce créneau");
+    const check=validateMissionTimeRules(s.date,s.time,s.label||"ce créneau");
     if(!check.ok) return {ok:false,msg:check.msg};
   }
   return {ok:true};
@@ -1105,7 +1119,7 @@ function manualConfirmMultiSlots(){
 function confirmSlot(){
   S.date=document.getElementById('d').value;
   S.slot=normalizeTime4(document.getElementById('sl').value);
-  const check=validateFutureSlot(S.date,S.slot,"ce créneau");
+  const check=validateMissionTimeRules(S.date,S.slot,"ce créneau");
   if(!check.ok) return alert(check.msg);
   refreshCalendarConstraints();
   availabilityPricing();
@@ -1125,7 +1139,7 @@ function slot(){
      <div id="jalon_${i}" class="checkZone${hidden?" hidden":""}">
        <div class="checkIntro">PASSAGE / JALON ${i}${i>1?" — UNIQUEMENT SI DATE CONNUE":""}</div>
        <div class="field"><label>Date</label><input id="d${i}" type="date" onchange="refreshCalendarConstraints()"></div>
-       <div class="field"><label>Heure — format HH:MM</label><input id="sl${i}" type="time" step="300" onchange="refreshCalendarConstraints()"><div class="muted">Toujours 4 chiffres : 09:00, 14:30, 03:00.</div></div>
+       <div class="field"><label>Heure — format HH:MM</label><input id="sl${i}" type="time" step="900" onchange="refreshCalendarConstraints()"><div class="muted">Quarts d’heure uniquement : 09:00, 09:15, 09:30, 09:45.</div></div>
        <div class="muted" style="margin-bottom:6px">Contraintes détectées automatiquement selon la date, l’heure et l’heure actuelle :</div>
        <label class="check"><input type="checkbox" id="prio24_${i}" disabled> <span>Demandé sous 24 h — ${pri}</span></label>
        <label class="check"><input type="checkbox" id="evening_${i}" disabled> <span>Soir à partir de 19 h — ${pri}</span></label>
@@ -1152,7 +1166,7 @@ function slot(){
 
  draw(`<div class="card"><h1>Créneau</h1>
  <div class="field"><label>Date souhaitée</label><input id="d" type="date" onchange="refreshCalendarConstraints()"></div>
- <div class="field"><label>Heure — format HH:MM</label><input id="sl" type="time" step="300" onchange="refreshCalendarConstraints()"><div class="muted">Toujours 4 chiffres : 09:00, 14:30, 03:00.</div></div>
+ <div class="field"><label>Heure — format HH:MM</label><input id="sl" type="time" step="900" onchange="refreshCalendarConstraints()"><div class="muted">Quarts d’heure uniquement : 09:00, 09:15, 09:30, 09:45.</div></div>
 
  ${supportsPriority()?`<div class="checkZone"><div class="checkIntro">CONTRAINTE DE DISPONIBILITÉ</div>
  <label class="check"><input type="checkbox" id="prio24" disabled> <span><b>Intervention sous 24 h</b> — détectée automatiquement selon l’heure réelle.</span></label>
