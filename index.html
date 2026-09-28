@@ -380,7 +380,7 @@ function home(remember=true){
    const amount=state.result?.price||"";
    return `<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:stretch">
      <button class="choice presence" onclick="resumeStoredMission('${esc(id)}')"><span class="missionName">${esc(state.result?.mission||"Mission en cours")} — ${esc(state.name||"Client")}</span><span class="missionGoal">${esc(activeMissionStatus(state))}${when?" · "+esc(when):""}${amount?" · "+esc(amount):""}</span></button>
-     <button class="btn ghost" style="min-width:46px;padding:0 14px;font-size:22px;line-height:1" title="Supprimer cette mission active" aria-label="Supprimer cette mission active" onclick="deleteActiveMission('${esc(id)}')">…</button>
+     <button class="btn ghost" style="min-width:46px;padding:0 14px;font-size:22px;line-height:1" title="Supprimer cette mission active" aria-label="Supprimer cette mission active" onclick="deleteActiveMission('${esc(id)}')">×</button>
    </div>`;
  }).join("");
  draw(`<div class="card"><h1>CYRNEA ASSISTANT</h1>
