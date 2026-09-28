@@ -877,11 +877,9 @@ function validateMissionTimeRules(dateStr,timeStr,label="créneau"){
   const check=validateFutureSlot(dateStr,timeStr,label);
   if(!check.ok)return check;
   const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
-  if(!isB2B && (check.dt.getHours()<8 || check.dt.getHours()>=19)){
-    return {ok:false,msg:"RELAIS / PRÉSENCE Propriétaires : créneau disponible uniquement entre 08 h 00 et 18 h 45. Aucun départ avant 08 h ni à partir de 19 h."};
-  }
-  if(isB2B && check.dt.getHours()>=21 && !nightAllowedForMission(S.result?.mission)){
-    return {ok:false,msg:"NUIT à partir de 21 h indisponible pour cette mission B2B. La nuit est réservée à PRÉSENCE PROJET, PRÉSENCE PROJET ÉTENDUE et CONTINUITÉ PROJET."};
+  const projectNightOpen=isB2B && nightAllowedForMission(S.result?.mission);
+  if(!projectNightOpen && (check.dt.getHours()<8 || check.dt.getHours()>=19)){
+    return {ok:false,msg:"Ce type de mission : départ possible uniquement entre 08 h 00 et 18 h 45. Aucun nouveau départ à partir de 19 h. Une mission déjà commencée peut toutefois se terminer ou être prolongée selon la règle terrain."};
   }
   const c=autoConstraints(dateStr,timeStr);
   const horsStandard=!!S.result?.isQuote || c.priority || c.evening || c.night || c.sunday;
@@ -898,8 +896,9 @@ function autoConstraints(dateStr,timeStr){
   const priority=diff>0 && diff<24*60*60*1000;
   const hour=dt.getHours();
   const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
-  const evening=isB2B && hour>=19 && hour<21;
-  const night=isB2B && hour>=21 && nightAllowedForMission(S.result?.mission);
+  const projectNightOpen=isB2B && nightAllowedForMission(S.result?.mission);
+  const evening=projectNightOpen && hour>=19 && hour<21;
+  const night=projectNightOpen && hour>=21;
   const sunday=dt.getDay()===0 || isFrenchPublicHoliday(dateStr);
   return {priority,evening,night,sunday};
 }
@@ -1036,7 +1035,8 @@ function availabilityPricing(){
   refreshCalendarConstraints();
   let priority=!!document.getElementById("prio24")?.checked;
   const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES";
-  let evening=isB2B && !!document.getElementById("evening")?.checked;
+  const projectNightOpen=isB2B && nightAllowedForMission(S.result?.mission);
+  let evening=projectNightOpen && !!document.getElementById("evening")?.checked;
   let sunday=!!document.getElementById("sunholiday")?.checked;
   const automatic=autoConstraints(S.date,S.slot);
   const night=!!automatic.night;
@@ -1212,8 +1212,8 @@ function slot(){
        ${timeDropdownHtml(`sl${i}`)}
        <div class="muted" style="margin-bottom:6px">Contraintes détectées automatiquement selon la date, l’heure et l’heure actuelle :</div>
        <label class="check"><input type="checkbox" id="prio24_${i}" disabled> <span>Demandé sous 24 h — ${pri}</span></label>
-       ${isB2B?`<label class="check"><input type="checkbox" id="evening_${i}" disabled> <span>Soir 19 h–20 h 59 — ${pri}</span></label>`:""}
-       ${isB2B?`<label class="check"><input type="checkbox" id="night_${i}" disabled> <span>Nuit à partir de 21 h — ${sun}</span></label>`:""}
+       ${isB2B&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="evening_${i}" disabled> <span>Soir 19 h–20 h 59 — ${pri}</span></label>`:""}
+       ${isB2B&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="night_${i}" disabled> <span>Nuit à partir de 21 h — ${sun}</span></label>`:""}
        <label class="check"><input type="checkbox" id="sunholiday_${i}" disabled> <span>Dimanche ou jour férié — ${sun}</span></label>
      </div>`;
 
@@ -1241,14 +1241,14 @@ function slot(){
 
  ${supportsPriority()?`<div class="checkZone"><div class="checkIntro">CONTRAINTE DE DISPONIBILITÉ</div>
  <label class="check"><input type="checkbox" id="prio24" disabled> <span><b>Intervention sous 24 h</b> — détectée automatiquement selon l’heure réelle.</span></label>
- ${S.result?.contract==="PRÉSENCE ENTREPRISES"?`<label class="check"><input type="checkbox" id="evening" disabled> <span>Soir 19 h–20 h 59 — détecté automatiquement.</span></label>`:""}
+ ${S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="evening" disabled> <span>Soir 19 h–20 h 59 — détecté automatiquement.</span></label>`:""}
  ${S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="night" disabled> <span>Nuit à partir de 21 h — détectée automatiquement.</span></label>`:""}
  <label class="check"><input type="checkbox" id="sunholiday" disabled> <span>Dimanche ou jour férié — détecté automatiquement.</span></label>
  <div class="muted">Les contraintes ne se cumulent pas : le tarif correspondant à la contrainte la plus élevée s’applique. Pour RELAIS / logistique B2B simple : sous 24 h = même majoration que soirée ; dimanche/jour férié reste la contrainte supérieure.</div>
  </div>`:
  `<div class="checkZone"><div class="checkIntro">CONTRAINTE DE CRÉNEAU</div>
  <label class="check"><input type="checkbox" id="prio24" disabled> <span><b>Intervention sous 24 h</b> — détectée automatiquement selon l’heure réelle.</span></label>
- ${S.result?.contract==="PRÉSENCE ENTREPRISES"?`<label class="check"><input type="checkbox" id="evening" disabled> <span>Soir 19 h–20 h 59 — détecté automatiquement.</span></label>`:""}
+ ${S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="evening" disabled> <span>Soir 19 h–20 h 59 — détecté automatiquement.</span></label>`:""}
  ${S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="night" disabled> <span>Nuit à partir de 21 h — détectée automatiquement.</span></label>`:""}
  <label class="check"><input type="checkbox" id="sunholiday" disabled> <span>Dimanche ou jour férié — détecté automatiquement.</span></label>
  <div class="muted">Les contraintes ne se cumulent pas.</div></div>`}
@@ -2038,6 +2038,44 @@ function toggleOverrunAvailability(){
  if(busy)busy.classList.toggle("hidden",v!=="BUSY");
  if(allowed)allowed.classList.toggle("hidden",v!=="FREE");
 }
+function overrunChargeCents(ov=S.overrun){
+ if(!ov)return null;
+ const gross=ov.base==="HT"?Number(ov.total)*1.20:Number(ov.total);
+ return Number.isFinite(gross)?Math.round(gross*100):null;
+}
+function ensureOverrunReference(){
+ if(!S.overrun)return "";
+ if(!GATEWAY_REF_RE.test(String(S.overrun.reference||"")))S.overrun.reference=newGatewayReference();
+ save();
+ return S.overrun.reference;
+}
+async function registerOverrunIntent(){
+ if(!S.overrun?.accepted)throw new Error("Aucune prolongation acceptée.");
+ const ref=ensureOverrunReference();
+ const cents=overrunChargeCents();
+ if(!Number.isInteger(cents)||cents<=0)throw new Error("Montant de prolongation invalide.");
+ const body={
+   reference:ref,
+   universe:S.universe||"",
+   contract:S.result?.contract||"",
+   mission:"PROLONGATION — "+baseMissionName(S.result?.mission||""),
+   object:S.obj||"",
+   schedule:(S.date||"")+" "+displayTime4(S.slot||""),
+   email:S.email||"",
+   customer_name:S.name||"",
+   customer_email:S.email||"",
+   customer_phone:S.phone||"",
+   amount_cents:cents,
+   currency:"eur",
+   price_text:S.overrun.total+" € "+S.overrun.base
+ };
+ const res=await fetch(PAYMENT_GATEWAY_URL+"/intent",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify(body),cache:"no-store"});
+ const data=await res.json().catch(()=>({}));
+ if(!res.ok)throw new Error(data.error||("Gateway HTTP "+res.status));
+ S.overrun.intentReady=true;
+ save();
+ return data;
+}
 function saveOverrun(unit,base,max){
  const availability=document.getElementById("overrunAvailability")?.value||"";
  if(availability==="BUSY")return alert("Une mission est prévue derrière : la prolongation est interdite. Arrêtez à l’heure convenue et proposez si nécessaire une nouvelle mission ultérieure.");
@@ -2053,16 +2091,54 @@ function saveOverrun(unit,base,max){
    availabilityCheck:"FREE",
    agreementMethod:agreement,
    agreementAt:nowStamp(),
-   paymentStatus:isRelais?"PENDING":"TO_CONNECT",
+   paymentStatus:"PENDING",
    paymentLink:isRelais?(RELAIS_OVERRUN_PAYMENT_LINKS[total]||""):"",
-   paymentProvider:isRelais?"STRIPE":"STRIPE_DYNAMIC_PENDING"
+   paymentProvider:isRelais?"STRIPE_PAYMENT_LINK":"CYRNEA_GATEWAY",
+   reference:isRelais?"":newGatewayReference(),
+   intentReady:false
  };
  save(); terrain();
 }
-function openOverrunPayment(){
- const url=String(S.overrun?.paymentLink||"");
- if(!url)return alert("Le paiement dynamique de ce supplément doit encore être raccordé au gateway CYRNEA.");
- window.open(url,"_blank","noopener");
+async function openOverrunPayment(){
+ if(!S.overrun?.accepted)return alert("Aucune prolongation acceptée.");
+ const staticUrl=String(S.overrun?.paymentLink||"");
+ if(staticUrl)return window.open(staticUrl,"_blank","noopener");
+ const popup=window.open("about:blank","_blank");
+ if(!popup)return alert("Le navigateur a bloqué l’ouverture du paiement. Autorisez les fenêtres surgissantes pour cette PWA.");
+ try{
+   popup.opener=null;
+   popup.document.title="CYRNEA — supplément de prolongation";
+   popup.document.body.innerHTML="<p style='font-family:-apple-system,Arial;padding:24px'>Préparation du paiement sécurisé…</p>";
+   await registerOverrunIntent();
+   const ref=ensureOverrunReference();
+   popup.location.replace(PAYMENT_GATEWAY_URL+"/pay?reference="+encodeURIComponent(ref));
+ }catch(err){
+   try{popup.close()}catch(e){}
+   alert("Paiement du supplément indisponible : "+String(err?.message||err));
+ }
+}
+async function checkOverrunPayment(){
+ if(!S.overrun?.accepted)return alert("Aucune prolongation acceptée.");
+ if(S.overrun.paymentProvider==="STRIPE_PAYMENT_LINK"){
+   return alert("Pour RELAIS, utilisez « PAIEMENT REÇU → MARQUER RÉGLÉ » après contrôle du paiement Stripe.");
+ }
+ const ref=ensureOverrunReference();
+ const expected=overrunChargeCents();
+ try{
+   const res=await fetch(PAYMENT_GATEWAY_URL+"/payment-status?reference="+encodeURIComponent(ref),{headers:{"accept":"application/json"},cache:"no-store"});
+   const data=await res.json().catch(()=>({}));
+   if(!res.ok)throw new Error(data.error||("Gateway HTTP "+res.status));
+   if(String(data.status||"").toUpperCase()!=="PAID")return alert("Paiement non confirmé pour l’instant. Statut : "+String(data.status||"WAITING")+".");
+   if(String(data.currency||"").toLowerCase()!=="eur")return alert("Paiement reçu avec une devise inattendue : contrôle manuel requis.");
+   if(Number(data.amount_cents)!==expected)return alert("Montant reçu différent du supplément attendu : contrôle manuel requis.");
+   S.overrun.paymentStatus="PAID";
+   S.overrun.paidAt=nowStamp();
+   S.overrun.paymentProof={reference:ref,provider:data.provider||"",amount_cents:Number(data.amount_cents),currency:String(data.currency||"").toLowerCase()};
+   save();
+   closeMission();
+ }catch(err){
+   alert("Impossible de vérifier le paiement : "+String(err?.message||err));
+ }
 }
 function markOverrunPaid(){
  if(!S.overrun?.accepted)return;
@@ -2179,7 +2255,7 @@ function restitution(){
  <div class="row"><b>Incident/limite</b><span>${esc(S.incident||"Aucun")}</span></div>
  ${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>+${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(String(S.overrun.tranches))} tranche(s) de 30 min</span></div>
  <div class="row"><b>Accord client</b><span>${esc(S.overrun.agreementMethod==="SMS"?"SMS reçu":"Accord téléphonique")} — ${esc(S.overrun.agreementAt||"-")}</span></div>
- <div class="row"><b>Supplément</b><span>${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":S.overrun.paymentStatus==="PENDING"?"À ENCAISSER":"PAIEMENT DYNAMIQUE À RACCORDER")}</span></div>`:""}
+ <div class="row"><b>Supplément</b><span>${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":S.overrun.paymentStatus==="PENDING"?"À ENCAISSER":"À VÉRIFIER")}</span></div>`:""}
  <div class="row"><b>Médias / preuves</b><span>${S.terrainMedia.length?esc(S.terrainMedia.join(" • ")):"AUCUN FICHIER AJOUTÉ"}</span></div>
  <div class="notice">En production : générer le bon modèle R0/R1/R2/R3, PDF contrôlé, sans ressaisie des données déjà connues.</div>
  ${interim
@@ -2197,9 +2273,9 @@ function closeMission(){
    <div class="${ov.paymentStatus==="PAID"?"notice":"warn"}"><b>SUPPLÉMENT DE PROLONGATION</b><br>
    ${esc(String(ov.tranches))} tranche(s) × ${esc(String(ov.unit))} € ${esc(ov.base)} = <b>${esc(String(ov.total))} € ${esc(ov.base)}</b><br>
    Accord : ${esc(ov.agreementMethod==="SMS"?"SMS reçu":"Accord téléphonique")} — ${esc(ov.agreementAt||"-")}<br>
-   Statut : <b>${esc(ov.paymentStatus==="PAID"?"RÉGLÉ":ov.paymentStatus==="PENDING"?"À ENCAISSER":"PAIEMENT DYNAMIQUE À RACCORDER")}</b></div>
+   Statut : <b>${esc(ov.paymentStatus==="PAID"?"RÉGLÉ":ov.paymentStatus==="PENDING"?"À ENCAISSER":"À VÉRIFIER")}</b></div>
    ${ov.paymentStatus==="PENDING"&&ov.paymentLink?`<div class="toolbar"><button class="btn primary" onclick="openOverrunPayment()">OUVRIR LE PAIEMENT STRIPE — ${esc(String(ov.total))} € TTC</button><button class="btn ghost" onclick="markOverrunPaid()">PAIEMENT REÇU → MARQUER RÉGLÉ</button></div>`:""}
-   ${ov.paymentStatus==="TO_CONNECT"?`<div class="neutral"><b>À PRÉVOIR DANS LE GATEWAY</b>La PWA a déjà mémorisé le montant exact du supplément. Pour PRÉSENCE / B2B, le gateway devra générer un Checkout Stripe dynamique au montant calculé. PayPal reste prévu comme moyen de paiement général ; le virement SEPA B2B reste prévu mais non activé.</div>`:""}
+   ${ov.paymentStatus==="PENDING"&&!ov.paymentLink?`<div class="toolbar"><button class="btn primary" onclick="openOverrunPayment()">OUVRIR LE PAIEMENT CYRNEA — ${esc(String(ov.total))} € ${esc(ov.base)}</button><button class="btn ghost" onclick="checkOverrunPayment()">VÉRIFIER LE PAIEMENT</button></div><div class="muted">${ov.base==="HT"?"Le paiement facturé inclut la TVA applicable.":""}</div>`:""}
    `:"";
  draw(`<div class="card"><h1>Clôture</h1>
  <div class="todo"><b>À FAIRE</b>Choisir le statut réel. Ne jamais sélectionner « réalisée » si une partie prévue n’a pas pu être exécutée.</div>
