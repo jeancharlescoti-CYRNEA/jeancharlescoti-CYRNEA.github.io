@@ -875,6 +875,11 @@ function validateMissionTimeRules(dateStr,timeStr,label="créneau"){
   if(isB2B && check.dt.getHours()>=21 && !nightAllowedForMission(S.result?.mission)){
     return {ok:false,msg:"NUIT à partir de 21 h indisponible pour cette mission B2B. La nuit est réservée à PRÉSENCE PROJET, PRÉSENCE PROJET ÉTENDUE et CONTINUITÉ PROJET."};
   }
+  const c=autoConstraints(dateStr,timeStr);
+  const horsStandard=!!S.result?.isQuote || c.priority || c.evening || c.night || c.sunday;
+  if(!horsStandard && !["00","30"].includes(String(timeStr||"").slice(3,5))){
+    return {ok:false,msg:"Créneau STANDARD : choisissez 00 ou 30 minutes, comme dans SimplyBook. Les quarts d’heure 15 et 45 restent disponibles uniquement en HORS STANDARD."};
+  }
   return check;
 }
 function autoConstraints(dateStr,timeStr){
