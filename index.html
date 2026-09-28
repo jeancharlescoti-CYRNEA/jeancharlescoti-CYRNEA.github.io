@@ -917,7 +917,6 @@ function setAutoConstraint(prefix,dateId,timeId){
 }
 function refreshCalendarConstraints(){
   const today=todayLocalISO();
-  const next=nextQuarterInfo();
   const pairs=[
     ["d","sl",""],
     ["d1","sl1","_1"],
@@ -928,14 +927,9 @@ function refreshCalendarConstraints(){
     const d=document.getElementById(dId), t=document.getElementById(tId);
     if(!d||!t) return;
     d.min=today;
-    if(d.value && d.value<today){d.value="";clearTimeDropdown(tId);}
-    if(d.value===today){
-      if(next.date===today){
-        if(t.value && t.value<next.time)clearTimeDropdown(tId);
-      }else{
-        clearTimeDropdown(tId);
-      }
-    }
+    // Ne jamais effacer silencieusement l'heure choisie.
+    // Les créneaux passés/interdits sont refusés explicitement au clic sur validation.
+    if(d.value && d.value<today)d.value="";
     setAutoConstraint(prefix,dId,tId);
   });
 }
