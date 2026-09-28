@@ -97,7 +97,7 @@ input,select,textarea{font-size:18px;min-height:52px}
 </div>
 <script>
 const STATES=["ACCUEIL","QUALIFICATION","CADRAGE","CRÉNEAU","RÉSERVATION","PRÊTE","TERRAIN","RESTITUTION","CLÔTURE","ARCHIVE"];
-let S={stage:"ACCUEIL",mode:null,universe:null,caller:null,name:"",phone:"",email:"",city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",acceptedSlot:false,draftKey:"",missionId:"",prep:{},facts:"",incident:"",terrainMedia:[],arrivalAt:"",departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,specialPending:false,resumeStage:"",history:["ACCUEIL"]};
+let S={stage:"ACCUEIL",mode:null,universe:null,caller:null,name:"",phone:"",email:"",city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",acceptedSlot:false,draftKey:"",missionId:"",prep:{},facts:"",incident:"",terrainMedia:[],arrivalAt:"",departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,paymentMethod:"",paymentState:"",specialPending:false,resumeStage:"",history:["ACCUEIL"]};
 let NAV=[];
 let LAST_VIEW=null;
 const ZONES=["porto-vecchio","porto vecchio","lecci","sotta","sainte-lucie","sainte lucie","pinarello","tarco"];
@@ -187,6 +187,11 @@ const STATE_KEY="cyrnea_assistant_v53_final_20260928";
 const LEGACY_STATE_KEY="cyrnea_assistant_v50";
 const PAYMENT_GATEWAY_URL="https://cyrnea-payment-gateway.jeancharles-coti.workers.dev";
 const RESERVATION_ACTIONS_URL="https://cyrnea-reservation-actions.jeancharles-coti.workers.dev";
+const RELAIS_OVERRUN_PAYMENT_LINKS={
+  25:"https://buy.stripe.com/eVq4gAf2Th1B9WM4yR1ZS00",
+  50:"https://buy.stripe.com/28EcN6g6X8v57OE4yR1ZS01"
+};
+const B2B_PAYMENT_CAPABILITIES={CARD:true,PAYPAL:true,SEPA_TRANSFER:false};
 const TALLY_URLS={
   RELAIS:"https://tally.so/r/b5oz46",
   PRESENCE:"https://tally.so/r/GxZbE2",
@@ -259,7 +264,7 @@ function home(remember=true){
 }
 function newMission(){
  localStorage.removeItem(STATE_KEY); localStorage.removeItem(LEGACY_STATE_KEY); localStorage.removeItem(STAGE_VIEWS_KEY); STAGE_VIEWS={}; REACHED_STAGES=new Set(["ACCUEIL"]);
- S={stage:"ACCUEIL",mode:"FULL",universe:null,caller:null,name:"",phone:"",email:"",city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",acceptedSlot:false,draftKey:key(),missionId:"",prep:{},facts:"",incident:"",terrainMedia:[],arrivalAt:"",departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,specialPending:false,resumeStage:"",history:["ACCUEIL"]};
+ S={stage:"ACCUEIL",mode:"FULL",universe:null,caller:null,name:"",phone:"",email:"",city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",acceptedSlot:false,draftKey:key(),missionId:"",prep:{},facts:"",incident:"",terrainMedia:[],arrivalAt:"",departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,paymentMethod:"",paymentState:"",specialPending:false,resumeStage:"",history:["ACCUEIL"]};
  NAV=[]; LAST_VIEW=null;
  home(false);
  identify();
@@ -1387,6 +1392,7 @@ function bookingHandoff(){
  <div class="row"><b>Créneau souhaité</b><span>${esc(scheduleText())}</span></div>
  <div class="row"><b>Tarif / contrainte</b><span>${esc(S.result.availabilityLabel||"Standard")} — ${esc(priceText())}</span></div>
  <div class="row"><b>Portail</b><span>${esc(portal)}</span></div>
+ ${S.result?.contract==="PRÉSENCE ENTREPRISES"?`<div class="neutral"><b>PAIEMENT B2B — ARCHITECTURE PRÉVUE</b>Carte bancaire et PayPal restent les moyens actifs via le portail. Le virement SEPA est prévu dans la PWA mais n’est pas encore activé. Lorsqu’il sera activé, une mission réglée par virement ne pourra jamais passer en PRÊTE / TERRAIN tant que la réception effective des fonds n’aura pas été confirmée.</div>`:""}
  <div class="row"><b>Conditions</b><span>${esc(contractRef())}</span></div>
  ${multi?multiPassageRows():""}
  ${multi?`<div class="neutral"><b>MISSION EN PLUSIEURS PASSAGES / JALONS</b>${route==="TALLY"?"La mission hors standard est transmise à Tally avec les passages connus et leurs suppléments.":"La réservation SimplyBook porte sur le premier passage. Les suivants restent rattachés au même dossier et seront programmés ensuite."}</div>`:""}
@@ -1960,7 +1966,7 @@ function overrunGuide(){
  const r=overrunRule();
  const phone=clientPhoneDisplay();
  if(!r.allowed){
-   const msg="La mission prévue arrive à sa limite. Je dois faire confirmer la suite avant de continuer. Je n’effectue aucune action supplémentaire sans nouvelle validation.";
+   const msg="La mission prévue arrive à sa limite de temps et je ne peux pas poursuivre automatiquement au-delà du cadre convenu. La situation nécessite une nouvelle validation avant toute action supplémentaire. Souhaitez-vous que je vous contacte pour requalifier la suite de la mission ?";
    return draw(`<div class="card"><h1>Temps / cadre dépassé</h1>
      <div class="stop"><b>NE PAS CONTINUER AUTOMATIQUEMENT</b><br>${esc(r.text)}</div>
      <div class="readAloud">${esc(msg)}</div>
@@ -1971,12 +1977,13 @@ function overrunGuide(){
        <a class="btn ghost" href="${esc(clientSmsHref())}">OUVRIR MESSAGES</a>
        <button class="btn ghost" onclick="copyOverrunMessage()">COPIER LE TEXTE</button>
      </div>
-     <div class="muted">APPELER utilise le lien téléphone natif. OUVRIR MESSAGES utilise le lien SMS natif. COPIER LE TEXTE permet de coller le message prêt à envoyer.</div>
+     <div class="muted">Aucune prolongation n’est enregistrée sur cette mission. Retour au terrain uniquement après requalification.</div>
      <button class="btn ghost" onclick="terrain()">RETOUR AU TERRAIN</button>
    </div>`);
  }
  const maxAttr=r.max?` max="${r.max}"`:"";
- const msg="La mission nécessite une prolongation dans le même objet. Le supplément est de "+r.unit+" € "+r.base+" par tranche de 30 minutes commencée"+(r.max?" (maximum "+r.max+" tranches)":"")+". Souhaitez-vous expressément que je poursuive ?";
+ const maxText=r.max?`, dans la limite de ${r.max} tranche${r.max>1?"s":""} maximum`:"";
+ const msg="La mission prévue arrive à sa limite de temps. Pour terminer correctement ce qui est prévu, une prolongation est nécessaire. Toute tranche de 30 minutes commencée est facturée "+r.unit+" € "+r.base+maxText+". Souhaitez-vous que je poursuive la mission dans ces conditions ? Merci de me confirmer expressément votre accord.";
  draw(`<div class="card"><h1>Prolongation imprévue</h1>
    <div class="warn"><b>RÈGLE</b><br>${esc(r.label)}. Uniquement si l’objet reste exactement le même et après accord exprès du client.</div>
    <div class="field"><label>Nombre de tranches de 30 min commencées</label><input id="overrunN" type="number" min="1"${maxAttr} value="1"></div>
@@ -1988,109 +1995,44 @@ function overrunGuide(){
      <a class="btn ghost" href="${esc(clientSmsHref())}">OUVRIR MESSAGES</a>
      <button class="btn ghost" onclick="copyOverrunMessage()">COPIER LE TEXTE</button>
    </div>
+   <div class="field"><label>Mode de confirmation du client</label><select id="overrunAgreement">
+     <option value="">— Choisir —</option>
+     <option value="SMS">SMS reçu</option>
+     <option value="PHONE">Accord téléphonique</option>
+   </select></div>
    <div class="toolbar"><button class="btn primary" onclick="saveOverrun(${r.unit},'${r.base}',${r.max||'null'})">ACCORD CLIENT OBTENU → ENREGISTRER</button><button class="btn ghost" onclick="terrain()">NE PAS PROLONGER</button></div>
  </div>`);
 }
 function saveOverrun(unit,base,max){
  const n=Math.max(1,Number(document.getElementById("overrunN")?.value||1));
+ const agreement=document.getElementById("overrunAgreement")?.value||"";
+ if(!agreement)return alert("Indiquez comment le client a confirmé son accord : SMS reçu ou accord téléphonique.");
  if(max && n>max) return alert("Maximum autorisé : "+max+" tranche(s). Au-delà : arrêt ou requalification.");
- S.overrun={tranches:n,unit,total:n*unit,base,passage:S.passage,accepted:true};
+ const total=n*unit;
+ const isRelais=S.result?.contract==="RELAIS";
+ S.overrun={
+   tranches:n,unit,total,base,passage:S.passage,accepted:true,
+   agreementMethod:agreement,
+   agreementAt:nowStamp(),
+   paymentStatus:isRelais?"PENDING":"TO_CONNECT",
+   paymentLink:isRelais?(RELAIS_OVERRUN_PAYMENT_LINKS[total]||""):"",
+   paymentProvider:isRelais?"STRIPE":"STRIPE_DYNAMIC_PENDING"
+ };
  save(); terrain();
 }
-function extraMomentRule(){
- const m=baseMissionName(S.result?.mission||"");
- if(m==="SUIVRE") return {unit:300,base:"TTC",name:"moment"};
- if(m==="CONTINUITÉ PROJET") return {unit:420,base:"HT",name:"jalon"};
- return null;
+function openOverrunPayment(){
+ const url=String(S.overrun?.paymentLink||"");
+ if(!url)return alert("Le paiement dynamique de ce supplément doit encore être raccordé au gateway CYRNEA.");
+ window.open(url,"_blank","noopener");
 }
-function extraMomentInfo(){
- const r=extraMomentRule();
- if(!r)return;
- const next=S.passage+1;
- if(next>5){
-   return draw(`<div class="card"><h1>Passage supplémentaire</h1><div class="stop"><b>À PARTIR DU 6e</b><br>Devis, requalification ou refus si la demande devient récurrente. Ne pas lancer un nouveau passage automatiquement.</div><button class="btn ghost" onclick="restitution()">RETOUR</button></div>`);
- }
- draw(`<div class="card"><h1>${next}e ${esc(r.name)} lié</h1>
-   <div class="notice"><b>SUPPLÉMENT</b>+${r.unit} € ${r.base} pour ce ${r.name}, même dossier et même objet.</div>
-   <div class="readAloud">Un ${next}e ${r.name} est possible dans le même dossier et pour le même objet, avec un supplément de ${r.unit} € ${r.base}. Il devra être validé avant ce nouveau passage.</div>
-   <div class="warn">Ne pas partir sur ce nouveau passage tant que le créneau, le supplément et la réservation / validation correspondante ne sont pas confirmés.</div>
-   <button class="btn ghost" onclick="restitution()">RETOUR</button>
- </div>`);
+function markOverrunPaid(){
+ if(!S.overrun?.accepted)return;
+ S.overrun.paymentStatus="PAID";
+ S.overrun.paidAt=nowStamp();
+ save();
+ closeMission();
 }
-function terrain(){
- setStage("TERRAIN");
- let rules=[];
- if(S.result.mission.includes("APRÈS INTEMPÉRIE"))rules=["Vérifier AVANT toute manipulation : pas d'eau","Pas d'humidité anormale","Pas d'odeur de brûlé","Pas d'échauffement","Pas de dommage visible","Un seul réarmement simple maximum si prévu"];
- else if(S.result.mission.includes("VOIR"))rules=["Observer uniquement le périmètre prévu","Séparer OBSERVÉ / DÉCLARÉ / DOCUMENT / NON VÉRIFIABLE","Aucun diagnostic / conformité / cause"];
- else if(S.result.mission==="DÉCIDER"||S.result.mission.includes("PRÉSENCE PROJET"))rules=["Suivre le cahier des charges","Poser uniquement les questions convenues","Aucune décision ou signature pour le client"];
- else rules=["Exécuter uniquement l'objet prévu","Ne pas élargir la mission","Documenter uniquement les preuves utiles"];
- if(needsWaitGuard())rules.push("Si tiers / professionnel absent ou en retard : attente incident maximum 15 minutes");
 
- const facts=terrainFactOptions();
-
- draw(`<div class="card"><h1>Sur place — passage ${S.passage}</h1><div class="operatorOnly">Suivez l’ordre : arrivée → contrôles → actions prévues → preuves utiles → contrôle de sortie. Si la situation diffère, n’improvisez pas.</div>
- <div class="todo"><b>À FAIRE SUR PLACE</b>Cochez uniquement ce que vous avez réellement vérifié, fait ou observé. Les coches servent directement à fabriquer la restitution.</div>
- ${S.arrivalAt
-   ? `<div class="notice"><b>ARRIVÉE HORODATÉE</b>${esc(S.arrivalAt)}</div>`
-   : `<button class="btn primary" onclick="markArrival()">J’ARRIVE SUR PLACE — HORODATER</button>`}
- <div class="advice"><b>CONSEIL</b>Les cases ci-dessous sont vos contrôles internes. Le client n’a rien à cocher ici.</div>
-
- <div class="row"><b>${esc(S.missionId)}</b><span>${esc(S.result.mission)}</span></div>
- <div class="toolbar"><button class="btn ghost" onclick="missionDesk()">DOSSIER MISSION</button></div>
-
- <div class="checkZone">
-   <div class="checkIntro">GARDE-FOUS À COCHER</div>
-   ${rules.map(x=>`<label class="check"><input type="checkbox" name="terrainGuard"> <span>J’ai vérifié / appliqué : <b>${esc(x)}</b></span></label>`).join("")}
- </div>
-
- <div class="checkZone">
-   <div class="checkIntro">FAITS / ACTIONS UTILES — PLUSIEURS CHOIX POSSIBLES</div>
-   ${facts.map(x=>`<label class="check"><input type="checkbox" name="terrainFact" value="${esc(x)}"> <span>${esc(x)}</span></label>`).join("")}
-   <button class="btn ghost" onclick="document.getElementById('factOtherWrap').classList.toggle('hidden')">+ AUTRE FAIT — EXCEPTION</button>
-   <div class="field hidden" id="factOtherWrap"><label>Autre fait — quelques mots</label><input id="factOther" maxlength="140" placeholder="Uniquement si aucune case ne convient."></div>
- </div>
-
- <div class="field">
-   <label>PHOTOS / PREUVES TERRAIN (SI UTILES)</label>
-   <input id="terrainMedia" type="file" accept="image/*,video/*,.pdf" capture="environment" multiple>
-   <div class="muted">Sur iPhone : prendre directement une photo/vidéo ou choisir une pièce existante. Le prototype mémorise seulement les noms ; la production devra stocker les fichiers réels.</div>
- </div>
-
- <div class="field" id="incidentZone">
-   <label>INCIDENT / LIMITE ÉVENTUEL — UN CHOIX PRINCIPAL</label>
-   <select id="incidentSelect" onchange="toggleIncidentOther()">
-     <option value="">— Choisir —</option>
-     <option value="AUCUN">AUCUN INCIDENT / AUCUNE LIMITE</option>
-     <option value="Tiers / professionnel absent">Tiers / professionnel absent</option>
-     <option value="Accès impossible ou partiel">Accès impossible ou partiel</option>
-     <option value="Retard important du tiers / professionnel">Retard important du tiers / professionnel</option>
-     <option value="Demande nouvelle hors mission">Demande nouvelle hors mission</option>
-     <option value="Information indispensable manquante">Information indispensable manquante</option>
-     <option value="Situation de sécurité / danger">Situation de sécurité / danger</option>
-     <option value="SITUATION DIFFÉRENTE / DOUTE">SITUATION DIFFÉRENTE / J’AI UN DOUTE</option>
-     <option value="Élément prévu non observable / non vérifiable">Élément prévu non observable / non vérifiable</option>
-     <option value="AUTRE">AUTRE — à préciser</option>
-   </select>
- </div>
- <div class="field hidden" id="incidentOtherWrap">
-   <label>Précisez l’incident / la limite</label>
-   <textarea id="incidentOther" placeholder="Décrire uniquement le fait constaté, sans interprétation."></textarea>
- </div>
-
- <div class="stop"><b>LA SITUATION EST DIFFÉRENTE / J'AI UN DOUTE</b><br>Ne pas improviser · constater · ne pas aggraver · documenter · requalifier avant élargissement.<br><br><button class="btn danger" onclick="triggerDoubt()">J’AI UN DOUTE / SITUATION DIFFÉRENTE</button></div>
- <div class="warn"><b>LE TEMPS PRÉVU EST DÉPASSÉ ?</b><br>Ne prolongez jamais de vous-même. L’assistant applique la règle de la mission.<br><br><button class="btn ghost" onclick="overrunGuide()">TEMPS / CADRE DÉPASSÉ</button>${S.overrun?.accepted?`<div class="notice" style="margin-top:10px"><b>PROLONGATION ACCEPTÉE</b>+${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(String(S.overrun.tranches))} tranche(s).</div>`:""}</div>
-
- <div class="checkZone">
-   <div class="checkIntro">AVANT DE QUITTER LES LIEUX — CONTRÔLES CRITIQUES</div>
-   <label class="check"><input type="checkbox" name="exitCheck"><span>Accès / clés / badge laissés conformément à la mission</span></label>
-   <label class="check"><input type="checkbox" name="exitCheck"><span>Portes / ouvrants / équipements simples laissés dans l’état prévu</span></label>
-   <label class="check"><input type="checkbox" name="exitCheck"><span>Tiers / professionnel : situation connue ou incident documenté si applicable</span></label>
-   <label class="check"><input type="checkbox" name="exitCheck"><span>Preuves utiles / photos nécessaires prises ou absence justifiée</span></label>
- </div>
-
- <button class="btn primary" onclick="collectTerrain()">J’AI TERMINÉ SUR PLACE</button>
- </div>`)
-}
 function restitution(){
  setStage("RESTITUTION");
  const interim=S.result.multi&&S.passage<3;
@@ -2102,7 +2044,9 @@ function restitution(){
  <div class="row"><b>Départ</b><span>${esc(S.departureAt||"-")}</span></div>
  <div class="row"><b>Faits/actions</b><span>${esc(S.facts||"À compléter")}</span></div>
  <div class="row"><b>Incident/limite</b><span>${esc(S.incident||"Aucun")}</span></div>
- ${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>+${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(String(S.overrun.tranches))} tranche(s) de 30 min</span></div>`:""}
+ ${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>+${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(String(S.overrun.tranches))} tranche(s) de 30 min</span></div>
+ <div class="row"><b>Accord client</b><span>${esc(S.overrun.agreementMethod==="SMS"?"SMS reçu":"Accord téléphonique")} — ${esc(S.overrun.agreementAt||"-")}</span></div>
+ <div class="row"><b>Supplément</b><span>${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":S.overrun.paymentStatus==="PENDING"?"À ENCAISSER":"PAIEMENT DYNAMIQUE À RACCORDER")}</span></div>`:""}
  <div class="row"><b>Médias / preuves</b><span>${S.terrainMedia.length?esc(S.terrainMedia.join(" • ")):"AUCUN FICHIER AJOUTÉ"}</span></div>
  <div class="notice">En production : générer le bon modèle R0/R1/R2/R3, PDF contrôlé, sans ressaisie des données déjà connues.</div>
  ${interim
@@ -2114,21 +2058,39 @@ function restitution(){
 function closeMission(){
  if(!S.departureAt)return alert("Impossible de clôturer sans contrôle terrain terminé et heure de départ.");
  setStage("CLÔTURE");
+ const ov=S.overrun?.accepted?S.overrun:null;
+ const isRelais=S.result?.contract==="RELAIS";
+ const paymentBlock=ov?`
+   <div class="${ov.paymentStatus==="PAID"?"notice":"warn"}"><b>SUPPLÉMENT DE PROLONGATION</b><br>
+   ${esc(String(ov.tranches))} tranche(s) × ${esc(String(ov.unit))} € ${esc(ov.base)} = <b>${esc(String(ov.total))} € ${esc(ov.base)}</b><br>
+   Accord : ${esc(ov.agreementMethod==="SMS"?"SMS reçu":"Accord téléphonique")} — ${esc(ov.agreementAt||"-")}<br>
+   Statut : <b>${esc(ov.paymentStatus==="PAID"?"RÉGLÉ":ov.paymentStatus==="PENDING"?"À ENCAISSER":"PAIEMENT DYNAMIQUE À RACCORDER")}</b></div>
+   ${ov.paymentStatus==="PENDING"&&ov.paymentLink?`<div class="toolbar"><button class="btn primary" onclick="openOverrunPayment()">OUVRIR LE PAIEMENT STRIPE — ${esc(String(ov.total))} € TTC</button><button class="btn ghost" onclick="markOverrunPaid()">PAIEMENT REÇU → MARQUER RÉGLÉ</button></div>`:""}
+   ${ov.paymentStatus==="TO_CONNECT"?`<div class="neutral"><b>À PRÉVOIR DANS LE GATEWAY</b>La PWA a déjà mémorisé le montant exact du supplément. Pour PRÉSENCE / B2B, le gateway devra générer un Checkout Stripe dynamique au montant calculé. PayPal reste prévu comme moyen de paiement général ; le virement SEPA B2B reste prévu mais non activé.</div>`:""}
+   `:"";
  draw(`<div class="card"><h1>Clôture</h1>
  <div class="todo"><b>À FAIRE</b>Choisir le statut réel. Ne jamais sélectionner « réalisée » si une partie prévue n’a pas pu être exécutée.</div>
  <div class="row"><b>Arrivée</b><span>${esc(S.arrivalAt)}</span></div>
  <div class="row"><b>Départ</b><span>${esc(S.departureAt)}</span></div>
  <div class="row"><b>Incident</b><span>${esc(S.incident||"Aucun")}</span></div>
+ ${paymentBlock}
  <div class="field"><label>Statut final</label><select id="fs">
    <option>MISSION RÉALISÉE ET CLÔTURÉE</option>
    <option>MISSION PARTIELLEMENT RÉALISÉE ET CLÔTURÉE</option>
    <option>MISSION IMPOSSIBLE À RÉALISER - CLÔTURÉE AVEC MOTIF DOCUMENTÉ</option>
  </select></div>
  <div class="notice">${S.result.contract.startsWith("PRÉSENCE")?"H5 / restitution finale à envoyer.":"Restitution RELAIS à envoyer."}</div>
- <button class="btn primary" onclick="S.finalStatus=document.getElementById('fs').value;save();archive()">ARCHIVER LE DOSSIER</button>
+ <button class="btn primary" onclick="finalizeArchive()">ARCHIVER LE DOSSIER</button>
  </div>`);
 }
-function archive(){setStage("ARCHIVE");save();const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div><div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>En production, aucun fichier technique ne sera à télécharger :</b> le dossier mission sera classé automatiquement dans l’archive CYRNEA. Sur le terrain, vous travaillez depuis l’assistant ; l’archive iCloud reste le stockage de fond, pas l’interface de travail.</div><div class="toolbar"><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
+function finalizeArchive(){
+ if(S.overrun?.accepted && S.overrun.paymentStatus==="PENDING"){
+   return alert("Supplément de prolongation encore à encaisser. Confirmez le paiement reçu avant l’archive définitive.");
+ }
+ S.finalStatus=document.getElementById("fs")?.value||S.finalStatus||"MISSION CLÔTURÉE";
+ save();archive();
+}
+function archive(){setStage("ARCHIVE");save();const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>En production, aucun fichier technique ne sera à télécharger :</b> le dossier mission sera classé automatiquement dans l’archive CYRNEA. Sur le terrain, vous travaillez depuis l’assistant ; l’archive iCloud reste le stockage de fond, pas l’interface de travail.</div><div class="toolbar"><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
 function exportJSON(){let b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(S.missionId||"CYRNEA-DEMO")+".json";a.click();URL.revokeObjectURL(a.href)}
 function boot(){
  try{STAGE_VIEWS=JSON.parse(localStorage.getItem(STAGE_VIEWS_KEY)||"{}")||{}}catch(e){STAGE_VIEWS={}}
