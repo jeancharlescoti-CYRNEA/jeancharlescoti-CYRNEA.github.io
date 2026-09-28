@@ -271,7 +271,10 @@ function resumeActiveMission(){
  if(st==="RESTITUTION" || (S.departureAt && S.facts)) return restitution();
  if(st==="TERRAIN") return terrain();
  if(st==="PRÊTE" || S.prep?.addr) return ready();
- if(st==="RÉSERVATION" || S.missionId || (S.result && S.acceptedSlot)) return S.missionId?preparationMission():bookingHandoff();
+ if(st==="RÉSERVATION" || S.missionId || (S.result && S.acceptedSlot)){
+   if(S.paymentStatus==="PAID_PENDING_CONFIRMATION" || S.decisionStatus==="ALTERNATIVE_PROPOSED") return postPaymentDecision();
+   return S.missionId?preparationMission():bookingHandoff();
+ }
  if(st==="CRÉNEAU" && S.result) return slot();
  if(st==="CADRAGE" && S.result) return showResult();
  if(S.result) return showResult();
@@ -1326,23 +1329,111 @@ function bookingHandoff(){
  <div class="row"><b>Créneau souhaité</b><span>${esc(scheduleText())}</span></div>
  <div class="row"><b>Tarif / contrainte</b><span>${esc(S.result.availabilityLabel||"Standard")} — ${esc(priceText())}</span></div>
  <div class="row"><b>Portail</b><span>${esc(portal)}</span></div>
+ <div class="row"><b>Conditions</b><span>${esc(contractRef())}</span></div>
  ${multi?multiPassageRows():""}
  ${multi?`<div class="neutral"><b>MISSION EN PLUSIEURS PASSAGES / JALONS</b>${route==="TALLY"?"La mission hors standard est transmise à Tally avec les passages connus et leurs suppléments.":"La réservation SimplyBook porte sur le premier passage. Les suivants restent rattachés au même dossier et seront programmés ensuite."}</div>`:""}
- <div class="notice"><b>PARCOURS CLIENT</b>Le créneau choisi est pris en compte et sera confirmé. Avant le paiement, le client choisit en un menu déroulant la solution qui lui convient si un ajustement est nécessaire.</div>
+ ${route==="TALLY"
+   ? `<div class="warn"><b>HORS STANDARD — CONFIRMATION HUMAINE</b>Le paiement ne confirme jamais automatiquement la mission. Après paiement : vérifier la disponibilité puis CONFIRMER, PROPOSER UNE ALTERNATIVE ou REMBOURSER.</div>`
+   : `<div class="notice"><b>STANDARD</b>SimplyBook gère la réservation. Vérifiez la confirmation avant de préparer la mission.</div>`}
  <div class="phoneScript"><b>PHRASE À DIRE AU CLIENT</b>
  « La mission adaptée est <b>${esc(S.result.mission)}</b>, au tarif de <b>${esc(priceText())}</b>. Le créneau choisi est pris en compte et vous sera confirmé. Vous pourrez indiquer une autre possibilité avant le paiement. »
  </div>
  <div class="toolbar">${route==="TALLY"?`<button class="btn primary" onclick="openTallySecure()">OUVRIR TALLY — RÉSERVER / PAYER</button>`:`<button class="btn primary" onclick="openSimplyBook()">OUVRIR SIMPLYBOOK — RÉSERVER / PAYER</button><button class="btn ghost" onclick="settings()">RÉGLAGES DU LIEN</button>`}</div>
  <div class="checkZone"><div class="checkIntro">APRÈS LE PAIEMENT ${route==="TALLY"?"TALLY":"SIMPLYBOOK"}</div>
- <button class="btn primary" onclick="markBooked()">RÉSERVATION PAYÉE → PRÉPARER LA MISSION</button>
+ <button class="btn primary" onclick="markBooked()">${route==="TALLY"?"PAIEMENT REÇU → DÉCIDER":"RÉSERVATION CONFIRMÉE → PRÉPARER LA MISSION"}</button>
  </div>
  </div>`);
 }
+function reservationActionsUrl(){
+ if(!GATEWAY_REF_RE.test(String(S.tallyReference||"")))return "";
+ return RESERVATION_ACTIONS_URL+"/?reference="+encodeURIComponent(S.tallyReference);
+}
+function openReservationActions(){
+ const url=reservationActionsUrl();
+ if(!url)return alert("Référence de réservation hors standard absente ou invalide.");
+ window.open(url,"_blank","noopener");
+}
 function markBooked(){
  S.specialPending=false;
+ if(routeKind()==="TALLY"){
+   S.paymentStatus="PAID_PENDING_CONFIRMATION";
+   save();
+   return postPaymentDecision();
+ }
+ S.paymentStatus="PAID_CONFIRMED";
+ S.decisionStatus="CONFIRMED";
  if(!S.missionId) S.missionId=missionId();
  save();
  preparationMission();
+}
+function postPaymentDecision(){
+ setStage("RÉSERVATION");
+ draw(`<div class="card"><h1>Paiement reçu — décision humaine</h1>
+   <div class="stop"><b>NE PAS PARTIR EN MISSION</b>Un paiement HORS STANDARD n’est pas une confirmation de disponibilité.</div>
+   <div class="row"><b>Mission</b><span>${esc(S.result?.mission||"-")}</span></div>
+   <div class="row"><b>Créneau demandé</b><span>${esc(scheduleText())}</span></div>
+   <div class="row"><b>Référence</b><span>${esc(S.tallyReference||"-")}</span></div>
+   <div class="toolbar"><button class="btn primary" onclick="openReservationActions()">OUVRIR CONFIRMER / ALTERNATIVE / REMBOURSER</button></div>
+   <div class="checkZone"><div class="checkIntro">APRÈS AVOIR EFFECTUÉ L’ACTION</div>
+     <button class="btn primary" onclick="decisionConfirmed()">J’AI CONFIRMÉ LA MISSION</button>
+     <button class="btn ghost" onclick="decisionAlternative()" style="margin-top:8px">J’AI PROPOSÉ UNE ALTERNATIVE</button>
+     <button class="btn danger" onclick="decisionRefunded()" style="margin-top:8px">J’AI REMBOURSÉ — ANNULER LE DOSSIER</button>
+   </div>
+ </div>`);
+}
+function decisionConfirmed(){
+ S.decisionStatus="CONFIRMED";
+ S.paymentStatus="PAID_CONFIRMED";
+ if(!S.missionId)S.missionId=missionId();
+ save();
+ preparationMission();
+}
+function decisionAlternative(){
+ S.decisionStatus="ALTERNATIVE_PROPOSED";
+ save();
+ draw(`<div class="card"><h1>Alternative proposée</h1>
+   <div class="warn"><b>DOSSIER EN ATTENTE</b>Ne préparez pas la mission tant que le client n’a pas accepté le nouveau créneau.</div>
+   <div class="toolbar"><button class="btn primary" onclick="alternativeAcceptedForm()">LE CLIENT A ACCEPTÉ → SAISIR LE CRÉNEAU</button><button class="btn ghost" onclick="postPaymentDecision()">RETOUR À LA DÉCISION</button></div>
+ </div>`);
+}
+function alternativeAcceptedForm(){
+ draw(`<div class="card"><h1>Créneau alternatif accepté</h1>
+   <div class="field"><label>Date confirmée</label><input id="altDate" type="date" min="${todayLocalISO()}" onchange="refreshAlternativeConstraints()"></div>
+   <div class="field"><label>Heure confirmée</label><input id="altTime" type="time" step="900" onchange="refreshAlternativeConstraints()"><div class="muted">Quarts d’heure : 00, 15, 30 ou 45.</div></div>
+   <div class="toolbar"><button class="btn primary" onclick="confirmAcceptedAlternative()">ENREGISTRER LE CRÉNEAU CONFIRMÉ</button><button class="btn ghost" onclick="postPaymentDecision()">RETOUR</button></div>
+ </div>`);
+ refreshAlternativeConstraints();
+}
+function refreshAlternativeConstraints(){
+ const d=document.getElementById("altDate"),t=document.getElementById("altTime");
+ if(!d||!t)return;
+ const today=todayLocalISO(),next=nextQuarterInfo();
+ d.min=today;t.step=900;
+ if(d.value && d.value<today){d.value="";t.value="";}
+ if(d.value===today){
+   if(next.date===today){t.min=next.time;if(t.value&&t.value<next.time)t.value=""}
+   else{t.min="23:59";if(t.value)t.value=""}
+ }else t.removeAttribute("min");
+}
+function confirmAcceptedAlternative(){
+ const d=(document.getElementById("altDate")?.value||"").trim();
+ const t=normalizeTime4((document.getElementById("altTime")?.value||"").trim());
+ const check=validateMissionTimeRules(d,t,"le créneau alternatif");
+ if(!check.ok)return alert(check.msg);
+ S.date=d;S.slot=t;S.multiSlots=[];S.availability=autoConstraints(d,t);
+ S.decisionStatus="CONFIRMED_AFTER_ALTERNATIVE";
+ S.paymentStatus="PAID_CONFIRMED";
+ if(!S.missionId)S.missionId=missionId();
+ save();
+ preparationMission();
+}
+function decisionRefunded(){
+ S.decisionStatus="REFUNDED";
+ S.paymentStatus="REFUNDED";
+ S.finalStatus="MISSION ANNULÉE — REMBOURSÉE";
+ if(!S.missionId)S.missionId=missionId();
+ save();
+ archive();
 }
 function toggleContactChoice(){
   const choice=document.querySelector('input[name="contactChoice"]:checked')?.value||"";
