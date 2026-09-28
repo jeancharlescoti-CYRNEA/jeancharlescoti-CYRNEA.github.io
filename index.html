@@ -1926,16 +1926,14 @@ function needsWaitGuard(){
 }
 
 function overrunRule(){
- const m=baseMissionName(S.result?.mission||"");
- if(m==="RELAIS SIMPLE" || m.includes("APRÈS INTEMPÉRIE") || ["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B"].includes(m))
-   return {allowed:false,text:"Cette mission n’a pas de prolongation horaire. Si le cadre prévu est dépassé, arrêtez et faites requalifier la demande avant toute action supplémentaire."};
- if(m==="RELAIS" || m.includes("AVANT INTEMPÉRIE"))
+ const contract=String(S.result?.contract||"");
+ if(contract==="RELAIS")
    return {allowed:true,unit:25,base:"TTC",max:2,label:"+25 € TTC par tranche de 30 min commencée, maximum 2 tranches, avec accord exprès"};
- if(m==="VOIR PRÉSENCE" || m==="VOIR RELAIS" || m==="DÉCIDER" || m==="SUIVRE")
-   return {allowed:true,unit:60,base:"TTC",max:null,label:"+60 € TTC par tranche de 30 min commencée"};
- if(["VISITE TERRAIN PILOTÉE","PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","CONTINUITÉ PROJET","PRÉSENCE LOGISTIQUE B2B"].includes(m))
-   return {allowed:true,unit:75,base:"HT",max:null,label:"+75 € HT par tranche de 30 min commencée"};
- return {allowed:false,text:"Aucune prolongation automatique n’est prévue pour cette mission. Arrêtez et faites requalifier avant d’élargir le périmètre."};
+ if(contract==="PRÉSENCE PROPRIÉTAIRES")
+   return {allowed:true,unit:60,base:"TTC",max:null,label:"+60 € TTC par tranche de 30 min commencée, avec accord exprès"};
+ if(contract==="PRÉSENCE ENTREPRISES")
+   return {allowed:true,unit:75,base:"HT",max:null,label:"+75 € HT par tranche de 30 min commencée, avec accord exprès"};
+ return {allowed:false,text:"La mission doit être requalifiée avant toute prolongation."};
 }
 function clientContactNumber(){
  return String(S.phone||"").replace(/[^+\d]/g,"");
@@ -2006,24 +2004,44 @@ function overrunGuide(){
  const maxText=r.max?`, dans la limite de ${r.max} tranche${r.max>1?"s":""} maximum`:"";
  const msg=overrunMissionSummary()+"\n\nLa mission prévue arrive à sa limite de temps. Pour terminer correctement ce qui est prévu, une prolongation est nécessaire. Toute tranche de 30 minutes commencée est facturée "+r.unit+" € "+r.base+maxText+". Souhaitez-vous que je poursuive la mission dans ces conditions ? Merci de me confirmer expressément votre accord. Sans votre accord exprès pour cette prolongation, la mission prendra fin à l’issue de la durée convenue.";
  draw(`<div class="card"><h1>Prolongation imprévue</h1>
-   <div class="warn"><b>RÈGLE</b><br>${esc(r.label)}. Uniquement si l’objet reste exactement le même et après accord exprès du client.</div>
-   <div class="field"><label>Nombre de tranches de 30 min commencées</label><input id="overrunN" type="number" min="1"${maxAttr} value="1"></div>
-   <div class="readAloud" style="white-space:pre-line">${esc(msg)}</div>
-   <div class="row"><b>Client</b><span>${esc(S.name||"-")}</span></div>
-   <div class="row"><b>Téléphone</b><span>${esc(phone||"NON RENSEIGNÉ")}</span></div>
-   <div class="toolbar">
-     <a class="btn primary" href="${esc(clientCallHref())}">APPELER LE CLIENT</a>
-     <button class="btn ghost" onclick="openMessagesForClient()">ENVOYER LE SMS</button>
-   </div>
-   <div class="field"><label>Mode de confirmation du client</label><select id="overrunAgreement">
-     <option value="">— Choisir —</option>
-     <option value="SMS">SMS reçu</option>
-     <option value="PHONE">Accord téléphonique</option>
+   <div class="warn"><b>RÈGLE GÉNÉRALE</b><br>Toute mission RELAIS, PRÉSENCE Propriétaires ou B2B déjà commencée peut être prolongée uniquement pour terminer l’objet prévu, avec accord exprès du client, et seulement si aucune autre mission n’occupe la période de prolongation demandée. Si une mission est prévue derrière, la mission en cours s’arrête à l’heure convenue et une nouvelle mission ultérieure peut être proposée.</div>
+   <div class="field"><label>Disponibilité après l’heure prévue</label><select id="overrunAvailability" onchange="toggleOverrunAvailability()">
+     <option value="">— Vérifier avant toute demande au client —</option>
+     <option value="FREE">AUCUNE MISSION DERRIÈRE pendant la prolongation demandée / dernier créneau</option>
+     <option value="BUSY">UNE MISSION EST PRÉVUE DERRIÈRE</option>
    </select></div>
-   <div class="toolbar"><button class="btn primary" onclick="saveOverrun(${r.unit},'${r.base}',${r.max||'null'})">ACCORD CLIENT OBTENU → ENREGISTRER</button><button class="btn ghost" onclick="terrain()">NE PAS PROLONGER</button></div>
+   <div id="overrunBusyStop" class="stop hidden"><b>PROLONGATION IMPOSSIBLE</b><br>Terminer la mission à l’heure convenue. Ne pas empiéter sur la mission suivante. Si le besoin subsiste, proposer une nouvelle mission à un créneau ultérieur.</div>
+   <div id="overrunAllowedZone">
+     <div class="notice"><b>TARIF DE PROLONGATION</b><br>${esc(r.label)}.</div>
+     <div class="field"><label>Nombre de tranches de 30 min commencées</label><input id="overrunN" type="number" min="1"${maxAttr} value="1"></div>
+     <div class="readAloud" style="white-space:pre-line">${esc(msg)}</div>
+     <div class="row"><b>Client</b><span>${esc(S.name||"-")}</span></div>
+     <div class="row"><b>Téléphone</b><span>${esc(phone||"NON RENSEIGNÉ")}</span></div>
+     <div class="toolbar">
+       <a class="btn primary" href="${esc(clientCallHref())}">APPELER LE CLIENT</a>
+       <button class="btn ghost" onclick="openMessagesForClient()">ENVOYER LE SMS</button>
+     </div>
+     <div class="field"><label>Mode de confirmation du client</label><select id="overrunAgreement">
+       <option value="">— Choisir —</option>
+       <option value="SMS">SMS reçu</option>
+       <option value="PHONE">Accord téléphonique</option>
+     </select></div>
+     <div class="toolbar"><button class="btn primary" onclick="saveOverrun(${r.unit},'${r.base}',${r.max||'null'})">ACCORD CLIENT OBTENU → ENREGISTRER</button><button class="btn ghost" onclick="terrain()">NE PAS PROLONGER</button></div>
+   </div>
  </div>`);
+ toggleOverrunAvailability();
+}
+function toggleOverrunAvailability(){
+ const v=document.getElementById("overrunAvailability")?.value||"";
+ const busy=document.getElementById("overrunBusyStop");
+ const allowed=document.getElementById("overrunAllowedZone");
+ if(busy)busy.classList.toggle("hidden",v!=="BUSY");
+ if(allowed)allowed.classList.toggle("hidden",v!=="FREE");
 }
 function saveOverrun(unit,base,max){
+ const availability=document.getElementById("overrunAvailability")?.value||"";
+ if(availability==="BUSY")return alert("Une mission est prévue derrière : la prolongation est interdite. Arrêtez à l’heure convenue et proposez si nécessaire une nouvelle mission ultérieure.");
+ if(availability!=="FREE")return alert("Vérifiez d’abord qu’aucune mission n’occupe la période de prolongation demandée.");
  const n=Math.max(1,Number(document.getElementById("overrunN")?.value||1));
  const agreement=document.getElementById("overrunAgreement")?.value||"";
  if(!agreement)return alert("Indiquez comment le client a confirmé son accord : SMS reçu ou accord téléphonique.");
@@ -2032,6 +2050,7 @@ function saveOverrun(unit,base,max){
  const isRelais=S.result?.contract==="RELAIS";
  S.overrun={
    tranches:n,unit,total,base,passage:S.passage,accepted:true,
+   availabilityCheck:"FREE",
    agreementMethod:agreement,
    agreementAt:nowStamp(),
    paymentStatus:isRelais?"PENDING":"TO_CONNECT",
@@ -2198,8 +2217,8 @@ function closeMission(){
  </div>`);
 }
 function finalizeArchive(){
- if(S.overrun?.accepted && S.overrun.paymentStatus==="PENDING"){
-   return alert("Supplément de prolongation encore à encaisser. Confirmez le paiement reçu avant l’archive définitive.");
+ if(S.overrun?.accepted && S.overrun.paymentStatus!=="PAID"){
+   return alert("Supplément de prolongation non réglé. La mission ne peut pas être archivée définitivement tant que le paiement n’est pas confirmé.");
  }
  S.finalStatus=document.getElementById("fs")?.value||S.finalStatus||"MISSION CLÔTURÉE";
  save();archive();
