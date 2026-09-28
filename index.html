@@ -729,6 +729,36 @@ function normalizeTime4(v){
   if(!m) return "";
   return `${pad2(Number(m[1]))}:${m[2]}`;
 }
+function timeDropdownHtml(baseId,onchangeFn="refreshCalendarConstraints()"){
+  const hours=Array.from({length:24},(_,i)=>pad2(i));
+  const minutes=["00","15","30","45"];
+  return `<div class="field"><label>Heure</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <select id="${baseId}H" onchange="syncTimeDropdown('${baseId}');${onchangeFn}">
+        <option value="">Heure</option>
+        ${hours.map(h=>`<option value="${h}">${h}</option>`).join("")}
+      </select>
+      <select id="${baseId}M" onchange="syncTimeDropdown('${baseId}');${onchangeFn}">
+        <option value="">Minutes</option>
+        ${minutes.map(m=>`<option value="${m}">${m}</option>`).join("")}
+      </select>
+    </div>
+    <input id="${baseId}" type="hidden" value="">
+    <div class="muted">Minutes : 00, 15, 30 ou 45.</div>
+  </div>`;
+}
+function syncTimeDropdown(baseId){
+  const h=document.getElementById(baseId+"H")?.value||"";
+  const m=document.getElementById(baseId+"M")?.value||"";
+  const hidden=document.getElementById(baseId);
+  if(hidden) hidden.value=(h&&m)?`${h}:${m}`:"";
+}
+function clearTimeDropdown(baseId){
+  const h=document.getElementById(baseId+"H"),m=document.getElementById(baseId+"M"),hidden=document.getElementById(baseId);
+  if(h)h.value="";
+  if(m)m.value="";
+  if(hidden)hidden.value="";
+}
 function displayTime4(v){
   const t=normalizeTime4(v);
   return t || v || "";
@@ -863,18 +893,13 @@ function refreshCalendarConstraints(){
     const d=document.getElementById(dId), t=document.getElementById(tId);
     if(!d||!t) return;
     d.min=today;
-    t.step=900;
-    if(d.value && d.value<today){d.value="";t.value="";}
+    if(d.value && d.value<today){d.value="";clearTimeDropdown(tId);}
     if(d.value===today){
       if(next.date===today){
-        t.min=next.time;
-        if(t.value && t.value<next.time)t.value="";
+        if(t.value && t.value<next.time)clearTimeDropdown(tId);
       }else{
-        t.min="23:59";
-        if(t.value)t.value="";
+        clearTimeDropdown(tId);
       }
-    }else{
-      t.removeAttribute("min");
     }
     setAutoConstraint(prefix,dId,tId);
   });
@@ -1145,7 +1170,7 @@ function slot(){
      <div id="jalon_${i}" class="checkZone${hidden?" hidden":""}">
        <div class="checkIntro">PASSAGE / JALON ${i}${i>1?" — UNIQUEMENT SI DATE CONNUE":""}</div>
        <div class="field"><label>Date</label><input id="d${i}" type="date" min="${todayLocalISO()}" onchange="refreshCalendarConstraints()"></div>
-       <div class="field"><label>Heure — format HH:MM</label><input id="sl${i}" type="time" step="900" onchange="refreshCalendarConstraints()"><div class="muted">Quarts d’heure uniquement : 09:00, 09:15, 09:30, 09:45.</div></div>
+       ${timeDropdownHtml(`sl${i}`)}
        <div class="muted" style="margin-bottom:6px">Contraintes détectées automatiquement selon la date, l’heure et l’heure actuelle :</div>
        <label class="check"><input type="checkbox" id="prio24_${i}" disabled> <span>Demandé sous 24 h — ${pri}</span></label>
        <label class="check"><input type="checkbox" id="evening_${i}" disabled> <span>${isB2B?"Soir 19 h–20 h 59":"Soir à partir de 19 h"} — ${pri}</span></label>
@@ -1173,7 +1198,7 @@ function slot(){
 
  draw(`<div class="card"><h1>Créneau</h1>
  <div class="field"><label>Date souhaitée</label><input id="d" type="date" min="${todayLocalISO()}" onchange="refreshCalendarConstraints()"></div>
- <div class="field"><label>Heure — format HH:MM</label><input id="sl" type="time" step="900" onchange="refreshCalendarConstraints()"><div class="muted">Quarts d’heure uniquement : 09:00, 09:15, 09:30, 09:45.</div></div>
+ ${timeDropdownHtml("sl")}
 
  ${supportsPriority()?`<div class="checkZone"><div class="checkIntro">CONTRAINTE DE DISPONIBILITÉ</div>
  <label class="check"><input type="checkbox" id="prio24" disabled> <span><b>Intervention sous 24 h</b> — détectée automatiquement selon l’heure réelle.</span></label>
@@ -1402,7 +1427,7 @@ function decisionAlternative(){
 function alternativeAcceptedForm(){
  draw(`<div class="card"><h1>Créneau alternatif accepté</h1>
    <div class="field"><label>Date confirmée</label><input id="altDate" type="date" min="${todayLocalISO()}" onchange="refreshAlternativeConstraints()"></div>
-   <div class="field"><label>Heure confirmée</label><input id="altTime" type="time" step="900" onchange="refreshAlternativeConstraints()"><div class="muted">Quarts d’heure : 00, 15, 30 ou 45.</div></div>
+   ${timeDropdownHtml("altTime","refreshAlternativeConstraints()")}
    <div class="toolbar"><button class="btn primary" onclick="confirmAcceptedAlternative()">ENREGISTRER LE CRÉNEAU CONFIRMÉ</button><button class="btn ghost" onclick="postPaymentDecision()">RETOUR</button></div>
  </div>`);
  refreshAlternativeConstraints();
@@ -1411,12 +1436,12 @@ function refreshAlternativeConstraints(){
  const d=document.getElementById("altDate"),t=document.getElementById("altTime");
  if(!d||!t)return;
  const today=todayLocalISO(),next=nextQuarterInfo();
- d.min=today;t.step=900;
- if(d.value && d.value<today){d.value="";t.value="";}
+ d.min=today;
+ if(d.value && d.value<today){d.value="";clearTimeDropdown("altTime");}
  if(d.value===today){
-   if(next.date===today){t.min=next.time;if(t.value&&t.value<next.time)t.value=""}
-   else{t.min="23:59";if(t.value)t.value=""}
- }else t.removeAttribute("min");
+   if(next.date===today){if(t.value&&t.value<next.time)clearTimeDropdown("altTime")}
+   else clearTimeDropdown("altTime");
+ }
 }
 function confirmAcceptedAlternative(){
  const d=(document.getElementById("altDate")?.value||"").trim();
