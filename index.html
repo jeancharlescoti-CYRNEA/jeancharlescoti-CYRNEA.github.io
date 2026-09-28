@@ -1171,7 +1171,9 @@ function manualConfirmMultiSlots(){
   bookingHandoff();
 }
 function confirmSlot(){
-  S.date=getDateValue("d");
+  S.date=getDateValue("d") || todayLocalISO();
+  const dEl=document.getElementById("d");
+  if(dEl && !dEl.value)dEl.value=S.date;
   S.slot=normalizeTime4(getDropdownTime("sl"));
   const check=validateMissionTimeRules(S.date,S.slot,"ce créneau");
   if(!check.ok) return alert(check.msg);
@@ -1220,7 +1222,7 @@ function slot(){
  }
 
  draw(`<div class="card"><h1>Créneau</h1>
- <div class="field"><label>Date souhaitée</label><input id="d" type="date" min="${todayLocalISO()}" onchange="refreshCalendarConstraints()"></div>
+ <div class="field"><label>Date souhaitée</label><input id="d" type="date" min="${todayLocalISO()}" value="${todayLocalISO()}" onchange="refreshCalendarConstraints()"></div>
  ${timeDropdownHtml("sl")}
 
  ${supportsPriority()?`<div class="checkZone"><div class="checkIntro">CONTRAINTE DE DISPONIBILITÉ</div>
@@ -1449,7 +1451,7 @@ function decisionAlternative(){
 }
 function alternativeAcceptedForm(){
  draw(`<div class="card"><h1>Créneau alternatif accepté</h1>
-   <div class="field"><label>Date confirmée</label><input id="altDate" type="date" min="${todayLocalISO()}" onchange="refreshAlternativeConstraints()"></div>
+   <div class="field"><label>Date confirmée</label><input id="altDate" type="date" min="${todayLocalISO()}" value="${todayLocalISO()}" onchange="refreshAlternativeConstraints()"></div>
    ${timeDropdownHtml("altTime","refreshAlternativeConstraints()")}
    <div class="toolbar"><button class="btn primary" onclick="confirmAcceptedAlternative()">ENREGISTRER LE CRÉNEAU CONFIRMÉ</button><button class="btn ghost" onclick="postPaymentDecision()">RETOUR</button></div>
  </div>`);
@@ -1467,7 +1469,9 @@ function refreshAlternativeConstraints(){
  }
 }
 function confirmAcceptedAlternative(){
- const d=getDateValue("altDate");
+ const d=getDateValue("altDate") || todayLocalISO();
+ const altDateEl=document.getElementById("altDate");
+ if(altDateEl && !altDateEl.value)altDateEl.value=d;
  const t=normalizeTime4(getDropdownTime("altTime"));
  const check=validateMissionTimeRules(d,t,"le créneau alternatif");
  if(!check.ok)return alert(check.msg);
