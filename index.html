@@ -187,6 +187,7 @@ const STATE_KEY="cyrnea_assistant_v53_final_20260928";
 const ACTIVE_MISSIONS_KEY="cyrnea_active_missions_v1";
 const MISSIONS_API_URL="https://cyrnea-missions-api.jeancharles-coti.workers.dev";
 const SYNC_KEY_STORAGE="cyrnea_sync_key_v1";
+const SYNC_META_STORAGE="cyrnea_sync_meta_v1";
 const LEGACY_STATE_KEY="cyrnea_assistant_v50";
 const PAYMENT_GATEWAY_URL="https://cyrnea-payment-gateway.jeancharles-coti.workers.dev";
 const RESERVATION_ACTIONS_URL="https://cyrnea-reservation-actions.jeancharles-coti.workers.dev";
@@ -272,15 +273,15 @@ function getSyncKey(){return String(localStorage.getItem(SYNC_KEY_STORAGE)||"").
 function syncHeaders(){return {"Content-Type":"application/json","X-Cyrnea-Key":getSyncKey()}}
 async function pushMissionToCloud(st){
  const key=getSyncKey();
- if(!key||!isActiveMissionState(st))return false;
+ if(!key||!isActiveMissionState(st))return null;
  const id=activeMissionKey(st);
- if(!id)return false;
+ if(!id)return null;
  const payload=JSON.parse(JSON.stringify(st));
  const res=await fetch(MISSIONS_API_URL+"/missions/"+encodeURIComponent(id),{
    method:"PUT",headers:syncHeaders(),body:JSON.stringify({payload})
  });
  if(!res.ok)throw new Error("sync_put_"+res.status);
- return true;
+ return await res.json();
 }
 async function pullCloudMissions(){
  const key=getSyncKey();
@@ -300,11 +301,26 @@ async function deleteMissionFromCloud(st){
  if(!res.ok)throw new Error("sync_delete_"+res.status);
  return true;
 }
+function loadSyncMeta(){
+ try{
+   const x=JSON.parse(localStorage.getItem(SYNC_META_STORAGE)||"{}");
+   return x&&typeof x==="object"&&!Array.isArray(x)?x:{};
+ }catch(e){return {}}
+}
+function writeSyncMeta(meta){
+ localStorage.setItem(SYNC_META_STORAGE,JSON.stringify(meta||{}));
+}
+function missionSyncSnapshot(st){
+ if(!st||typeof st!=="object")return "";
+ const x=JSON.parse(JSON.stringify(st));
+ delete x._localUpdatedAt;
+ return JSON.stringify(x);
+}
 async function reconcileCloudMissions(){
- if(!getSyncKey())return {ok:false,count:0};
- let remote=await pullCloudMissions();
- let remoteById=new Map();
+ if(!getSyncKey())return {ok:false,count:0,conflicts:0};
 
+ const remote=await pullCloudMissions();
+ const remoteById=new Map();
  for(const item of remote){
    const st=item?.payload;
    if(!st||typeof st!=="object")continue;
@@ -313,62 +329,96 @@ async function reconcileCloudMissions(){
  }
 
  const map=loadActiveMissionMap();
- const currentId=activeMissionKey(S);
+ const meta=loadSyncMeta();
+ const ids=new Set([...Object.keys(map),...remoteById.keys()]);
+ let conflicts=0;
 
- // 1) Appliquer d'abord les suppressions centrales.
- for(const [id,item] of remoteById.entries()){
-   if(item?.payload?._deleted){
-     delete map[id];
-     if(currentId===id){
-       localStorage.removeItem(STATE_KEY);
-       localStorage.removeItem(STAGE_VIEWS_KEY);
-     }
-   }
- }
-
- // 2) Envoyer vers D1 toute version locale réellement plus récente.
- // Une tombstone distante gagne toujours et empêche toute recréation.
- for(const [id,local] of Object.entries(map)){
-   if(!isActiveMissionState(local))continue;
+ for(const id of ids){
+   const local=map[id];
    const item=remoteById.get(id);
-   if(item?.payload?._deleted)continue;
-   const localTime=Number(local?._localUpdatedAt||0);
-   const remoteTime=Number(item?.payload?._localUpdatedAt||item?.updated_at||0);
-   if(!item || localTime>remoteTime){
-     await pushMissionToCloud(local);
-   }
- }
+   const remoteState=item?.payload;
+   const m=meta[id]||null;
 
- // 3) Relire D1 après les envois, puis appliquer l'état central final.
- remote=await pullCloudMissions();
- remoteById=new Map();
- for(const item of remote){
-   const st=item?.payload;
-   if(!st||typeof st!=="object")continue;
-   const id=String(item.id||activeMissionKey(st)||st.missionId||"");
-   if(id)remoteById.set(id,item);
- }
-
- for(const [id,item] of remoteById.entries()){
-   const st=item.payload;
-   if(st._deleted){
+   // Une suppression centrale gagne toujours.
+   if(remoteState?._deleted){
      delete map[id];
-   }else{
-     map[id]=st;
+     delete meta[id];
+     continue;
+   }
+
+   // Mission uniquement locale : l'envoyer une fois au central.
+   if(local && !item){
+     if(isActiveMissionState(local)){
+       const pushed=await pushMissionToCloud(local);
+       meta[id]={
+         remoteUpdatedAt:Number(pushed?.updated_at||Date.now()),
+         snapshot:missionSyncSnapshot(local)
+       };
+     }
+     continue;
+   }
+
+   // Mission uniquement centrale : la récupérer.
+   if(!local && item){
+     map[id]=remoteState;
+     meta[id]={
+       remoteUpdatedAt:Number(item.updated_at||0),
+       snapshot:missionSyncSnapshot(remoteState)
+     };
+     continue;
+   }
+
+   if(!local||!item)continue;
+
+   // Premier passage avec cette nouvelle logique : D1 sert de base commune.
+   if(!m){
+     map[id]=remoteState;
+     meta[id]={
+       remoteUpdatedAt:Number(item.updated_at||0),
+       snapshot:missionSyncSnapshot(remoteState)
+     };
+     continue;
+   }
+
+   const localChanged=missionSyncSnapshot(local)!==String(m.snapshot||"");
+   const remoteChanged=Number(item.updated_at||0)!==Number(m.remoteUpdatedAt||0);
+
+   if(localChanged && !remoteChanged){
+     const pushed=await pushMissionToCloud(local);
+     meta[id]={
+       remoteUpdatedAt:Number(pushed?.updated_at||Date.now()),
+       snapshot:missionSyncSnapshot(local)
+     };
+   }else if(!localChanged && remoteChanged){
+     map[id]=remoteState;
+     meta[id]={
+       remoteUpdatedAt:Number(item.updated_at||0),
+       snapshot:missionSyncSnapshot(remoteState)
+     };
+   }else if(localChanged && remoteChanged){
+     // Modification simultanée sur deux appareils : ne jamais écraser silencieusement.
+     conflicts++;
+     map[id]=remoteState;
+     meta[id]={
+       remoteUpdatedAt:Number(item.updated_at||0),
+       snapshot:missionSyncSnapshot(remoteState)
+     };
    }
  }
 
  writeActiveMissionMap(map);
+ writeSyncMeta(meta);
 
+ const currentId=activeMissionKey(S);
  if(currentId && map[currentId]){
    S=JSON.parse(JSON.stringify(map[currentId]));
    localStorage.setItem(STATE_KEY,JSON.stringify(S));
  }else if(currentId && !map[currentId]){
-   S={stage:"ACCUEIL",mode:"FULL",universe:null,caller:null,name:"",phone:"",email:"",city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",acceptedSlot:false,draftKey:key(),missionId:"",prep:{},facts:"",incident:"",terrainMedia:[],terrainDraft:null,arrivalAt:"",arrivalEpochMs:null,departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,paymentMethod:"",paymentState:"",specialPending:false,resumeStage:"",history:["ACCUEIL"]};
    localStorage.removeItem(STATE_KEY);
+   localStorage.removeItem(STAGE_VIEWS_KEY);
  }
 
- return {ok:true,count:Object.keys(map).length};
+ return {ok:true,count:Object.keys(map).length,conflicts};
 }
 async function configureCloudSync(){
  const entered=prompt("Clé de synchronisation CYRNEA",getSyncKey());
@@ -392,7 +442,11 @@ async function manualCloudSync(){
    persistActiveSnapshot(S);
    const result=await reconcileCloudMissions();
    home(false);
-   alert("Synchronisation terminée — "+String(result?.count||0)+" mission(s) active(s).");
+   if(result?.conflicts){
+     alert("Synchronisation terminée — "+String(result.count||0)+" mission(s). "+String(result.conflicts)+" conflit(s) détecté(s) : la version centrale a été conservée pour éviter un écrasement.");
+   }else{
+     alert("Synchronisation terminée — "+String(result?.count||0)+" mission(s) active(s).");
+   }
  }catch(e){
    alert("Synchronisation impossible — "+String(e?.message||e));
  }
@@ -401,7 +455,6 @@ function save(){
  S._localUpdatedAt=Date.now();
  localStorage.setItem(STATE_KEY,JSON.stringify(S));
  persistActiveSnapshot(S);
- if(getSyncKey()&&isActiveMissionState(S))pushMissionToCloud(S).catch(()=>{});
 }
 function reset(){localStorage.removeItem(STATE_KEY);localStorage.removeItem(LEGACY_STATE_KEY);localStorage.removeItem(STAGE_VIEWS_KEY);location.reload()}
 function key(){return "D-"+new Date().toISOString().replace(/\D/g,"").slice(0,14)}
@@ -469,6 +522,9 @@ async function deleteActiveMission(id){
  if(!confirm("SUPPRIMER CE DOSSIER ACTIF ?\n\n"+label+"\n\nÀ utiliser uniquement si le dossier a été créé par erreur. Cette suppression sera aussi répercutée sur les autres appareils synchronisés."))return;
  delete map[id];
  writeActiveMissionMap(map);
+ const syncMeta=loadSyncMeta();
+ delete syncMeta[id];
+ writeSyncMeta(syncMeta);
  const currentId=activeMissionKey(S);
  if(currentId===id){
    localStorage.removeItem(STATE_KEY);
