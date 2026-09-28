@@ -2039,44 +2039,6 @@ function toggleOverrunAvailability(){
  if(busy)busy.classList.toggle("hidden",v!=="BUSY");
  if(allowed)allowed.classList.toggle("hidden",v!=="FREE");
 }
-function overrunChargeCents(ov=S.overrun){
- if(!ov)return null;
- const gross=ov.base==="HT"?Number(ov.total)*1.20:Number(ov.total);
- return Number.isFinite(gross)?Math.round(gross*100):null;
-}
-function ensureOverrunReference(){
- if(!S.overrun)return "";
- if(!GATEWAY_REF_RE.test(String(S.overrun.reference||"")))S.overrun.reference=newGatewayReference();
- save();
- return S.overrun.reference;
-}
-async function registerOverrunIntent(){
- if(!S.overrun?.accepted)throw new Error("Aucune prolongation acceptée.");
- const ref=ensureOverrunReference();
- const cents=overrunChargeCents();
- if(!Number.isInteger(cents)||cents<=0)throw new Error("Montant de prolongation invalide.");
- const body={
-   reference:ref,
-   universe:S.universe||"",
-   contract:S.result?.contract||"",
-   mission:"PROLONGATION — "+baseMissionName(S.result?.mission||""),
-   object:S.obj||"",
-   schedule:(S.date||"")+" "+displayTime4(S.slot||""),
-   email:S.email||"",
-   customer_name:S.name||"",
-   customer_email:S.email||"",
-   customer_phone:S.phone||"",
-   amount_cents:cents,
-   currency:"eur",
-   price_text:S.overrun.total+" € "+S.overrun.base
- };
- const res=await fetch(PAYMENT_GATEWAY_URL+"/intent",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify(body),cache:"no-store"});
- const data=await res.json().catch(()=>({}));
- if(!res.ok)throw new Error(data.error||("Gateway HTTP "+res.status));
- S.overrun.intentReady=true;
- save();
- return data;
-}
 function saveOverrun(unit,base,max){
  const availability=document.getElementById("overrunAvailability")?.value||"";
  if(availability==="BUSY")return alert("Une mission est prévue derrière : la prolongation est interdite. Arrêtez à l’heure convenue et proposez si nécessaire une nouvelle mission ultérieure.");
@@ -2094,52 +2056,14 @@ function saveOverrun(unit,base,max){
    agreementAt:nowStamp(),
    paymentStatus:"PENDING",
    paymentLink:isRelais?(RELAIS_OVERRUN_PAYMENT_LINKS[total]||""):"",
-   paymentProvider:isRelais?"STRIPE_PAYMENT_LINK":"CYRNEA_GATEWAY",
-   reference:isRelais?"":newGatewayReference(),
-   intentReady:false
+   paymentProvider:isRelais?"STRIPE_PAYMENT_LINK":"CYRNEA_GATEWAY_PENDING"
  };
  save(); terrain();
 }
-async function openOverrunPayment(){
- if(!S.overrun?.accepted)return alert("Aucune prolongation acceptée.");
- const staticUrl=String(S.overrun?.paymentLink||"");
- if(staticUrl)return window.open(staticUrl,"_blank","noopener");
- const popup=window.open("about:blank","_blank");
- if(!popup)return alert("Le navigateur a bloqué l’ouverture du paiement. Autorisez les fenêtres surgissantes pour cette PWA.");
- try{
-   popup.opener=null;
-   popup.document.title="CYRNEA — supplément de prolongation";
-   popup.document.body.innerHTML="<p style='font-family:-apple-system,Arial;padding:24px'>Préparation du paiement sécurisé…</p>";
-   await registerOverrunIntent();
-   const ref=ensureOverrunReference();
-   popup.location.replace(PAYMENT_GATEWAY_URL+"/pay?reference="+encodeURIComponent(ref));
- }catch(err){
-   try{popup.close()}catch(e){}
-   alert("Paiement du supplément indisponible : "+String(err?.message||err));
- }
-}
-async function checkOverrunPayment(){
- if(!S.overrun?.accepted)return alert("Aucune prolongation acceptée.");
- if(S.overrun.paymentProvider==="STRIPE_PAYMENT_LINK"){
-   return alert("Pour RELAIS, utilisez « PAIEMENT REÇU → MARQUER RÉGLÉ » après contrôle du paiement Stripe.");
- }
- const ref=ensureOverrunReference();
- const expected=overrunChargeCents();
- try{
-   const res=await fetch(PAYMENT_GATEWAY_URL+"/payment-status?reference="+encodeURIComponent(ref),{headers:{"accept":"application/json"},cache:"no-store"});
-   const data=await res.json().catch(()=>({}));
-   if(!res.ok)throw new Error(data.error||("Gateway HTTP "+res.status));
-   if(String(data.status||"").toUpperCase()!=="PAID")return alert("Paiement non confirmé pour l’instant. Statut : "+String(data.status||"WAITING")+".");
-   if(String(data.currency||"").toLowerCase()!=="eur")return alert("Paiement reçu avec une devise inattendue : contrôle manuel requis.");
-   if(Number(data.amount_cents)!==expected)return alert("Montant reçu différent du supplément attendu : contrôle manuel requis.");
-   S.overrun.paymentStatus="PAID";
-   S.overrun.paidAt=nowStamp();
-   S.overrun.paymentProof={reference:ref,provider:data.provider||"",amount_cents:Number(data.amount_cents),currency:String(data.currency||"").toLowerCase()};
-   save();
-   closeMission();
- }catch(err){
-   alert("Impossible de vérifier le paiement : "+String(err?.message||err));
- }
+function openOverrunPayment(){
+ const url=String(S.overrun?.paymentLink||"");
+ if(!url)return alert("Le paiement automatique de ce supplément PRÉSENCE / B2B doit encore être raccordé au gateway CYRNEA. Encaissez le supplément via le moyen de paiement actif, puis confirmez sa réception dans la PWA.");
+ window.open(url,"_blank","noopener");
 }
 function markOverrunPaid(){
  if(!S.overrun?.accepted)return;
@@ -2276,7 +2200,7 @@ function closeMission(){
    Accord : ${esc(ov.agreementMethod==="SMS"?"SMS reçu":"Accord téléphonique")} — ${esc(ov.agreementAt||"-")}<br>
    Statut : <b>${esc(ov.paymentStatus==="PAID"?"RÉGLÉ":ov.paymentStatus==="PENDING"?"À ENCAISSER":"À VÉRIFIER")}</b></div>
    ${ov.paymentStatus==="PENDING"&&ov.paymentLink?`<div class="toolbar"><button class="btn primary" onclick="openOverrunPayment()">OUVRIR LE PAIEMENT STRIPE — ${esc(String(ov.total))} € TTC</button><button class="btn ghost" onclick="markOverrunPaid()">PAIEMENT REÇU → MARQUER RÉGLÉ</button></div>`:""}
-   ${ov.paymentStatus==="PENDING"&&!ov.paymentLink?`<div class="toolbar"><button class="btn primary" onclick="openOverrunPayment()">OUVRIR LE PAIEMENT CYRNEA — ${esc(String(ov.total))} € ${esc(ov.base)}</button><button class="btn ghost" onclick="checkOverrunPayment()">VÉRIFIER LE PAIEMENT</button></div><div class="muted">${ov.base==="HT"?"Le paiement facturé inclut la TVA applicable.":""}</div>`:""}
+   ${ov.paymentStatus==="PENDING"&&!ov.paymentLink?`<div class="warn"><b>SUPPLÉMENT À ENCAISSER</b><br>${esc(String(ov.total))} € ${esc(ov.base)}. Le raccordement automatique du paiement PRÉSENCE / B2B au gateway reste à finaliser ; ne clôturez pas tant que le règlement n’est pas réellement reçu.</div><div class="toolbar"><button class="btn ghost" onclick="markOverrunPaid()">PAIEMENT RÉELLEMENT REÇU → MARQUER RÉGLÉ</button></div>`:""}
    `:"";
  draw(`<div class="card"><h1>Clôture</h1>
  <div class="todo"><b>À FAIRE</b>Choisir le statut réel. Ne jamais sélectionner « réalisée » si une partie prévue n’a pas pu être exécutée.</div>
