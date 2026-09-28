@@ -320,6 +320,33 @@ async function reconcileCloudMissions(){
  writeActiveMissionMap(map);
  return true;
 }
+async function configureCloudSync(){
+ const entered=prompt("Clé de synchronisation CYRNEA",getSyncKey());
+ if(entered===null)return;
+ const key=String(entered||"").trim();
+ if(!key)return alert("Clé de synchronisation requise.");
+ localStorage.setItem(SYNC_KEY_STORAGE,key);
+ try{
+   await reconcileCloudMissions();
+   await pushMissionToCloud(S);
+   alert("Synchronisation CYRNEA activée sur cet appareil.");
+   home(false);
+ }catch(e){
+   localStorage.removeItem(SYNC_KEY_STORAGE);
+   alert("Clé refusée ou stockage central indisponible.");
+ }
+}
+async function manualCloudSync(){
+ if(!getSyncKey())return configureCloudSync();
+ try{
+   persistActiveSnapshot(S);
+   await reconcileCloudMissions();
+   await pushMissionToCloud(S);
+   home(false);
+ }catch(e){
+   alert("Synchronisation impossible pour le moment.");
+ }
+}
 function save(){
  S._localUpdatedAt=Date.now();
  localStorage.setItem(STATE_KEY,JSON.stringify(S));
