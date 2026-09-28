@@ -293,8 +293,11 @@ async function pullCloudMissions(){
 async function deleteMissionFromCloud(st){
  const key=getSyncKey(),id=activeMissionKey(st);
  if(!key||!id)return false;
- const res=await fetch(MISSIONS_API_URL+"/missions/"+encodeURIComponent(id),{method:"DELETE",headers:syncHeaders()});
- if(!res.ok&&res.status!==404)throw new Error("sync_delete_"+res.status);
+ const tombstone={_deleted:true,_deletedAt:Date.now(),missionId:id};
+ const res=await fetch(MISSIONS_API_URL+"/missions/"+encodeURIComponent(id),{
+   method:"PUT",headers:syncHeaders(),body:JSON.stringify({payload:tombstone})
+ });
+ if(!res.ok)throw new Error("sync_delete_"+res.status);
  return true;
 }
 async function reconcileCloudMissions(){
@@ -302,12 +305,19 @@ async function reconcileCloudMissions(){
  const remote=await pullCloudMissions();
  const map=loadActiveMissionMap();
  const remoteIds=new Set();
+ let currentDeleted=false;
+ const currentId=activeMissionKey(S);
  for(const item of remote){
    const st=item?.payload;
    if(!st||typeof st!=="object")continue;
-   const id=String(item.id||activeMissionKey(st)||"");
+   const id=String(item.id||activeMissionKey(st)||st.missionId||"");
    if(!id)continue;
    remoteIds.add(id);
+   if(st._deleted){
+     delete map[id];
+     if(currentId===id)currentDeleted=true;
+     continue;
+   }
    const local=map[id];
    const remoteTime=Number(st._localUpdatedAt||item.updated_at||0);
    const localTime=Number(local?._localUpdatedAt||0);
@@ -318,6 +328,14 @@ async function reconcileCloudMissions(){
    if(!remoteIds.has(id)&&isActiveMissionState(local))await pushMissionToCloud(local);
  }
  writeActiveMissionMap(map);
+ if(currentDeleted){
+   S.finalStatus="DOSSIER SUPPRIMÉ";
+   S.stage="ACCUEIL";
+   localStorage.removeItem(STATE_KEY);
+ }else if(currentId&&map[currentId]){
+   S=JSON.parse(JSON.stringify(map[currentId]));
+   localStorage.setItem(STATE_KEY,JSON.stringify(S));
+ }
  return true;
 }
 async function configureCloudSync(){
@@ -341,10 +359,10 @@ async function manualCloudSync(){
  try{
    persistActiveSnapshot(S);
    await reconcileCloudMissions();
-   await pushMissionToCloud(S);
    home(false);
+   alert("Synchronisation terminée.");
  }catch(e){
-   alert("Synchronisation impossible pour le moment.");
+   alert("Synchronisation impossible — "+String(e?.message||e));
  }
 }
 function save(){
