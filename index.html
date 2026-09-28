@@ -1293,19 +1293,13 @@ async function registerTallyIntent(){
  if(!r.ok)throw new Error(data.error||`Gateway HTTP ${r.status}`);
  S.tallyIntentReady=true;save();return data;
 }
-async function openTallySecure(){
- const popup=window.open("about:blank","_blank");
+function openTallySecure(){
+ if(!assertVoirContractInvariant())return;
+ const url=buildTallyUrl();
+ const popup=window.open(url,"_blank","noopener");
  if(!popup)return alert("Le navigateur a bloqué l’ouverture de Tally. Autorisez les fenêtres surgissantes pour cette PWA.");
- try{
-   popup.opener=null;
-   popup.document.title="CYRNEA — ouverture Tally";
-   popup.document.body.innerHTML="<p style='font-family:-apple-system,Arial;padding:24px'>Sécurisation de la mission…</p>";
-   await registerTallyIntent();
-   popup.location.replace(buildTallyUrl());
- }catch(err){
-   try{popup.close()}catch(e){}
-   alert("Tally bloqué : "+String(err?.message||err)+". Aucun paiement ne doit être lancé.");
- }
+ S.tallyIntentReady=false;
+ save();
 }
 function openSimplyBook(){
  if(!assertVoirContractInvariant())return;
