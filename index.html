@@ -1756,7 +1756,7 @@ function missionDesk(){
     <div class="grid">
       <button class="choice" onclick="showMissionDoc('fiche')"><b>FICHE MISSION</b><br><span class="muted">Lecture uniquement — déjà remplie.</span></button>
       <button class="choice" onclick="terrain()"><b>CHECKLIST TERRAIN</b><br><span class="muted">À cocher directement sur l’iPhone.</span></button>
-      <button class="choice" onclick="showMissionDoc('support')"><b>DOCUMENTS / PHOTOS</b><br><span class="muted">Consulter les pièces client et le cadrage. Prototype : noms seulement ; production : fichiers réels.</span></button>
+      <button class="choice" onclick="showMissionDoc('support')"><b>DOCUMENTS / PHOTOS</b><br><span class="muted">Consulter le cadrage et la liste des pièces utiles. Les fichiers eux-mêmes restent conservés dans votre stockage habituel.</span></button>
       <button class="choice" onclick="showMissionDoc('rest')"><b>RESTITUTION</b><br><span class="muted">Se remplit à partir de vos coches terrain.</span></button>
     </div>
 
@@ -1781,7 +1781,7 @@ function showMissionDoc(kind){
   } else if(kind==="support"){
     body=`<div class="row"><b>Document de cadrage</b><span>${esc(p.support)}</span></div>
       <div class="row"><b>Pièces client</b><span>${S.prep.docsChoice==="OUI"?esc((S.prep.docs||[]).join(" • ")):"AUCUN DOCUMENT"}</span></div>
-      <div class="notice">En production : toucher le nom d’une pièce ouvre directement sa photo / son PDF dans l’assistant, sans chercher dans iCloud.</div>`;
+      <div class="notice">Les noms des pièces sont repris dans le dossier mission. Ouvrez le fichier correspondant depuis votre stockage habituel si nécessaire.</div>`;
   } else {
     body=`<div class="row"><b>Modèle</b><span>${esc(p.rest)}</span></div>
       <div class="row"><b>Faits / actions terrain</b><span>${esc(S.facts||"Pas encore renseignés")}</span></div>
@@ -1871,7 +1871,7 @@ function continueMultiAfterRestitution(){
     return draw(`<div class="card"><h1>Passage / jalon ${next} à programmer</h1>
       <div class="warn"><b>ARRÊT NORMAL</b>Le prochain créneau n’est pas fixé. Aucun passage suivant ne peut être lancé sans date, heure, contrôle d’agenda et éventuelle majoration.</div>
       <div class="notice">En pratique : créneau → disponibilité → réservation SimplyBook → préparation interne → mission prête.</div>
-      <button class="btn ghost" onclick="archivePartialMulti()">QUITTER LE TEST ICI</button>
+      <button class="btn ghost" onclick="archivePartialMulti()">CONSERVER LA MISSION EN COURS</button>
     </div>`);
   }
   S.passage=next;
@@ -2182,7 +2182,7 @@ function restitution(){
  <div class="row"><b>Accord client</b><span>${esc(S.overrun.agreementMethod==="SMS"?"SMS reçu":"Accord téléphonique")} — ${esc(S.overrun.agreementAt||"-")}</span></div>
  <div class="row"><b>Supplément</b><span>${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":S.overrun.paymentStatus==="PENDING"?"À ENCAISSER":"À VÉRIFIER")}</span></div>`:""}
  <div class="row"><b>Médias / preuves</b><span>${S.terrainMedia.length?esc(S.terrainMedia.join(" • ")):"AUCUN FICHIER AJOUTÉ"}</span></div>
- <div class="notice">En production : générer le bon modèle R0/R1/R2/R3, PDF contrôlé, sans ressaisie des données déjà connues.</div>
+ <div class="notice">La PWA rassemble les données nécessaires à la restitution R0/R1/R2/R3 et évite de ressaisir les informations déjà connues.</div>
  ${interim
    ? `<button class="btn primary" onclick="continueMultiAfterRestitution()">ENREGISTRER L’INTERMÉDIAIRE ET PRÉPARER LE PASSAGE ${S.passage+1}</button>`
    : `<button class="btn primary" onclick="closeMission()">VALIDER LA RESTITUTION FINALE</button>${S.result.multi&&S.passage>=3?`<button class="btn ghost" onclick="extraMomentInfo()" style="margin-top:10px">UN 4e / 5e PASSAGE LIÉ EST ENVISAGÉ</button>`:""}`}
@@ -2224,7 +2224,7 @@ function finalizeArchive(){
  S.finalStatus=document.getElementById("fs")?.value||S.finalStatus||"MISSION CLÔTURÉE";
  save();archive();
 }
-function archive(){setStage("ARCHIVE");save();const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>En production, aucun fichier technique ne sera à télécharger :</b> le dossier mission sera classé automatiquement dans l’archive CYRNEA. Sur le terrain, vous travaillez depuis l’assistant ; l’archive iCloud reste le stockage de fond, pas l’interface de travail.</div><div class="toolbar"><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
+function archive(){setStage("ARCHIVE");save();const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la PWA conserve l’état opérationnel du dossier. L’archive iCloud reste le stockage documentaire de fond ; sur le terrain, vous travaillez depuis l’assistant.</div><div class="toolbar"><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
 function exportJSON(){let b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(S.missionId||"CYRNEA-DEMO")+".json";a.click();URL.revokeObjectURL(a.href)}
 function boot(){
  try{STAGE_VIEWS=JSON.parse(localStorage.getItem(STAGE_VIEWS_KEY)||"{}")||{}}catch(e){STAGE_VIEWS={}}
