@@ -1990,7 +1990,10 @@ async function copyOverrunMessage(){
 function openMessagesForClient(){
  const phone=clientContactNumber();
  if(!phone)return alert("Aucun numéro client n’est enregistré dans le dossier.");
- window.location.href="sms:"+phone;
+ const message=overrunMessageText();
+ const isApple=/Macintosh|Mac OS X|iPhone|iPad|iPod/i.test(navigator.userAgent||"");
+ const sep=isApple?"&":"?"; 
+ window.location.href="sms:"+phone+(message?sep+"body="+encodeURIComponent(message):"");
 }
 function overrunGuide(){
  const r=overrunRule();
@@ -2004,8 +2007,8 @@ function overrunGuide(){
      <div class="row"><b>Téléphone</b><span>${esc(phone||"NON RENSEIGNÉ")}</span></div>
      <div class="toolbar">
        <a class="btn primary" href="${esc(clientCallHref())}">APPELER LE CLIENT</a>
-       <button id="copyOverrunBtn" class="btn ghost" onclick="copyOverrunMessage()">1 — COPIER LE MESSAGE</button>
-       <button class="btn ghost" onclick="openMessagesForClient()">2 — OUVRIR MESSAGES</button>
+       <button class="btn ghost" onclick="openMessagesForClient()">ENVOYER LE SMS</button>
+       <button id="copyOverrunBtn" class="btn ghost" onclick="copyOverrunMessage()">COPIER LE TEXTE — SECOURS</button>
      </div>
      <div class="muted">Aucune prolongation n’est enregistrée sur cette mission. Retour au terrain uniquement après requalification.</div>
      <button class="btn ghost" onclick="terrain()">RETOUR AU TERRAIN</button>
@@ -2022,8 +2025,8 @@ function overrunGuide(){
    <div class="row"><b>Téléphone</b><span>${esc(phone||"NON RENSEIGNÉ")}</span></div>
    <div class="toolbar">
      <a class="btn primary" href="${esc(clientCallHref())}">APPELER LE CLIENT</a>
-     <button id="copyOverrunBtn" class="btn ghost" onclick="copyOverrunMessage()">1 — COPIER LE MESSAGE</button>
-     <button class="btn ghost" onclick="openMessagesForClient()">2 — OUVRIR MESSAGES</button>
+     <button class="btn ghost" onclick="openMessagesForClient()">ENVOYER LE SMS</button>
+     <button id="copyOverrunBtn" class="btn ghost" onclick="copyOverrunMessage()">COPIER LE TEXTE — SECOURS</button>
    </div>
    <div class="field"><label>Mode de confirmation du client</label><select id="overrunAgreement">
      <option value="">— Choisir —</option>
