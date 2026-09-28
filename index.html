@@ -1945,8 +1945,10 @@ function clientSmsHref(){
  const phone=clientContactNumber();
  return phone?"sms:"+phone:"#";
 }
-async function copyOverrunMessage(message){
- if(!message)return;
+async function copyOverrunMessage(){
+ const el=document.querySelector(".readAloud");
+ const message=String(el?.textContent||"").trim();
+ if(!message)return alert("Aucun texte à copier.");
  try{
    await navigator.clipboard.writeText(message);
    alert("Texte copié. Collez-le dans Messages.");
@@ -1967,7 +1969,7 @@ function overrunGuide(){
      <div class="toolbar">
        <a class="btn primary" href="${esc(clientCallHref())}">APPELER LE CLIENT</a>
        <a class="btn ghost" href="${esc(clientSmsHref())}">OUVRIR MESSAGES</a>
-       <button class="btn ghost" onclick="copyOverrunMessage(${JSON.stringify(msg)})">COPIER LE TEXTE</button>
+       <button class="btn ghost" onclick="copyOverrunMessage()">COPIER LE TEXTE</button>
      </div>
      <div class="muted">APPELER utilise le lien téléphone natif. OUVRIR MESSAGES utilise le lien SMS natif. COPIER LE TEXTE permet de coller le message prêt à envoyer.</div>
      <button class="btn ghost" onclick="terrain()">RETOUR AU TERRAIN</button>
@@ -1984,7 +1986,7 @@ function overrunGuide(){
    <div class="toolbar">
      <a class="btn primary" href="${esc(clientCallHref())}">APPELER LE CLIENT</a>
      <a class="btn ghost" href="${esc(clientSmsHref())}">OUVRIR MESSAGES</a>
-     <button class="btn ghost" onclick="copyOverrunMessage(${JSON.stringify(msg)})">COPIER LE TEXTE</button>
+     <button class="btn ghost" onclick="copyOverrunMessage()">COPIER LE TEXTE</button>
    </div>
    <div class="toolbar"><button class="btn primary" onclick="saveOverrun(${r.unit},'${r.base}',${r.max||'null'})">ACCORD CLIENT OBTENU → ENREGISTRER</button><button class="btn ghost" onclick="terrain()">NE PAS PROLONGER</button></div>
  </div>`);
