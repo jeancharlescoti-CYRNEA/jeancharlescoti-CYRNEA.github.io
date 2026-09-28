@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-v53-final-20260928-final8';
+const CACHE='cyrnea-assistant-v53-final-20260928-final9';
 const ASSETS=['./index.html','./terrain-clock.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
@@ -19,6 +19,12 @@ self.addEventListener('activate',event=>{
 
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET')return;
+
+  // Laisser les appels API externes (Cloudflare Workers, Stripe, etc.)
+  // passer directement par le navigateur. Safari peut échouer si le service
+  // worker intercepte une requête CORS avec en-tête personnalisé.
+  const requestUrl=new URL(event.request.url);
+  if(requestUrl.origin!==self.location.origin)return;
 
   if(event.request.mode==='navigate'){
     event.respondWith(
