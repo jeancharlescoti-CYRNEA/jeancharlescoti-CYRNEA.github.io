@@ -1835,10 +1835,16 @@ function markArrival(){
   terrain();
 }
 function triggerDoubt(){
-  const s=document.getElementById("incidentSelect");
-  if(s)s.value="SITUATION DIFFÉRENTE / DOUTE";
-  const z=document.getElementById("incidentZone");
-  if(z)z.scrollIntoView({behavior:"smooth",block:"center"});
+  const sel=document.getElementById("incidentSelect");
+  if(sel)sel.value="SITUATION DIFFÉRENTE / DOUTE";
+  const w=document.getElementById("incidentOtherWrap");
+  if(w)w.classList.remove("hidden");
+  const t=document.getElementById("incidentOther");
+  if(t){
+    t.placeholder="Décrivez uniquement les faits constatés et ce qui vous fait douter, sans interprétation.";
+    setTimeout(()=>t.focus(),150);
+  }
+  if(w)w.scrollIntoView({behavior:"smooth",block:"center"});
 }
 function terrainMediaNames(){
   return [...(document.getElementById("terrainMedia")?.files||[])].map(f=>f.name);
