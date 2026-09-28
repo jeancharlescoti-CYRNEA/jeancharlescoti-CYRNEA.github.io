@@ -378,9 +378,9 @@ function home(remember=true){
  const cards=active.map(({id,state})=>{
    const when=[state.date||"",displayTime4(state.slot||"")].filter(Boolean).join(" · ");
    const amount=state.result?.price||"";
-   return `<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:stretch">
-     <button class="choice presence" onclick="resumeStoredMission('${esc(id)}')"><span class="missionName">${esc(state.result?.mission||"Mission en cours")} — ${esc(state.name||"Client")}</span><span class="missionGoal">${esc(activeMissionStatus(state))}${when?" · "+esc(when):""}${amount?" · "+esc(amount):""}</span></button>
-     <button class="btn ghost" style="min-width:46px;padding:0 14px;font-size:22px;line-height:1" title="Supprimer cette mission active" aria-label="Supprimer cette mission active" onclick="deleteActiveMission('${esc(id)}')">×</button>
+   return `<div style="display:grid;grid-template-columns:minmax(0,1fr) 42px;gap:8px;align-items:stretch;width:100%">
+     <button class="choice presence" style="min-width:0;width:100%" onclick="resumeStoredMission('${esc(id)}')"><span class="missionName">${esc(state.result?.mission||"Mission en cours")} — ${esc(state.name||"Client")}</span><span class="missionGoal">${esc(activeMissionStatus(state))}${when?" · "+esc(when):""}${amount?" · "+esc(amount):""}</span></button>
+     <button class="btn ghost" style="width:42px;min-width:42px;padding:0;font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center" title="Supprimer cette mission active" aria-label="Supprimer cette mission active" onclick="deleteActiveMission('${esc(id)}')">×</button>
    </div>`;
  }).join("");
  draw(`<div class="card"><h1>CYRNEA ASSISTANT</h1>
