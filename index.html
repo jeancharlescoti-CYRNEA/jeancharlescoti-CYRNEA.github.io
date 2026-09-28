@@ -2288,29 +2288,34 @@ function closeMission(){
  if(!S.departureAt)return alert("Impossible de clôturer sans contrôle terrain terminé et heure de départ.");
  setStage("CLÔTURE");
  const ov=S.overrun?.accepted?S.overrun:null;
- const isRelais=S.result?.contract==="RELAIS";
+ const unpaidOverrun=!!(ov&&ov.paymentStatus!=="PAID");
  const paymentBlock=ov?`
    <div class="${ov.paymentStatus==="PAID"?"notice":"warn"}"><b>SUPPLÉMENT DE PROLONGATION</b><br>
    ${esc(String(ov.tranches))} tranche(s) × ${esc(String(ov.unit))} € ${esc(ov.base)} = <b>${esc(String(ov.total))} € ${esc(ov.base)}</b><br>
    Accord : ${esc(ov.agreementMethod==="SMS"?"SMS reçu":"Accord téléphonique")} — ${esc(ov.agreementAt||"-")}<br>
    Statut : <b>${esc(ov.paymentStatus==="PAID"?"RÉGLÉ":ov.paymentStatus==="PENDING"?"À ENCAISSER":"À VÉRIFIER")}</b></div>
    ${ov.paymentStatus==="PENDING"&&ov.paymentLink?`<div class="toolbar"><button class="btn primary" onclick="openOverrunPayment()">OUVRIR LE PAIEMENT STRIPE — ${esc(String(ov.total))} € TTC</button><button class="btn ghost" onclick="markOverrunPaid()">PAIEMENT REÇU → MARQUER RÉGLÉ</button></div>`:""}
-   ${ov.paymentStatus==="PENDING"&&!ov.paymentLink?`<div class="warn"><b>SUPPLÉMENT À ENCAISSER</b><br>${esc(String(ov.total))} € ${esc(ov.base)}. Le raccordement automatique du paiement PRÉSENCE / B2B au gateway reste à finaliser ; ne clôturez pas tant que le règlement n’est pas réellement reçu.</div><div class="toolbar"><button class="btn ghost" onclick="markOverrunPaid()">PAIEMENT RÉELLEMENT REÇU → MARQUER RÉGLÉ</button></div>`:""}
+   ${ov.paymentStatus==="PENDING"&&!ov.paymentLink?`<div class="warn"><b>SUPPLÉMENT À ENCAISSER</b><br>${esc(String(ov.total))} € ${esc(ov.base)}. Ne clôturez pas le dossier tant que le règlement n’est pas réellement reçu.</div><div class="toolbar"><button class="btn ghost" onclick="markOverrunPaid()">PAIEMENT RÉELLEMENT REÇU → MARQUER RÉGLÉ</button></div>`:""}
    `:"";
+ if(unpaidOverrun)S.finalStatus="MISSION TERRAIN TERMINÉE — SUPPLÉMENT À ENCAISSER";
+ save();
  draw(`<div class="card"><h1>Clôture</h1>
- <div class="todo"><b>À FAIRE</b>Choisir le statut réel. Ne jamais sélectionner « réalisée » si une partie prévue n’a pas pu être exécutée.</div>
+ <div class="todo"><b>À FAIRE</b>${unpaidOverrun?"Le terrain est terminé. Le dossier reste ouvert jusqu’au règlement du supplément.":"Choisir le statut réel avant archivage."}</div>
  <div class="row"><b>Arrivée</b><span>${esc(S.arrivalAt)}</span></div>
  <div class="row"><b>Départ</b><span>${esc(S.departureAt)}</span></div>
  <div class="row"><b>Incident</b><span>${esc(S.incident||"Aucun")}</span></div>
  ${paymentBlock}
- <div class="field"><label>Statut final</label><select id="fs">
-   <option>MISSION RÉALISÉE ET CLÔTURÉE</option>
-   <option>MISSION PARTIELLEMENT RÉALISÉE ET CLÔTURÉE</option>
-   <option>MISSION IMPOSSIBLE À RÉALISER - CLÔTURÉE AVEC MOTIF DOCUMENTÉ</option>
- </select></div>
+ ${unpaidOverrun
+   ? `<div class="row"><b>Statut du dossier</b><span>MISSION TERRAIN TERMINÉE — SUPPLÉMENT À ENCAISSER</span></div>`
+   : `<div class="field"><label>Statut final</label><select id="fs">
+       <option>MISSION RÉALISÉE ET CLÔTURÉE</option>
+       <option>MISSION PARTIELLEMENT RÉALISÉE ET CLÔTURÉE</option>
+       <option>MISSION IMPOSSIBLE À RÉALISER - CLÔTURÉE AVEC MOTIF DOCUMENTÉ</option>
+     </select></div>`}
  <div class="notice">${S.result.contract.startsWith("PRÉSENCE")?"H5 / restitution finale à envoyer.":"Restitution RELAIS à envoyer."}</div>
- <button class="btn primary" onclick="finalizeArchive()">ARCHIVER LE DOSSIER</button>
- ${ov&&ov.paymentStatus!=="PAID"?`<button class="btn ghost" style="margin-top:10px" onclick="goHome()">CONSERVER EN ATTENTE DE PAIEMENT → ACCUEIL</button><div class="muted">La mission est terminée sur le terrain, mais le dossier reste actif en CLÔTURE jusqu’à réception du supplément.</div>`:""}
+ ${unpaidOverrun
+   ? `<button class="btn primary" onclick="goHome()">CONSERVER EN ATTENTE DE PAIEMENT → ACCUEIL</button><div class="muted">Cette mission reste dans MISSIONS ACTIVES. Elle pourra être rouverte dès réception du supplément.</div>`
+   : `<button class="btn primary" onclick="finalizeArchive()">ARCHIVER LE DOSSIER</button>`}
  </div>`);
 }
 function finalizeArchive(){
