@@ -1411,14 +1411,26 @@ function reservationActionsUrl(){
  if(!GATEWAY_REF_RE.test(String(S.tallyReference||"")))return "";
  return RESERVATION_ACTIONS_URL+"/?reference="+encodeURIComponent(S.tallyReference);
 }
-function openReservationActions(){
- const url=reservationActionsUrl();
- if(!url)return alert("Référence de réservation hors standard absente ou invalide.");
- window.open(url,"_blank","noopener");
+async function openReservationActions(){
+ const popup=window.open("about:blank","_blank");
+ if(!popup)return alert("Le navigateur a bloqué l’ouverture. Autorisez les fenêtres surgissantes pour cette PWA.");
+ try{
+   popup.opener=null;
+   if(!GATEWAY_REF_RE.test(String(S.tallyReference||"")))ensureTallyReference();
+   if(!S.tallyIntentReady)await registerTallyIntent();
+   const url=reservationActionsUrl();
+   if(!url)throw new Error("Référence de réservation hors standard absente ou invalide.");
+   popup.location.replace(url);
+   postPaymentDecision();
+ }catch(err){
+   try{popup.close()}catch(e){}
+   alert("Impossible d’ouvrir CONFIRMER / ALTERNATIVE / REMBOURSER : "+String(err?.message||err));
+ }
 }
 function markBooked(){
  S.specialPending=false;
  if(routeKind()==="TALLY"){
+   ensureTallyReference();
    S.paymentStatus="PAID_PENDING_CONFIRMATION";
    save();
    return postPaymentDecision();
@@ -1462,6 +1474,7 @@ function completeSimplyBookBooking(){
 }
 function postPaymentDecision(){
  setStage("RÉSERVATION");
+ if(!GATEWAY_REF_RE.test(String(S.tallyReference||"")))ensureTallyReference();
  draw(`<div class="card"><h1>Paiement reçu — décision humaine</h1>
    <div class="stop"><b>NE PAS PARTIR EN MISSION</b>Un paiement HORS STANDARD n’est pas une confirmation de disponibilité.</div>
    <div class="row"><b>Mission</b><span>${esc(S.result?.mission||"-")}</span></div>
@@ -1501,13 +1514,9 @@ function alternativeAcceptedForm(){
 function refreshAlternativeConstraints(){
  const d=document.getElementById("altDate"),t=document.getElementById("altTime");
  if(!d||!t)return;
- const today=todayLocalISO(),next=nextQuarterInfo();
+ const today=todayLocalISO();
  d.min=today;
- if(d.value && d.value<today){d.value="";clearTimeDropdown("altTime");}
- if(d.value===today){
-   if(next.date===today){if(t.value&&t.value<next.time)clearTimeDropdown("altTime")}
-   else clearTimeDropdown("altTime");
- }
+ if(d.value && d.value<today)d.value="";
 }
 function confirmAcceptedAlternative(){
  const d=getDateValue("altDate") || todayLocalISO();
