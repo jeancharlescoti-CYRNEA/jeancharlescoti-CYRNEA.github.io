@@ -1428,7 +1428,7 @@ function confirmSimplyBookSlot(){
  <button class="btn primary" onclick="completeSimplyBookBooking()">VALIDER LE CRÉNEAU RÉEL → PRÉPARER</button>
  </div>`);
  setTimeout(()=>{
-   if(requestedTime && /^\\d{2}:\\d{2}$/.test(requestedTime)){
+   if(requestedTime && /^\d{2}:\d{2}$/.test(requestedTime)){
      const [h,m]=requestedTime.split(":");
      const hh=document.getElementById("bookedSlH"), mm=document.getElementById("bookedSlM");
      if(hh)hh.value=h;
