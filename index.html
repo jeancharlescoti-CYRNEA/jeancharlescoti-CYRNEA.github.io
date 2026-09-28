@@ -370,13 +370,34 @@ async function reconcileCloudMissions(){
 
    if(!local||!item)continue;
 
-   // Premier passage avec cette nouvelle logique : D1 sert de base commune.
+   // Premier passage avec cette logique : comparer réellement les deux copies.
+   // Si elles diffèrent, conserver la plus récemment modifiée au lieu
+   // d'écraser systématiquement l'iPhone par la copie centrale.
    if(!m){
-     map[id]=remoteState;
-     meta[id]={
-       remoteUpdatedAt:Number(item.updated_at||0),
-       snapshot:missionSyncSnapshot(remoteState)
-     };
+     const localSnap=missionSyncSnapshot(local);
+     const remoteSnap=missionSyncSnapshot(remoteState);
+     if(localSnap===remoteSnap){
+       meta[id]={
+         remoteUpdatedAt:Number(item.updated_at||0),
+         snapshot:remoteSnap
+       };
+     }else{
+       const localTime=Number(local?._localUpdatedAt||0);
+       const remoteTime=Number(remoteState?._localUpdatedAt||item.updated_at||0);
+       if(localTime>remoteTime){
+         const pushed=await pushMissionToCloud(local);
+         meta[id]={
+           remoteUpdatedAt:Number(pushed?.updated_at||Date.now()),
+           snapshot:localSnap
+         };
+       }else{
+         map[id]=remoteState;
+         meta[id]={
+           remoteUpdatedAt:Number(item.updated_at||0),
+           snapshot:remoteSnap
+         };
+       }
+     }
      continue;
    }
 
@@ -452,7 +473,11 @@ async function manualCloudSync(){
  }
 }
 function save(){
- S._localUpdatedAt=Date.now();
+ let previous=null;
+ try{previous=JSON.parse(localStorage.getItem(STATE_KEY)||"null")}catch(e){}
+ const changed=!previous || missionSyncSnapshot(previous)!==missionSyncSnapshot(S);
+ if(changed)S._localUpdatedAt=Date.now();
+ else if(previous?._localUpdatedAt)S._localUpdatedAt=previous._localUpdatedAt;
  localStorage.setItem(STATE_KEY,JSON.stringify(S));
  persistActiveSnapshot(S);
 }
