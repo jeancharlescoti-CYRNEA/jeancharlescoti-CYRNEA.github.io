@@ -460,35 +460,35 @@ async function configureCloudSync(){
 async function manualCloudSync(){
  if(!getSyncKey())return configureCloudSync();
  try{
-   // SYNCHRONISER MAINTENANT = cet appareil devient la référence de la liste active.
+   // Synchronisation bidirectionnelle :
+   // - on conserve l'union des missions actives des deux appareils ;
+   // - seules les suppressions explicites (croix ×) suppriment une mission partout.
    const localMap=loadActiveMissionMap();
-   const localIds=new Set(Object.keys(localMap).filter(id=>isActiveMissionState(localMap[id])));
 
-   // 1. Lire l'état central actuel.
+   // 1. Lire d'abord le central pour appliquer les suppressions explicites.
    const remote=await pullCloudMissions();
-
-   // 2. Supprimer du central toute mission absente de cet appareil.
+   const deletedIds=new Set();
    for(const item of remote){
      const st=item?.payload;
      const id=String(item?.id||activeMissionKey(st)||st?.missionId||"");
-     if(!id||st?._deleted)continue;
-     if(!localIds.has(id)){
-       const tombstone={_deleted:true,_deletedAt:Date.now(),missionId:id};
-       const res=await fetch(MISSIONS_API_URL+"/missions/"+encodeURIComponent(id),{
-         method:"PUT",headers:syncHeaders(),body:JSON.stringify({payload:tombstone})
-       });
-       if(!res.ok)throw new Error("sync_delete_"+res.status);
+     if(id&&st?._deleted)deletedIds.add(id);
+   }
+
+   for(const id of deletedIds){
+     delete localMap[id];
+   }
+
+   // 2. Envoyer toutes les missions actives locales non supprimées.
+   let sent=0;
+   for(const [id,st] of Object.entries(localMap)){
+     if(deletedIds.has(id))continue;
+     if(isActiveMissionState(st)){
+       await pushMissionToCloud(st);
+       sent++;
      }
    }
 
-   // 3. Envoyer toutes les missions actives présentes sur cet appareil.
-   let sent=0;
-   for(const id of localIds){
-     await pushMissionToCloud(localMap[id]);
-     sent++;
-   }
-
-   // 4. Relire le central final et l'appliquer localement.
+   // 3. Relire le central final et reconstruire la liste locale complète.
    const finalRemote=await pullCloudMissions();
    const finalMap={};
    for(const item of finalRemote){
@@ -499,6 +499,7 @@ async function manualCloudSync(){
    }
    writeActiveMissionMap(finalMap);
 
+   // 4. Mettre à jour le dossier actuellement ouvert s'il existe encore.
    const currentId=activeMissionKey(S);
    if(currentId && finalMap[currentId]){
      S=JSON.parse(JSON.stringify(finalMap[currentId]));
@@ -509,7 +510,7 @@ async function manualCloudSync(){
    }
 
    home(false);
-   alert("Synchronisation terminée — cet appareil est la référence : "+Object.keys(finalMap).length+" mission(s) active(s).");
+   alert("Synchronisation terminée — "+Object.keys(finalMap).length+" mission(s) active(s) sur les deux appareils.");
  }catch(e){
    alert("Synchronisation impossible — "+String(e?.message||e));
  }
