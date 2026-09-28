@@ -268,7 +268,54 @@ function activeMissionStatus(st){
  if(st.stage==="RÉSERVATION")return "RÉSERVATION / PAIEMENT";
  return st.stage||"MISSION EN COURS";
 }
-function save(){localStorage.setItem(STATE_KEY,JSON.stringify(S));persistActiveSnapshot(S)}
+function getSyncKey(){return String(localStorage.getItem(SYNC_KEY_STORAGE)||"").trim()}
+function syncHeaders(){return {"Content-Type":"application/json","X-Cyrnea-Key":getSyncKey()}}
+async function pushMissionToCloud(st){
+ const key=getSyncKey();
+ if(!key||!isActiveMissionState(st))return false;
+ const id=activeMissionKey(st);
+ if(!id)return false;
+ const payload=JSON.parse(JSON.stringify(st));
+ const res=await fetch(MISSIONS_API_URL+"/missions/"+encodeURIComponent(id),{
+   method:"PUT",headers:syncHeaders(),body:JSON.stringify({payload})
+ });
+ if(!res.ok)throw new Error("sync_put_"+res.status);
+ return true;
+}
+async function pullCloudMissions(){
+ const key=getSyncKey();
+ if(!key)return [];
+ const res=await fetch(MISSIONS_API_URL+"/missions",{method:"GET",headers:syncHeaders(),cache:"no-store"});
+ if(!res.ok)throw new Error("sync_get_"+res.status);
+ const data=await res.json();
+ return Array.isArray(data.missions)?data.missions:[];
+}
+async function deleteMissionFromCloud(st){
+ const key=getSyncKey(),id=activeMissionKey(st);
+ if(!key||!id)return false;
+ const res=await fetch(MISSIONS_API_URL+"/missions/"+encodeURIComponent(id),{method:"DELETE",headers:syncHeaders()});
+ if(!res.ok&&res.status!==404)throw new Error("sync_delete_"+res.status);
+ return true;
+}
+async function reconcileCloudMissions(){
+ if(!getSyncKey())return false;
+ const remote=await pullCloudMissions();
+ const map=loadActiveMissionMap();
+ for(const item of remote){
+   const st=item?.payload;
+   if(!st||typeof st!=="object")continue;
+   const id=String(item.id||activeMissionKey(st)||"");
+   if(!id)continue;
+   map[id]=st;
+ }
+ writeActiveMissionMap(map);
+ return true;
+}
+function save(){
+ localStorage.setItem(STATE_KEY,JSON.stringify(S));
+ persistActiveSnapshot(S);
+ if(getSyncKey()&&isActiveMissionState(S))pushMissionToCloud(S).catch(()=>{});
+}
 function reset(){localStorage.removeItem(STATE_KEY);localStorage.removeItem(LEGACY_STATE_KEY);localStorage.removeItem(STAGE_VIEWS_KEY);location.reload()}
 function key(){return "D-"+new Date().toISOString().replace(/\D/g,"").slice(0,14)}
 function missionId(){
