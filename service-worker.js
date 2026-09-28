@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-v53-final-20260928-final18';
+const CACHE='cyrnea-assistant-v53-final-20260928-final19';
 const ASSETS=['./index.html','./terrain-clock.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
