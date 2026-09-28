@@ -1844,6 +1844,7 @@ function nowStamp(){
   return `${pad2(n.getDate())}/${pad2(n.getMonth()+1)}/${n.getFullYear()} ${pad2(n.getHours())}:${pad2(n.getMinutes())}:${pad2(n.getSeconds())}`;
 }
 function markArrival(){
+  captureTerrainDraft();
   if(!S.arrivalAt){S.arrivalEpochMs=Date.now();S.arrivalAt=nowStamp();}
   save();
   terrain();
@@ -1861,7 +1862,35 @@ function triggerDoubt(){
   if(w)w.scrollIntoView({behavior:"smooth",block:"center"});
 }
 function terrainMediaNames(){
-  return [...(document.getElementById("terrainMedia")?.files||[])].map(f=>f.name);
+  const current=[...(document.getElementById("terrainMedia")?.files||[])].map(f=>f.name);
+  const cached=Array.isArray(S.terrainDraft?.mediaNames)?S.terrainDraft.mediaNames:[];
+  return [...new Set([...cached,...current])];
+}
+function captureTerrainDraft(){
+  if(!document.querySelector("input[name=\"terrainGuard\"]"))return;
+  S.terrainDraft={
+    guards:[...document.querySelectorAll("input[name=\"terrainGuard\"]")].map(x=>!!x.checked),
+    facts:[...document.querySelectorAll("input[name=\"terrainFact\"]:checked")].map(x=>x.value),
+    factOther:(document.getElementById("factOther")?.value||"").trim(),
+    incident:document.getElementById("incidentSelect")?.value||"",
+    incidentOther:(document.getElementById("incidentOther")?.value||"").trim(),
+    exits:[...document.querySelectorAll("input[name=\"exitCheck\"]")].map(x=>!!x.checked),
+    mediaNames:terrainMediaNames()
+  };
+  save();
+}
+function restoreTerrainDraft(){
+  const d=S.terrainDraft;
+  if(!d)return;
+  [...document.querySelectorAll("input[name=\"terrainGuard\"]")].forEach((x,i)=>x.checked=!!d.guards?.[i]);
+  [...document.querySelectorAll("input[name=\"terrainFact\"]")].forEach(x=>x.checked=(d.facts||[]).includes(x.value));
+  const fo=document.getElementById("factOther");
+  if(fo&&d.factOther){fo.value=d.factOther;document.getElementById("factOtherWrap")?.classList.remove("hidden")}
+  const inc=document.getElementById("incidentSelect");
+  if(inc&&d.incident){inc.value=d.incident;toggleIncidentOther()}
+  const io=document.getElementById("incidentOther");
+  if(io&&d.incidentOther){io.value=d.incidentOther;document.getElementById("incidentOtherWrap")?.classList.remove("hidden")}
+  [...document.querySelectorAll("input[name=\"exitCheck\"]")].forEach((x,i)=>x.checked=!!d.exits?.[i]);
 }
 function allChecked(selector){
   const xs=[...document.querySelectorAll(selector)];
@@ -1921,6 +1950,7 @@ function collectTerrain(){
   S.facts=facts.join(" ; ");
   S.incident=inc==="AUCUN"?"Aucun":incText;
   S.departureAt=nowStamp();
+  S.terrainDraft=null;
   save();
   restitution();
 }
@@ -1987,6 +2017,8 @@ function openMessagesForClient(){
    : "sms:"+phone+"?body="+encodeURIComponent(message);
 }
 function overrunGuide(){
+ if(!S.arrivalAt)return alert("Une prolongation ne peut être demandée qu’après avoir horodaté votre arrivée sur place et commencé la mission.");
+ captureTerrainDraft();
  const r=overrunRule();
  const phone=clientPhoneDisplay();
  if(!r.allowed){
@@ -2157,7 +2189,7 @@ function terrain(){
  </div>
 
  <div class="stop"><b>LA SITUATION EST DIFFÉRENTE / J'AI UN DOUTE</b><br>Ne pas improviser · constater · ne pas aggraver · documenter · requalifier avant élargissement.<br><br><button class="btn danger" onclick="triggerDoubt()">J’AI UN DOUTE / SITUATION DIFFÉRENTE</button></div>
- <div class="warn"><b>LE TEMPS PRÉVU EST DÉPASSÉ ?</b><br>Ne prolongez jamais de vous-même. L’assistant applique la règle de la mission.<br><br><button class="btn ghost" onclick="overrunGuide()">TEMPS / CADRE DÉPASSÉ</button>${S.overrun?.accepted?`<div class="notice" style="margin-top:10px"><b>PROLONGATION ACCEPTÉE</b>+${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(String(S.overrun.tranches))} tranche(s).</div>`:""}</div>
+ <div class="warn"><b>LE TEMPS PRÉVU EST DÉPASSÉ ?</b><br>Ne prolongez jamais de vous-même. L’assistant applique la règle de la mission.<br><br>${S.arrivalAt?`<button class="btn ghost" onclick="overrunGuide()">TEMPS / CADRE DÉPASSÉ</button>`:`<div class="muted">La prolongation devient disponible après « J’ARRIVE SUR PLACE — HORODATER ».</div>`}${S.overrun?.accepted?`<div class="notice" style="margin-top:10px"><b>PROLONGATION ACCEPTÉE</b>+${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(String(S.overrun.tranches))} tranche(s).</div>`:""}</div>
 
  <div class="checkZone">
    <div class="checkIntro">AVANT DE QUITTER LES LIEUX — CONTRÔLES CRITIQUES</div>
@@ -2168,7 +2200,8 @@ function terrain(){
  </div>
 
  <button class="btn primary" onclick="collectTerrain()">J’AI TERMINÉ SUR PLACE</button>
- </div>`)
+ </div>`);
+ restoreTerrainDraft();
 }
 function restitution(){
  setStage("RESTITUTION");
