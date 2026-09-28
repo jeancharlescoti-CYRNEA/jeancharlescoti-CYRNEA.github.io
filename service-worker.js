@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-v53-final-20260928e';
+const CACHE='cyrnea-assistant-v53-final-20260928f';
 const ASSETS=['./','./index.html','./manifest.webmanifest','./icons/icon-192.png'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));
