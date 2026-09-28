@@ -1393,7 +1393,7 @@ function bookingHandoff(){
  </div>
  <div class="toolbar">${route==="TALLY"?`<button class="btn primary" onclick="openTallySecure()">OUVRIR TALLY — RÉSERVER / PAYER</button>`:`<button class="btn primary" onclick="openSimplyBook()">OUVRIR SIMPLYBOOK — RÉSERVER / PAYER</button><button class="btn ghost" onclick="settings()">RÉGLAGES DU LIEN</button>`}</div>
  <div class="checkZone"><div class="checkIntro">APRÈS LE PAIEMENT ${route==="TALLY"?"TALLY":"SIMPLYBOOK"}</div>
- <button class="btn primary" onclick="markBooked()">${route==="TALLY"?"PAIEMENT REÇU → DÉCIDER":"RÉSERVATION CONFIRMÉE → PRÉPARER LA MISSION"}</button>
+ <button class="btn primary" onclick="markBooked()">${route==="TALLY"?"PAIEMENT REÇU → DÉCIDER":"RÉSERVATION SIMPLYBOOK CONFIRMÉE → ENREGISTRER LE CRÉNEAU RÉEL"}</button>
  </div>
  </div>`);
 }
@@ -1413,9 +1413,40 @@ function markBooked(){
    save();
    return postPaymentDecision();
  }
+ return confirmSimplyBookSlot();
+}
+function confirmSimplyBookSlot(){
+ setStage("RÉSERVATION");
+ const requestedDate=S.date||todayLocalISO();
+ const requestedTime=normalizeTime4(S.slot||"");
+ draw(`<div class="card"><h1>Créneau réellement réservé dans SimplyBook</h1>
+ <div class="notice"><b>IMPORTANT</b>Le créneau saisi précédemment dans la PWA était un créneau souhaité pour orienter la réservation. SimplyBook reste la source de vérité pour la réservation STANDARD.</div>
+ <div class="row"><b>Créneau initialement souhaité</b><span>${esc(scheduleText())}</span></div>
+ <div class="field"><label>Date réellement réservée dans SimplyBook</label><input id="bookedDate" type="date" min="${todayLocalISO()}" value="${esc(requestedDate)}"></div>
+ ${timeDropdownHtml("bookedSl","")}
+ <div class="operatorOnly">Recopiez ici la date et l'heure affichées dans la confirmation SimplyBook avant de préparer la mission.</div>
+ <button class="btn primary" onclick="completeSimplyBookBooking()">VALIDER LE CRÉNEAU RÉEL → PRÉPARER</button>
+ </div>`);
+ setTimeout(()=>{
+   if(requestedTime && /^\d{2}:\d{2}$/.test(requestedTime)){
+     const [h,m]=requestedTime.split(":");
+     const hh=document.getElementById("bookedSlH"), mm=document.getElementById("bookedSlM");
+     if(hh)hh.value=h;
+     if(mm)mm.value=m;
+     syncTimeDropdown("bookedSl");
+   }
+ },0);
+}
+function completeSimplyBookBooking(){
+ const bookedDate=getDateValue("bookedDate");
+ const bookedTime=normalizeTime4(getDropdownTime("bookedSl"));
+ const check=validateMissionTimeRules(bookedDate,bookedTime,"le créneau réellement réservé");
+ if(!check.ok)return alert(check.msg);
+ S.date=bookedDate;
+ S.slot=bookedTime;
  S.paymentStatus="PAID_CONFIRMED";
  S.decisionStatus="CONFIRMED";
- if(!S.missionId) S.missionId=missionId();
+ if(!S.missionId)S.missionId=missionId();
  save();
  preparationMission();
 }
