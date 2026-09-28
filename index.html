@@ -747,10 +747,29 @@ function timeDropdownHtml(baseId,onchangeFn="refreshCalendarConstraints()"){
     <div class="muted">Minutes : 00, 15, 30 ou 45.</div>
   </div>`;
 }
+function selectedValue(id){
+  const el=document.getElementById(id);
+  if(!el)return "";
+  const direct=String(el.value||"").trim();
+  if(direct)return direct;
+  const opt=el.options?.[el.selectedIndex];
+  return String(opt?.value||opt?.textContent||"").trim();
+}
 function getDropdownTime(baseId){
-  const h=document.getElementById(baseId+"H")?.value||"";
-  const m=document.getElementById(baseId+"M")?.value||"";
-  return (h&&m)?`${h}:${m}`:"";
+  const h=selectedValue(baseId+"H");
+  const m=selectedValue(baseId+"M");
+  return (h&&m)?`${h.padStart(2,"0")}:${m.padStart(2,"0")}`:"";
+}
+function getDateValue(id){
+  const el=document.getElementById(id);
+  if(!el)return "";
+  const direct=String(el.value||"").trim();
+  if(direct)return direct;
+  const d=el.valueAsDate;
+  if(d instanceof Date && !Number.isNaN(d.getTime())){
+    return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+  }
+  return "";
 }
 function syncTimeDropdown(baseId){
   const value=getDropdownTime(baseId);
@@ -927,8 +946,8 @@ function readMultiPassage(i){
   const block=document.getElementById(`jalon_${i}`);
   const active=i===1 || (block && !block.classList.contains("hidden"));
   if(!active) return null;
-  const date=(document.getElementById(`d${i}`)?.value||"").trim();
-  const time=normalizeTime4(getDropdownTime(`sl${i}`) || (document.getElementById(`sl${i}`)?.value||"").trim());
+  const date=getDateValue(`d${i}`);
+  const time=normalizeTime4(getDropdownTime(`sl${i}`));
   const c=autoConstraints(date,time);
   return {index:i,date,time,priority:c.priority,evening:c.evening,night:c.night,sunday:c.sunday};
 }
@@ -1152,8 +1171,8 @@ function manualConfirmMultiSlots(){
   bookingHandoff();
 }
 function confirmSlot(){
-  S.date=document.getElementById('d').value;
-  S.slot=normalizeTime4(getDropdownTime("sl") || document.getElementById('sl')?.value || "");
+  S.date=getDateValue("d");
+  S.slot=normalizeTime4(getDropdownTime("sl"));
   const check=validateMissionTimeRules(S.date,S.slot,"ce créneau");
   if(!check.ok) return alert(check.msg);
   refreshCalendarConstraints();
@@ -1448,8 +1467,8 @@ function refreshAlternativeConstraints(){
  }
 }
 function confirmAcceptedAlternative(){
- const d=(document.getElementById("altDate")?.value||"").trim();
- const t=normalizeTime4(getDropdownTime("altTime") || (document.getElementById("altTime")?.value||"").trim());
+ const d=getDateValue("altDate");
+ const t=normalizeTime4(getDropdownTime("altTime"));
  const check=validateMissionTimeRules(d,t,"le créneau alternatif");
  if(!check.ok)return alert(check.msg);
  S.date=d;S.slot=t;S.multiSlots=[];S.availability=autoConstraints(d,t);
