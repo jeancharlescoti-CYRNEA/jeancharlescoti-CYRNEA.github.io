@@ -747,11 +747,15 @@ function timeDropdownHtml(baseId,onchangeFn="refreshCalendarConstraints()"){
     <div class="muted">Minutes : 00, 15, 30 ou 45.</div>
   </div>`;
 }
-function syncTimeDropdown(baseId){
+function getDropdownTime(baseId){
   const h=document.getElementById(baseId+"H")?.value||"";
   const m=document.getElementById(baseId+"M")?.value||"";
+  return (h&&m)?`${h}:${m}`:"";
+}
+function syncTimeDropdown(baseId){
+  const value=getDropdownTime(baseId);
   const hidden=document.getElementById(baseId);
-  if(hidden) hidden.value=(h&&m)?`${h}:${m}`:"";
+  if(hidden) hidden.value=value;
 }
 function clearTimeDropdown(baseId){
   const h=document.getElementById(baseId+"H"),m=document.getElementById(baseId+"M"),hidden=document.getElementById(baseId);
@@ -869,7 +873,7 @@ function autoConstraints(dateStr,timeStr){
 }
 function setAutoConstraint(prefix,dateId,timeId){
   const date=document.getElementById(dateId)?.value||"";
-  const time=document.getElementById(timeId)?.value||"";
+  const time=getDropdownTime(timeId) || document.getElementById(timeId)?.value || "";
   const c=autoConstraints(date,time);
   const p=document.getElementById(`prio24${prefix}`);
   const e=document.getElementById(`evening${prefix}`);
@@ -924,7 +928,7 @@ function readMultiPassage(i){
   const active=i===1 || (block && !block.classList.contains("hidden"));
   if(!active) return null;
   const date=(document.getElementById(`d${i}`)?.value||"").trim();
-  const time=normalizeTime4((document.getElementById(`sl${i}`)?.value||"").trim());
+  const time=normalizeTime4(getDropdownTime(`sl${i}`) || (document.getElementById(`sl${i}`)?.value||"").trim());
   const c=autoConstraints(date,time);
   return {index:i,date,time,priority:c.priority,evening:c.evening,night:c.night,sunday:c.sunday};
 }
@@ -1149,7 +1153,7 @@ function manualConfirmMultiSlots(){
 }
 function confirmSlot(){
   S.date=document.getElementById('d').value;
-  S.slot=normalizeTime4(document.getElementById('sl').value);
+  S.slot=normalizeTime4(getDropdownTime("sl") || document.getElementById('sl')?.value || "");
   const check=validateMissionTimeRules(S.date,S.slot,"ce créneau");
   if(!check.ok) return alert(check.msg);
   refreshCalendarConstraints();
@@ -1445,7 +1449,7 @@ function refreshAlternativeConstraints(){
 }
 function confirmAcceptedAlternative(){
  const d=(document.getElementById("altDate")?.value||"").trim();
- const t=normalizeTime4((document.getElementById("altTime")?.value||"").trim());
+ const t=normalizeTime4(getDropdownTime("altTime") || (document.getElementById("altTime")?.value||"").trim());
  const check=validateMissionTimeRules(d,t,"le créneau alternatif");
  if(!check.ok)return alert(check.msg);
  S.date=d;S.slot=t;S.multiSlots=[];S.availability=autoConstraints(d,t);
