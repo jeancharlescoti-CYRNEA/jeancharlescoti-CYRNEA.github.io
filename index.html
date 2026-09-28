@@ -378,7 +378,10 @@ function home(remember=true){
  const cards=active.map(({id,state})=>{
    const when=[state.date||"",displayTime4(state.slot||"")].filter(Boolean).join(" · ");
    const amount=state.result?.price||"";
-   return `<button class="choice presence" onclick="resumeStoredMission('${esc(id)}')"><span class="missionName">${esc(state.result?.mission||"Mission en cours")} — ${esc(state.name||"Client")}</span><span class="missionGoal">${esc(activeMissionStatus(state))}${when?" · "+esc(when):""}${amount?" · "+esc(amount):""}</span></button>`;
+   return `<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:stretch">
+     <button class="choice presence" onclick="resumeStoredMission('${esc(id)}')"><span class="missionName">${esc(state.result?.mission||"Mission en cours")} — ${esc(state.name||"Client")}</span><span class="missionGoal">${esc(activeMissionStatus(state))}${when?" · "+esc(when):""}${amount?" · "+esc(amount):""}</span></button>
+     <button class="btn ghost" style="min-width:46px;padding:0 14px;font-size:22px;line-height:1" title="Supprimer cette mission active" aria-label="Supprimer cette mission active" onclick="deleteActiveMission('${esc(id)}')">…</button>
+   </div>`;
  }).join("");
  draw(`<div class="card"><h1>CYRNEA ASSISTANT</h1>
  <div class="bigQuestion">Que voulez-vous faire ?</div>
@@ -407,6 +410,24 @@ function resumeStoredMission(id){
  STAGE_VIEWS={};NAV=[];LAST_VIEW=null;
  REACHED_STAGES=new Set(S.history);REACHED_STAGES.add("ACCUEIL");syncReached();
  resumeActiveMission();
+}
+async function deleteActiveMission(id){
+ const map=loadActiveMissionMap();
+ const st=map[id];
+ if(!st)return alert("Cette mission active n’existe plus.");
+ const label=(st.result?.mission||"Mission")+" — "+(st.name||"Client");
+ if(!confirm("SUPPRIMER CE DOSSIER ACTIF ?\n\n"+label+"\n\nÀ utiliser uniquement si le dossier a été créé par erreur. Cette suppression sera aussi répercutée sur les autres appareils synchronisés."))return;
+ delete map[id];
+ writeActiveMissionMap(map);
+ const currentId=activeMissionKey(S);
+ if(currentId===id){
+   localStorage.removeItem(STATE_KEY);
+   localStorage.removeItem(STAGE_VIEWS_KEY);
+   STAGE_VIEWS={};NAV=[];LAST_VIEW=null;
+   S={stage:"ACCUEIL",mode:"FULL",universe:null,caller:null,name:"",phone:"",email:"",city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",acceptedSlot:false,draftKey:key(),missionId:"",prep:{},facts:"",incident:"",terrainMedia:[],terrainDraft:null,arrivalAt:"",arrivalEpochMs:null,departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,paymentMethod:"",paymentState:"",specialPending:false,resumeStage:"",history:["ACCUEIL"]};
+ }
+ try{await deleteMissionFromCloud(st)}catch(e){}
+ home(false);
 }
 function newMission(){
  persistActiveSnapshot(S);
