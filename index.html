@@ -1,10 +1,10 @@
-<!-- V46 FLUIDE 22/09/2026 : paiement immédiat ; créneau souhaité à confirmer ; alternatives via menu SimplyBook ; parcours interne complet jusqu'à archive. -->
+<!-- V53 FINAL 28/09/2026 — base V53 + routage STANDARD/HORS STANDARD, cloisonnement VOIR, CGV/CGS V14/V7/V8, décision humaine après paiement HORS STANDARD, calendrier futur strict. -->
 <!doctype html>
 <html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CYRNEA - Assistant interne V53</title>
+<title>CYRNEA - Assistant interne V53 FINAL 28/09/2026</title>
 <style>
 :root{--bg:#f5f3ef;--card:#fff;--ink:#1d2733;--muted:#6d7680;--line:#d7d2ca;--accent:#29415f;--ok:#326047;--warn:#8b5d19;--danger:#8b3434}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink)}
@@ -131,7 +131,7 @@ function refreshPhoneFormat(){
 }
 let STAGE_VIEWS={};
 let REACHED_STAGES=new Set(["ACCUEIL"]);
-const STAGE_VIEWS_KEY="cyrnea_stage_views_v50";
+const STAGE_VIEWS_KEY="cyrnea_stage_views_v53_final_20260928";
 function serializeAppHtml(){
  const app=document.getElementById("app"); if(!app)return "";
  const c=app.cloneNode(true);
@@ -173,15 +173,57 @@ function gotoStage(st){
  if(st==="QUALIFICATION")return identify();
  if(st==="CADRAGE")return S.result?showResult():needs();
  if(st==="CRÉNEAU")return slot();
- if(st==="RÉSERVATION")return bookingHandoff();
+ if(st==="RÉSERVATION"){
+   if(S.paymentStatus==="PAID_PENDING_CONFIRMATION" || S.decisionStatus==="ALTERNATIVE_PROPOSED") return postPaymentDecision();
+   return bookingHandoff();
+ }
  if(st==="PRÊTE")return S.prep?.addr?ready():preparationMission();
  if(st==="TERRAIN")return terrain();
  if(st==="RESTITUTION")return restitution();
  if(st==="CLÔTURE")return closeMission();
  if(st==="ARCHIVE")return archive();
 }
-const STATE_KEY="cyrnea_assistant_v50";
-const LEGACY_STATE_KEY="cyrnea_assistant_v49";
+const STATE_KEY="cyrnea_assistant_v53_final_20260928";
+const LEGACY_STATE_KEY="cyrnea_assistant_v50";
+const PAYMENT_GATEWAY_URL="https://cyrnea-payment-gateway.jeancharles-coti.workers.dev";
+const RESERVATION_ACTIONS_URL="https://cyrnea-reservation-actions.jeancharles-coti.workers.dev";
+const TALLY_URLS={
+  RELAIS:"https://tally.so/r/b5oz46",
+  PRESENCE:"https://tally.so/r/GxZbE2",
+  B2B:"https://tally.so/r/RGp0PQ"
+};
+const OWNER_SERVICE_URLS={
+  "RELAIS SIMPLE":"https://cyrneapresencerelais.simplybook.it/v2/#book/service/2/count/1/",
+  "RELAIS":"https://cyrneapresencerelais.simplybook.it/v2/#book/service/3/count/1/",
+  "VOIR RELAIS":"https://cyrneapresencerelais.simplybook.it/v2/#book/service/4/count/1/",
+  "VOIR PRÉSENCE":"https://cyrneapresencerelais.simplybook.it/v2/#book/service/4/count/1/",
+  "VOIR PRIORITAIRE RELAIS":"https://cyrneapresencerelais.simplybook.it/v2/#book/service/5/count/1/",
+  "VOIR PRIORITAIRE":"https://cyrneapresencerelais.simplybook.it/v2/#book/service/5/count/1/",
+  "SUIVRE":"https://cyrneapresencerelais.simplybook.it/v2/#book/service/6/count/1/",
+  "DÉCIDER":"https://cyrneapresencerelais.simplybook.it/v2/#book/service/7/count/1/",
+  "RELAIS - AVANT INTEMPÉRIE":"https://cyrneapresencerelais.simplybook.it/v2/#book/service/17/count/1/",
+  "RELAIS SIMPLE - APRÈS INTEMPÉRIE":"https://cyrneapresencerelais.simplybook.it/v2/#book/service/18/count/1/"
+};
+const B2B_SERVICE_URLS={
+  "VISITE TERRAIN PILOTÉE":"https://cyrneapresenceentreprises.simplybook.it/v2/#book/service/4/count/1/",
+  "PRÉSENCE PROJET":"https://cyrneapresenceentreprises.simplybook.it/v2/#book/service/5/count/1/",
+  "PRÉSENCE PROJET ÉTENDUE":"https://cyrneapresenceentreprises.simplybook.it/v2/#book/service/6/count/1/",
+  "CONTINUITÉ PROJET":"https://cyrneapresenceentreprises.simplybook.it/v2/#book/service/7/count/1/",
+  "ACCÈS B2B":"https://cyrneapresenceentreprises.simplybook.it/v2/#book/service/8/count/1/",
+  "REMISE CLÉ / BADGE B2B":"https://cyrneapresenceentreprises.simplybook.it/v2/#book/service/9/count/1/",
+  "RÉCUPÉRATION CLÉ / BADGE B2B":"https://cyrneapresenceentreprises.simplybook.it/v2/#book/service/10/count/1/",
+  "PRÉSENCE LOGISTIQUE B2B":"https://cyrneapresenceentreprises.simplybook.it/v2/#book/service/11/count/1/"
+};
+const B2B_TALLY_MISSION={
+  "VISITE TERRAIN PILOTÉE":"VISITE TERRAIN PILOTÉE - 350 € HT",
+  "PRÉSENCE PROJET":"PRÉSENCE PROJET - 490 € HT",
+  "PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE PROJET ÉTENDUE - 690 € HT",
+  "CONTINUITÉ PROJET":"CONTINUITÉ PROJET - 1190 € HT",
+  "ACCÈS B2B":"ACCÈS B2B - 109 € HT",
+  "REMISE CLÉ / BADGE B2B":"REMISE CLÉ / BADGE B2B - 109 € HT",
+  "RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE B2B - 109 € HT",
+  "PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE B2B - 169 € HT"
+};
 function save(){localStorage.setItem(STATE_KEY,JSON.stringify(S))}
 function reset(){localStorage.removeItem(STATE_KEY);localStorage.removeItem(LEGACY_STATE_KEY);localStorage.removeItem(STAGE_VIEWS_KEY);location.reload()}
 function key(){return "D-"+new Date().toISOString().replace(/\D/g,"").slice(0,14)}
@@ -232,7 +274,10 @@ function resumeActiveMission(){
  if(st==="RESTITUTION" || (S.departureAt && S.facts)) return restitution();
  if(st==="TERRAIN") return terrain();
  if(st==="PRÊTE" || S.prep?.addr) return ready();
- if(st==="RÉSERVATION" || S.missionId || (S.result && S.acceptedSlot)) return S.missionId?preparationMission():bookingHandoff();
+ if(st==="RÉSERVATION" || S.missionId || (S.result && S.acceptedSlot)){
+   if(S.paymentStatus==="PAID_PENDING_CONFIRMATION" || S.decisionStatus==="ALTERNATIVE_PROPOSED") return postPaymentDecision();
+   return S.missionId?preparationMission():bookingHandoff();
+ }
  if(st==="CRÉNEAU" && S.result) return slot();
  if(st==="CADRAGE" && S.result) return showResult();
  if(S.result) return showResult();
@@ -657,8 +702,21 @@ function showResult(){
 function needsCahier(){return ["DÉCIDER","SUIVRE","PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","CONTINUITÉ PROJET"].includes(S.result.mission)}
 
 function baseMissionName(m){
-  if(m==="VOIR PRIORITAIRE") return S.result?.contract==="RELAIS"?"VOIR RELAIS":"VOIR PRÉSENCE";
+  if(m==="VOIR PRIORITAIRE RELAIS") return "VOIR RELAIS";
+  if(m==="VOIR PRIORITAIRE") return "VOIR PRÉSENCE";
   return m;
+}
+function voirContractInvariant(){
+  const m=String(S.result?.mission||"");
+  const c=String(S.result?.contract||"");
+  if(m==="VOIR RELAIS" || m==="VOIR PRIORITAIRE RELAIS") return c==="RELAIS";
+  if(m==="VOIR PRÉSENCE" || m==="VOIR PRIORITAIRE") return c==="PRÉSENCE PROPRIÉTAIRES";
+  return true;
+}
+function assertVoirContractInvariant(){
+  if(voirContractInvariant()) return true;
+  alert("Incohérence VOIR détectée : contrat et univers ne correspondent pas. La mission est bloquée sans conversion automatique.");
+  return false;
 }
 
 
@@ -722,9 +780,32 @@ function localDateTime(dateStr,timeStr){
   const [hh,mm]=timeStr.split(":").map(Number);
   return new Date(y,m-1,d,hh,mm,0,0);
 }
+function isQuarterHour(timeStr){
+  const m=String(timeStr||"").match(/^(\d{2}):(\d{2})$/);
+  if(!m)return false;
+  const hh=Number(m[1]), mm=Number(m[2]);
+  return hh>=0&&hh<=23&&mm>=0&&mm<=59&&mm%15===0;
+}
+function nextQuarterInfo(){
+  const n=new Date();
+  const q=new Date(n);
+  q.setSeconds(0,0);
+  const add=(15-(q.getMinutes()%15))%15;
+  q.setMinutes(q.getMinutes()+add);
+  if(q.getTime()<=n.getTime())q.setMinutes(q.getMinutes()+15);
+  return {
+    date:`${q.getFullYear()}-${pad2(q.getMonth()+1)}-${pad2(q.getDate())}`,
+    time:`${pad2(q.getHours())}:${pad2(q.getMinutes())}`
+  };
+}
+function nightAllowedForMission(mission){
+  const m=baseMissionName(String(mission||""));
+  return ["PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","CONTINUITÉ PROJET"].includes(m);
+}
 function validateFutureSlot(dateStr,timeStr,label="créneau"){
   const normalized=normalizeTime4(timeStr);
-  if(!/^\d{2}:\d{2}$/.test(normalized)) return {ok:false,msg:`Heure invalide pour ${label}. Utilisez toujours 4 chiffres au format HH:MM, par exemple 09:00 ou 14:30.`};
+  if(!/^\d{2}:\d{2}$/.test(normalized)) return {ok:false,msg:`Heure invalide pour ${label}. Utilisez le format HH:MM.`};
+  if(!isQuarterHour(normalized)) return {ok:false,msg:`Heure invalide pour ${label}. Choisissez 00, 15, 30 ou 45 minutes.`};
   timeStr=normalized;
   const dt=localDateTime(dateStr,timeStr);
   if(!dt) return {ok:false,msg:`Date et heure requises pour ${label}.`};
@@ -734,15 +815,27 @@ function validateFutureSlot(dateStr,timeStr,label="créneau"){
   }
   return {ok:true,dt};
 }
+function validateMissionTimeRules(dateStr,timeStr,label="créneau"){
+  const check=validateFutureSlot(dateStr,timeStr,label);
+  if(!check.ok)return check;
+  const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
+  if(isB2B && check.dt.getHours()>=21 && !nightAllowedForMission(S.result?.mission)){
+    return {ok:false,msg:"NUIT à partir de 21 h indisponible pour cette mission B2B. La nuit est réservée à PRÉSENCE PROJET, PRÉSENCE PROJET ÉTENDUE et CONTINUITÉ PROJET."};
+  }
+  return check;
+}
 function autoConstraints(dateStr,timeStr){
   const dt=localDateTime(dateStr,timeStr);
-  if(!dt) return {priority:false,evening:false,sunday:false};
+  if(!dt) return {priority:false,evening:false,night:false,sunday:false};
   const now=new Date();
   const diff=dt.getTime()-now.getTime();
   const priority=diff>0 && diff<24*60*60*1000;
-  const evening=dt.getHours()>=19;
+  const hour=dt.getHours();
+  const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
+  const evening=isB2B ? (hour>=19 && hour<21) : hour>=19;
+  const night=isB2B && hour>=21 && nightAllowedForMission(S.result?.mission);
   const sunday=dt.getDay()===0 || isFrenchPublicHoliday(dateStr);
-  return {priority,evening,sunday};
+  return {priority,evening,night,sunday};
 }
 function setAutoConstraint(prefix,dateId,timeId){
   const date=document.getElementById(dateId)?.value||"";
@@ -750,14 +843,16 @@ function setAutoConstraint(prefix,dateId,timeId){
   const c=autoConstraints(date,time);
   const p=document.getElementById(`prio24${prefix}`);
   const e=document.getElementById(`evening${prefix}`);
-  const s=document.getElementById(`sunholiday${prefix}`);
+  const n=document.getElementById(`night${prefix}`);
+  const sh=document.getElementById(`sunholiday${prefix}`);
   if(p){p.checked=c.priority;p.disabled=true}
   if(e){e.checked=c.evening;e.disabled=true}
-  if(s){s.checked=c.sunday;s.disabled=true}
+  if(n){n.checked=c.night;n.disabled=true}
+  if(sh){sh.checked=c.sunday;sh.disabled=true}
 }
 function refreshCalendarConstraints(){
   const today=todayLocalISO();
-  const nowHM=currentLocalHM();
+  const next=nextQuarterInfo();
   const pairs=[
     ["d","sl",""],
     ["d1","sl1","_1"],
@@ -768,7 +863,19 @@ function refreshCalendarConstraints(){
     const d=document.getElementById(dId), t=document.getElementById(tId);
     if(!d||!t) return;
     d.min=today;
-    if(d.value===today) t.min=nowHM; else t.removeAttribute("min");
+    t.step=900;
+    if(d.value && d.value<today){d.value="";t.value="";}
+    if(d.value===today){
+      if(next.date===today){
+        t.min=next.time;
+        if(t.value && t.value<next.time)t.value="";
+      }else{
+        t.min="23:59";
+        if(t.value)t.value="";
+      }
+    }else{
+      t.removeAttribute("min");
+    }
     setAutoConstraint(prefix,dId,tId);
   });
 }
@@ -794,13 +901,13 @@ function readMultiPassage(i){
   const date=(document.getElementById(`d${i}`)?.value||"").trim();
   const time=normalizeTime4((document.getElementById(`sl${i}`)?.value||"").trim());
   const c=autoConstraints(date,time);
-  return {index:i,date,time,priority:c.priority,evening:c.evening,sunday:c.sunday};
+  return {index:i,date,time,priority:c.priority,evening:c.evening,night:c.night,sunday:c.sunday};
 }
 function multiPassagePricing(){
   const m=baseMissionName(S.result.mission);
   const passages=[1,2,3].map(readMultiPassage).filter(Boolean);
   for(const p of passages){
-    const check=validateFutureSlot(p.date,p.time,`le passage / jalon ${p.index}`);
+    const check=validateMissionTimeRules(p.date,p.time,`le passage / jalon ${p.index}`);
     if(!check.ok) return alert(check.msg);
   }
   if(!passages.length) return alert("Le premier passage / jalon doit être renseigné.");
@@ -808,7 +915,7 @@ function multiPassagePricing(){
   if(S.result.isQuote){
     passages.forEach(p=>{
       p.surcharge=0;
-      p.label=p.sunday?"Dimanche / jour férié":p.priority?"Prioritaire sous 24 h":p.evening?"Soir à partir de 19 h":"Standard";
+      p.label=p.sunday?"Dimanche / jour férié":p.night?"Nuit à partir de 21 h":p.priority?"Prioritaire sous 24 h":p.evening?"Soir à partir de 19 h":"Standard";
     });
     S.multiSlots=passages;
     S.date=passages[0].date;
@@ -833,6 +940,7 @@ function multiPassagePricing(){
   passages.forEach(p=>{
     let add=0,label="Standard";
     if(p.priority||p.evening){add=unitPriority;label=p.priority?"Prioritaire sous 24 h":"Soir à partir de 19 h";}
+    if(m==="CONTINUITÉ PROJET" && p.night){add=unitSunday;label="Nuit à partir de 21 h";}
     if(p.sunday){add=unitSunday;label="Dimanche / jour férié";}
     p.surcharge=add;
     p.label=label;
@@ -862,39 +970,33 @@ function multiPassageRows(){
   return rows;
 }
 function availabilityPricing(){
+  if(!assertVoirContractInvariant())return;
   let m=baseMissionName(S.result.mission);
   refreshCalendarConstraints();
   let priority=!!document.getElementById("prio24")?.checked;
   let evening=!!document.getElementById("evening")?.checked;
   let sunday=!!document.getElementById("sunholiday")?.checked;
+  const automatic=autoConstraints(S.date,S.slot);
+  const night=!!automatic.night;
+  sunday=!!automatic.sunday || sunday;
 
-  // Dimanche et jours fériés français sont détectés automatiquement à partir du créneau.
-  if(S.date){
-    const d=new Date(S.date+"T12:00:00");
-    if(d.getDay()===0) sunday=true;
-  }
-
-  S.availability={priority,evening,sunday};
+  S.availability={priority,evening,night,sunday};
   S.result.mission=m;
 
   if(S.result.isQuote){
     S.result.availabilityLabel="Selon devis accepté — contraintes de créneau intégrées au devis";
     return;
   }
-
-  // If this is a bespoke quote, the availability constraint must be included in the quote itself.
   if(m==="LOGISTIQUE / ACCÈS B2B" || String(S.result.price).includes("À CHIFFRER")) return;
 
-  // B2B logistique simple : tarification fixe, avec majorations de créneau non cumulatives.
   if(["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","PRÉSENCE LOGISTIQUE B2B"].includes(m)){
     const base=(m==="PRÉSENCE LOGISTIQUE B2B")?169:109;
-    const add=sunday?60:(priority||evening)?40:0;
+    const add=(sunday||night)?60:(priority||evening)?40:0;
     S.result.price=(base+add)+" € HT";
-    S.result.availabilityLabel=sunday?"Dimanche / jour férié":priority?"Prioritaire sous 24 h":evening?"Soir à partir de 19 h":"Standard";
+    S.result.availabilityLabel=sunday?"Dimanche / jour férié":night?"Nuit à partir de 21 h":priority?"Prioritaire sous 24 h":evening?"Soir 19 h–20 h 59":"Standard";
     return;
   }
 
-  // RELAIS : règle post-référentiel validée dans le prototype — sous 24 h = même majoration que soirée ; dimanche/férié supérieur.
   if(m==="RELAIS SIMPLE" || m==="RELAIS" || m.includes("INTEMPÉRIE")){
     const base=(m==="RELAIS SIMPLE"||m.includes("APRÈS INTEMPÉRIE"))?109:169;
     const add=sunday?60:(priority||evening)?40:0;
@@ -903,13 +1005,21 @@ function availabilityPricing(){
     return;
   }
 
-  // PRÉSENCE Propriétaires.
-  if(m==="VOIR PRÉSENCE" || m==="VOIR RELAIS"){
+  if(m==="VOIR RELAIS"){
     let price=260,label="Standard";
     if(priority||evening){price=350;label=priority?"Prioritaire sous 24 h":"Soir à partir de 19 h";}
     if(sunday){price=380;label="Dimanche / jour férié";}
     S.result.price=price+" € TTC";
-    S.result.mission=priority?"VOIR PRIORITAIRE":m;
+    S.result.mission=priority?"VOIR PRIORITAIRE RELAIS":"VOIR RELAIS";
+    S.result.availabilityLabel=label;
+    return;
+  }
+  if(m==="VOIR PRÉSENCE"){
+    let price=260,label="Standard";
+    if(priority||evening){price=350;label=priority?"Prioritaire sous 24 h":"Soir à partir de 19 h";}
+    if(sunday){price=380;label="Dimanche / jour férié";}
+    S.result.price=price+" € TTC";
+    S.result.mission=priority?"VOIR PRIORITAIRE":"VOIR PRÉSENCE";
     S.result.availabilityLabel=label;
     return;
   }
@@ -928,24 +1038,21 @@ function availabilityPricing(){
     return;
   }
 
-  // PRÉSENCE Entreprises B2B.
   const b2bBase={
     "VISITE TERRAIN PILOTÉE":350,
     "PRÉSENCE PROJET":490,
     "PRÉSENCE PROJET ÉTENDUE":690
   };
   if(b2bBase[m]!=null){
-    let add=0,label="Standard";
-    if(priority||evening){add=120;label=priority?"Prioritaire sous 24 h":"Soir à partir de 19 h";}
-    if(sunday){add=180;label="Dimanche / jour férié";}
+    const add=(sunday||night)?180:(priority||evening)?120:0;
+    const label=sunday?"Dimanche / jour férié":night?"Nuit à partir de 21 h":priority?"Prioritaire sous 24 h":evening?"Soir 19 h–20 h 59":"Standard";
     S.result.price=(b2bBase[m]+add)+" € HT";
     S.result.availabilityLabel=label;
     return;
   }
   if(m==="CONTINUITÉ PROJET"){
-    let add=0,label="Standard";
-    if(priority||evening){add=120;label=(priority?"Prioritaire sous 24 h":"Soir à partir de 19 h")+" — jalon concerné";}
-    if(sunday){add=180;label="Dimanche / jour férié — jalon concerné";}
+    const add=(sunday||night)?180:(priority||evening)?120:0;
+    const label=sunday?"Dimanche / jour férié — jalon concerné":night?"Nuit à partir de 21 h — jalon concerné":priority?"Prioritaire sous 24 h — jalon concerné":evening?"Soir 19 h–20 h 59 — jalon concerné":"Standard";
     S.result.price=(1190+add).toLocaleString("fr-FR")+" € HT";
     S.result.availabilityLabel=label;
   }
@@ -961,7 +1068,7 @@ function centralAvailabilityPrototypeCheck(slots){
   // Production: this hook must query the single CYRNEA agenda source
   // and reject any occupied/unavailable slot before manual confirmation.
   for(const s of slots){
-    const check=validateFutureSlot(s.date,s.time,s.label||"ce créneau");
+    const check=validateMissionTimeRules(s.date,s.time,s.label||"ce créneau");
     if(!check.ok) return {ok:false,msg:check.msg};
   }
   return {ok:true};
@@ -1018,7 +1125,7 @@ function manualConfirmMultiSlots(){
 function confirmSlot(){
   S.date=document.getElementById('d').value;
   S.slot=normalizeTime4(document.getElementById('sl').value);
-  const check=validateFutureSlot(S.date,S.slot,"ce créneau");
+  const check=validateMissionTimeRules(S.date,S.slot,"ce créneau");
   if(!check.ok) return alert(check.msg);
   refreshCalendarConstraints();
   availabilityPricing();
@@ -1037,11 +1144,12 @@ function slot(){
    const jalonBlock=(i, hidden)=>`
      <div id="jalon_${i}" class="checkZone${hidden?" hidden":""}">
        <div class="checkIntro">PASSAGE / JALON ${i}${i>1?" — UNIQUEMENT SI DATE CONNUE":""}</div>
-       <div class="field"><label>Date</label><input id="d${i}" type="date" onchange="refreshCalendarConstraints()"></div>
-       <div class="field"><label>Heure — format HH:MM</label><input id="sl${i}" type="time" step="300" onchange="refreshCalendarConstraints()"><div class="muted">Toujours 4 chiffres : 09:00, 14:30, 03:00.</div></div>
+       <div class="field"><label>Date</label><input id="d${i}" type="date" min="${todayLocalISO()}" onchange="refreshCalendarConstraints()"></div>
+       <div class="field"><label>Heure — format HH:MM</label><input id="sl${i}" type="time" step="900" onchange="refreshCalendarConstraints()"><div class="muted">Quarts d’heure uniquement : 09:00, 09:15, 09:30, 09:45.</div></div>
        <div class="muted" style="margin-bottom:6px">Contraintes détectées automatiquement selon la date, l’heure et l’heure actuelle :</div>
        <label class="check"><input type="checkbox" id="prio24_${i}" disabled> <span>Demandé sous 24 h — ${pri}</span></label>
-       <label class="check"><input type="checkbox" id="evening_${i}" disabled> <span>Soir à partir de 19 h — ${pri}</span></label>
+       <label class="check"><input type="checkbox" id="evening_${i}" disabled> <span>${isB2B?"Soir 19 h–20 h 59":"Soir à partir de 19 h"} — ${pri}</span></label>
+       ${isB2B?`<label class="check"><input type="checkbox" id="night_${i}" disabled> <span>Nuit à partir de 21 h — ${sun}</span></label>`:""}
        <label class="check"><input type="checkbox" id="sunholiday_${i}" disabled> <span>Dimanche ou jour férié — ${sun}</span></label>
      </div>`;
 
@@ -1064,22 +1172,24 @@ function slot(){
  }
 
  draw(`<div class="card"><h1>Créneau</h1>
- <div class="field"><label>Date souhaitée</label><input id="d" type="date" onchange="refreshCalendarConstraints()"></div>
- <div class="field"><label>Heure — format HH:MM</label><input id="sl" type="time" step="300" onchange="refreshCalendarConstraints()"><div class="muted">Toujours 4 chiffres : 09:00, 14:30, 03:00.</div></div>
+ <div class="field"><label>Date souhaitée</label><input id="d" type="date" min="${todayLocalISO()}" onchange="refreshCalendarConstraints()"></div>
+ <div class="field"><label>Heure — format HH:MM</label><input id="sl" type="time" step="900" onchange="refreshCalendarConstraints()"><div class="muted">Quarts d’heure uniquement : 09:00, 09:15, 09:30, 09:45.</div></div>
 
  ${supportsPriority()?`<div class="checkZone"><div class="checkIntro">CONTRAINTE DE DISPONIBILITÉ</div>
  <label class="check"><input type="checkbox" id="prio24" disabled> <span><b>Intervention sous 24 h</b> — détectée automatiquement selon l’heure réelle.</span></label>
- <label class="check"><input type="checkbox" id="evening" disabled> <span>Créneau en soirée à partir de 19 h — détecté automatiquement.</span></label>
+ <label class="check"><input type="checkbox" id="evening" disabled> <span>${S.result?.contract==="PRÉSENCE ENTREPRISES"?"Soir 19 h–20 h 59":"Créneau en soirée à partir de 19 h"} — détecté automatiquement.</span></label>
+ ${S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="night" disabled> <span>Nuit à partir de 21 h — détectée automatiquement.</span></label>`:""}
  <label class="check"><input type="checkbox" id="sunholiday" disabled> <span>Dimanche ou jour férié — détecté automatiquement.</span></label>
  <div class="muted">Les contraintes ne se cumulent pas : le tarif correspondant à la contrainte la plus élevée s’applique. Pour RELAIS / logistique B2B simple : sous 24 h = même majoration que soirée ; dimanche/jour férié reste la contrainte supérieure.</div>
  </div>`:
  `<div class="checkZone"><div class="checkIntro">CONTRAINTE DE CRÉNEAU</div>
  <label class="check"><input type="checkbox" id="prio24" disabled> <span><b>Intervention sous 24 h</b> — détectée automatiquement selon l’heure réelle.</span></label>
- <label class="check"><input type="checkbox" id="evening" disabled> <span>Créneau en soirée à partir de 19 h — détecté automatiquement.</span></label>
+ <label class="check"><input type="checkbox" id="evening" disabled> <span>${S.result?.contract==="PRÉSENCE ENTREPRISES"?"Soir 19 h–20 h 59":"Créneau en soirée à partir de 19 h"} — détecté automatiquement.</span></label>
+ ${S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="night" disabled> <span>Nuit à partir de 21 h — détectée automatiquement.</span></label>`:""}
  <label class="check"><input type="checkbox" id="sunholiday" disabled> <span>Dimanche ou jour férié — détecté automatiquement.</span></label>
  <div class="muted">Les contraintes ne se cumulent pas.</div></div>`}
 
- <div class="notice">Le tarif affiché sert à orienter correctement le client. La réservation et le paiement seront ensuite gérés dans SimplyBook.</div>
+ <div class="notice">Le tarif affiché sert à orienter correctement le client. La réservation et le paiement seront orientés automatiquement vers SimplyBook en standard ou vers Tally en hors standard / supplément.</div>
  <button class="btn primary" onclick="confirmSlot()">VÉRIFIER DISPONIBILITÉ ET TARIF</button>
  </div>`);
  setTimeout(startCalendarTicker,0);
@@ -1108,20 +1218,110 @@ function bookingPortalKind(){
 }
 function contractRef(){
  const c=S.result?.contract;
- if(c==="RELAIS") return "CGV RELAIS PROPRIÉTAIRE V14 CM2C";
- if(c==="PRÉSENCE PROPRIÉTAIRES") return "CGV CYRNEA PRÉSENCE — PROPRIÉTAIRES V6 CM2C";
- return "CGS CYRNEA PRÉSENCE — ENTREPRISES V5";
+ if(c==="RELAIS") return "CGV RELAIS PROPRIÉTAIRE V14 CM2C — 27/09/2026";
+ if(c==="PRÉSENCE PROPRIÉTAIRES") return "CGV CYRNEA PRÉSENCE — PROPRIÉTAIRES V7 CM2C — 26/09/2026";
+ return "CGS CYRNEA PRÉSENCE — ENTREPRISES V8 — 27/09/2026";
+}
+function isHorsStandard(){
+ if(S.result?.isQuote)return true;
+ const mission=String(S.result?.mission||"");
+ const label=String(S.result?.availabilityLabel||"");
+ if(mission.includes("PRIORITAIRE") || /Prioritaire|Soir|Nuit|Dimanche|jour férié/i.test(label))return true;
+ if(Array.isArray(S.multiSlots)&&S.multiSlots.length){
+   return S.multiSlots.some(p=>Number(p?.surcharge||0)>0 || p?.priority || p?.evening || p?.night || p?.sunday);
+ }
+ const a=S.availability||{};
+ return !!(a.priority||a.evening||a.night||a.sunday);
+}
+function routeKind(){return isHorsStandard()?"TALLY":"SIMPLYBOOK";}
+function routeLabel(){return routeKind()==="TALLY"?"HORS STANDARD / SUP → TALLY":"STANDARD → SIMPLYBOOK";}
+function standardSimplyBookUrl(){
+ const m=String(S.result?.mission||"");
+ if(S.result?.contract==="PRÉSENCE ENTREPRISES") return B2B_SERVICE_URLS[m]||"";
+ return OWNER_SERVICE_URLS[m]||"";
+}
+function tallyBaseUrl(){
+ if(S.result?.contract==="RELAIS")return TALLY_URLS.RELAIS;
+ if(S.result?.contract==="PRÉSENCE ENTREPRISES")return TALLY_URLS.B2B;
+ return TALLY_URLS.PRESENCE;
+}
+function tallyMissionValue(){
+ const m=String(S.result?.mission||"");
+ if(S.result?.contract==="PRÉSENCE ENTREPRISES")return B2B_TALLY_MISSION[m]||m;
+ if(S.result?.contract==="RELAIS" && m==="VOIR PRIORITAIRE")return "VOIR PRIORITAIRE RELAIS";
+ return m;
+}
+function gatewayPaymentCents(){
+ const p=priceParts();
+ const n=p.b2b?p.ttc:parseEuroAmount(p.raw);
+ return n==null?null:Math.round(n*100);
+}
+const GATEWAY_REF_RE=/^D-\d{14}-[A-F0-9]{32}$/;
+function newGatewayReference(){
+ const stamp=new Date().toISOString().replace(/\D/g,"").slice(0,14);
+ let suffix="";
+ try{const a=new Uint8Array(16);crypto.getRandomValues(a);suffix=[...a].map(x=>x.toString(16).padStart(2,"0")).join("").toUpperCase();}
+ catch(e){suffix=Array.from({length:32},()=>Math.floor(Math.random()*16).toString(16)).join("").toUpperCase();}
+ return `D-${stamp}-${suffix}`;
+}
+function ensureTallyReference(){
+ if(!GATEWAY_REF_RE.test(String(S.tallyReference||"")))S.tallyReference=newGatewayReference();
+ return S.tallyReference;
+}
+function buildTallyUrl(){
+ const ref=ensureTallyReference();
+ const q=new URLSearchParams();
+ q.set("mission",tallyMissionValue());
+ q.set("objet",S.obj||"");
+ q.set("tarif",paymentAmountText());
+ q.set("creneau",scheduleText());
+ q.set("reference_temporaire",ref);
+ q.set("nom_client",S.name||"");
+ q.set("email_client",S.email||"");
+ q.set("telephone_client",S.phone||"");
+ q.set("cadre_client",S.caller==="B2B"?"ENTREPRISE / DONNEUR D’ORDRE PROFESSIONNEL":"PROPRIÉTAIRE PARTICULIER");
+ return tallyBaseUrl()+"?"+q.toString();
+}
+async function registerTallyIntent(){
+ if(!assertVoirContractInvariant())throw new Error("Incohérence VOIR / contrat.");
+ const ref=ensureTallyReference();
+ const cents=gatewayPaymentCents();
+ if(!Number.isInteger(cents)||cents<=0)throw new Error("Montant de paiement invalide.");
+ const body={reference:ref,universe:S.universe||"",contract:S.result?.contract||"",mission:tallyMissionValue(),object:S.obj||"",schedule:scheduleText(),email:S.email||"",customer_name:S.name||"",customer_email:S.email||"",customer_phone:S.phone||"",amount_cents:cents,currency:"eur",price_text:paymentAmountText()};
+ const r=await fetch(PAYMENT_GATEWAY_URL+"/intent",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify(body),cache:"no-store"});
+ const data=await r.json().catch(()=>({}));
+ if(!r.ok)throw new Error(data.error||`Gateway HTTP ${r.status}`);
+ S.tallyIntentReady=true;save();return data;
+}
+async function openTallySecure(){
+ const popup=window.open("about:blank","_blank");
+ if(!popup)return alert("Le navigateur a bloqué l’ouverture de Tally. Autorisez les fenêtres surgissantes pour cette PWA.");
+ try{
+   popup.opener=null;
+   popup.document.title="CYRNEA — ouverture Tally";
+   popup.document.body.innerHTML="<p style='font-family:-apple-system,Arial;padding:24px'>Sécurisation de la mission…</p>";
+   await registerTallyIntent();
+   popup.location.replace(buildTallyUrl());
+ }catch(err){
+   try{popup.close()}catch(e){}
+   alert("Tally bloqué : "+String(err?.message||err)+". Aucun paiement ne doit être lancé.");
+ }
 }
 function openSimplyBook(){
+ if(!assertVoirContractInvariant())return;
+ const direct=standardSimplyBookUrl();
+ if(direct)return window.open(direct,"_blank","noopener");
  const c=cfg();
  const url=bookingPortalKind()==="B2B"?c.b2bUrl:c.ownersUrl;
  if(!url) return alert("Le lien de ce portail SimplyBook n’est pas encore enregistré. Ouvrez RÉGLAGES SIMPLYBOOK.");
  window.open(url,"_blank","noopener");
 }
 function bookingHandoff(){
+ if(!assertVoirContractInvariant())return;
  setStage("RÉSERVATION");
  const multi=!!S.result?.multi;
- const portal=bookingPortalKind()==="B2B"?"CYRNEA PRÉSENCE ENTREPRISES":"CYRNEA PRÉSENCE & RELAIS";
+ const route=routeKind();
+ const portal=route==="TALLY"?(S.result?.contract==="RELAIS"?"TALLY RELAIS":S.result?.contract==="PRÉSENCE ENTREPRISES"?"TALLY B2B":"TALLY PRÉSENCE PROPRIÉTAIRES"):(bookingPortalKind()==="B2B"?"CYRNEA PRÉSENCE ENTREPRISES":"CYRNEA PRÉSENCE & RELAIS");
  S.specialPending=false;
  S.acceptedSlot=true;
  save();
@@ -1132,23 +1332,111 @@ function bookingHandoff(){
  <div class="row"><b>Créneau souhaité</b><span>${esc(scheduleText())}</span></div>
  <div class="row"><b>Tarif / contrainte</b><span>${esc(S.result.availabilityLabel||"Standard")} — ${esc(priceText())}</span></div>
  <div class="row"><b>Portail</b><span>${esc(portal)}</span></div>
+ <div class="row"><b>Conditions</b><span>${esc(contractRef())}</span></div>
  ${multi?multiPassageRows():""}
- ${multi?`<div class="neutral"><b>MISSION EN PLUSIEURS PASSAGES / JALONS</b>La réservation SimplyBook porte sur le premier passage. Les suivants restent rattachés au même dossier et seront programmés ensuite.</div>`:""}
- <div class="notice"><b>PARCOURS CLIENT</b>Le créneau choisi est pris en compte et sera confirmé. Avant le paiement, le client choisit en un menu déroulant la solution qui lui convient si un ajustement est nécessaire.</div>
+ ${multi?`<div class="neutral"><b>MISSION EN PLUSIEURS PASSAGES / JALONS</b>${route==="TALLY"?"La mission hors standard est transmise à Tally avec les passages connus et leurs suppléments.":"La réservation SimplyBook porte sur le premier passage. Les suivants restent rattachés au même dossier et seront programmés ensuite."}</div>`:""}
+ ${route==="TALLY"
+   ? `<div class="warn"><b>HORS STANDARD — CONFIRMATION HUMAINE</b>Le paiement ne confirme jamais automatiquement la mission. Après paiement : vérifier la disponibilité puis CONFIRMER, PROPOSER UNE ALTERNATIVE ou REMBOURSER.</div>`
+   : `<div class="notice"><b>STANDARD</b>SimplyBook gère la réservation. Vérifiez la confirmation avant de préparer la mission.</div>`}
  <div class="phoneScript"><b>PHRASE À DIRE AU CLIENT</b>
  « La mission adaptée est <b>${esc(S.result.mission)}</b>, au tarif de <b>${esc(priceText())}</b>. Le créneau choisi est pris en compte et vous sera confirmé. Vous pourrez indiquer une autre possibilité avant le paiement. »
  </div>
- <div class="toolbar"><button class="btn primary" onclick="openSimplyBook()">OUVRIR SIMPLYBOOK — RÉSERVER / PAYER</button><button class="btn ghost" onclick="settings()">RÉGLAGES DU LIEN</button></div>
- <div class="checkZone"><div class="checkIntro">APRÈS LE PAIEMENT SIMPLYBOOK</div>
- <button class="btn primary" onclick="markBooked()">RÉSERVATION PAYÉE → PRÉPARER LA MISSION</button>
+ <div class="toolbar">${route==="TALLY"?`<button class="btn primary" onclick="openTallySecure()">OUVRIR TALLY — RÉSERVER / PAYER</button>`:`<button class="btn primary" onclick="openSimplyBook()">OUVRIR SIMPLYBOOK — RÉSERVER / PAYER</button><button class="btn ghost" onclick="settings()">RÉGLAGES DU LIEN</button>`}</div>
+ <div class="checkZone"><div class="checkIntro">APRÈS LE PAIEMENT ${route==="TALLY"?"TALLY":"SIMPLYBOOK"}</div>
+ <button class="btn primary" onclick="markBooked()">${route==="TALLY"?"PAIEMENT REÇU → DÉCIDER":"RÉSERVATION CONFIRMÉE → PRÉPARER LA MISSION"}</button>
  </div>
  </div>`);
 }
+function reservationActionsUrl(){
+ if(!GATEWAY_REF_RE.test(String(S.tallyReference||"")))return "";
+ return RESERVATION_ACTIONS_URL+"/?reference="+encodeURIComponent(S.tallyReference);
+}
+function openReservationActions(){
+ const url=reservationActionsUrl();
+ if(!url)return alert("Référence de réservation hors standard absente ou invalide.");
+ window.open(url,"_blank","noopener");
+}
 function markBooked(){
  S.specialPending=false;
+ if(routeKind()==="TALLY"){
+   S.paymentStatus="PAID_PENDING_CONFIRMATION";
+   save();
+   return postPaymentDecision();
+ }
+ S.paymentStatus="PAID_CONFIRMED";
+ S.decisionStatus="CONFIRMED";
  if(!S.missionId) S.missionId=missionId();
  save();
  preparationMission();
+}
+function postPaymentDecision(){
+ setStage("RÉSERVATION");
+ draw(`<div class="card"><h1>Paiement reçu — décision humaine</h1>
+   <div class="stop"><b>NE PAS PARTIR EN MISSION</b>Un paiement HORS STANDARD n’est pas une confirmation de disponibilité.</div>
+   <div class="row"><b>Mission</b><span>${esc(S.result?.mission||"-")}</span></div>
+   <div class="row"><b>Créneau demandé</b><span>${esc(scheduleText())}</span></div>
+   <div class="row"><b>Référence</b><span>${esc(S.tallyReference||"-")}</span></div>
+   <div class="toolbar"><button class="btn primary" onclick="openReservationActions()">OUVRIR CONFIRMER / ALTERNATIVE / REMBOURSER</button></div>
+   <div class="checkZone"><div class="checkIntro">APRÈS AVOIR EFFECTUÉ L’ACTION</div>
+     <button class="btn primary" onclick="decisionConfirmed()">J’AI CONFIRMÉ LA MISSION</button>
+     <button class="btn ghost" onclick="decisionAlternative()" style="margin-top:8px">J’AI PROPOSÉ UNE ALTERNATIVE</button>
+     <button class="btn danger" onclick="decisionRefunded()" style="margin-top:8px">J’AI REMBOURSÉ — ANNULER LE DOSSIER</button>
+   </div>
+ </div>`);
+}
+function decisionConfirmed(){
+ S.decisionStatus="CONFIRMED";
+ S.paymentStatus="PAID_CONFIRMED";
+ if(!S.missionId)S.missionId=missionId();
+ save();
+ preparationMission();
+}
+function decisionAlternative(){
+ S.decisionStatus="ALTERNATIVE_PROPOSED";
+ save();
+ draw(`<div class="card"><h1>Alternative proposée</h1>
+   <div class="warn"><b>DOSSIER EN ATTENTE</b>Ne préparez pas la mission tant que le client n’a pas accepté le nouveau créneau.</div>
+   <div class="toolbar"><button class="btn primary" onclick="alternativeAcceptedForm()">LE CLIENT A ACCEPTÉ → SAISIR LE CRÉNEAU</button><button class="btn ghost" onclick="postPaymentDecision()">RETOUR À LA DÉCISION</button></div>
+ </div>`);
+}
+function alternativeAcceptedForm(){
+ draw(`<div class="card"><h1>Créneau alternatif accepté</h1>
+   <div class="field"><label>Date confirmée</label><input id="altDate" type="date" min="${todayLocalISO()}" onchange="refreshAlternativeConstraints()"></div>
+   <div class="field"><label>Heure confirmée</label><input id="altTime" type="time" step="900" onchange="refreshAlternativeConstraints()"><div class="muted">Quarts d’heure : 00, 15, 30 ou 45.</div></div>
+   <div class="toolbar"><button class="btn primary" onclick="confirmAcceptedAlternative()">ENREGISTRER LE CRÉNEAU CONFIRMÉ</button><button class="btn ghost" onclick="postPaymentDecision()">RETOUR</button></div>
+ </div>`);
+ refreshAlternativeConstraints();
+}
+function refreshAlternativeConstraints(){
+ const d=document.getElementById("altDate"),t=document.getElementById("altTime");
+ if(!d||!t)return;
+ const today=todayLocalISO(),next=nextQuarterInfo();
+ d.min=today;t.step=900;
+ if(d.value && d.value<today){d.value="";t.value="";}
+ if(d.value===today){
+   if(next.date===today){t.min=next.time;if(t.value&&t.value<next.time)t.value=""}
+   else{t.min="23:59";if(t.value)t.value=""}
+ }else t.removeAttribute("min");
+}
+function confirmAcceptedAlternative(){
+ const d=(document.getElementById("altDate")?.value||"").trim();
+ const t=normalizeTime4((document.getElementById("altTime")?.value||"").trim());
+ const check=validateMissionTimeRules(d,t,"le créneau alternatif");
+ if(!check.ok)return alert(check.msg);
+ S.date=d;S.slot=t;S.multiSlots=[];S.availability=autoConstraints(d,t);
+ S.decisionStatus="CONFIRMED_AFTER_ALTERNATIVE";
+ S.paymentStatus="PAID_CONFIRMED";
+ if(!S.missionId)S.missionId=missionId();
+ save();
+ preparationMission();
+}
+function decisionRefunded(){
+ S.decisionStatus="REFUNDED";
+ S.paymentStatus="REFUNDED";
+ S.finalStatus="MISSION ANNULÉE — REMBOURSÉE";
+ if(!S.missionId)S.missionId=missionId();
+ save();
+ archive();
 }
 function toggleContactChoice(){
   const choice=document.querySelector('input[name="contactChoice"]:checked')?.value||"";
@@ -1239,7 +1527,7 @@ function showPackDoc(kind){
   if(z)z.innerHTML=packDocHtml(kind);
 }
 function preparationMission(){
- setStage("PRÉPARATION");
+ setStage("RÉSERVATION");
  const b2b=S.caller==="B2B";
  draw(`<div class="card"><h1>Préparer la mission</h1>
  <div class="operatorOnly">Suivez simplement les étapes. Si une information manque, demandez-la au client ou laissez la mission en attente. N’inventez rien.</div>
@@ -1537,7 +1825,7 @@ function overrunRule(){
  if(m==="RELAIS SIMPLE" || m.includes("APRÈS INTEMPÉRIE") || ["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B"].includes(m))
    return {allowed:false,text:"Cette mission n’a pas de prolongation horaire. Si le cadre prévu est dépassé, arrêtez et faites requalifier la demande avant toute action supplémentaire."};
  if(m==="RELAIS" || m.includes("AVANT INTEMPÉRIE"))
-   return {allowed:true,unit:40,base:"TTC",max:2,label:"+40 € TTC par tranche de 30 min commencée, maximum 2 tranches"};
+   return {allowed:true,unit:25,base:"TTC",max:2,label:"+25 € TTC par tranche de 30 min commencée, maximum 2 tranches, avec accord exprès"};
  if(m==="VOIR PRÉSENCE" || m==="VOIR RELAIS" || m==="DÉCIDER" || m==="SUIVRE")
    return {allowed:true,unit:60,base:"TTC",max:null,label:"+60 € TTC par tranche de 30 min commencée"};
  if(["VISITE TERRAIN PILOTÉE","PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","CONTINUITÉ PROJET","PRÉSENCE LOGISTIQUE B2B"].includes(m))
@@ -1698,7 +1986,7 @@ function closeMission(){
  <button class="btn primary" onclick="S.finalStatus=document.getElementById('fs').value;save();archive()">ARCHIVER LE DOSSIER</button>
  </div>`);
 }
-function archive(){setStage("ARCHIVE");save();draw(`<div class="card"><h1>Mission archivée</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div><div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">Mission terminée : appel → préparation → terrain → restitution → clôture.<br><br><b>En production, aucun fichier technique ne sera à télécharger :</b> le dossier mission sera classé automatiquement dans l’archive CYRNEA. Sur le terrain, vous travaillez depuis l’assistant ; l’archive iCloud reste le stockage de fond, pas l’interface de travail.</div><div class="toolbar"><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
+function archive(){setStage("ARCHIVE");save();const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div><div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>En production, aucun fichier technique ne sera à télécharger :</b> le dossier mission sera classé automatiquement dans l’archive CYRNEA. Sur le terrain, vous travaillez depuis l’assistant ; l’archive iCloud reste le stockage de fond, pas l’interface de travail.</div><div class="toolbar"><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
 function exportJSON(){let b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(S.missionId||"CYRNEA-DEMO")+".json";a.click();URL.revokeObjectURL(a.href)}
 function boot(){
  try{STAGE_VIEWS=JSON.parse(localStorage.getItem(STAGE_VIEWS_KEY)||"{}")||{}}catch(e){STAGE_VIEWS={}}
@@ -1708,10 +1996,6 @@ function boot(){
      const p=JSON.parse(raw);
      S={...S,...p,prep:{...(p.prep||{})},multiSlots:Array.isArray(p.multiSlots)?p.multiSlots:[],availability:{...(p.availability||{})},overrun:p.overrun||null,specialPending:false,resumeStage:p.resumeStage||""};
      if(p.specialPending && S.result) S.acceptedSlot=true;
-     if(S.result && (S.result.mission==="VOIR RELAIS" || S.result.mission==="VOIR PRIORITAIRE RELAIS")){
-       S.result.contract="PRÉSENCE PROPRIÉTAIRES"; S.result.rest="R1";
-       S.result.mission=S.result.mission.includes("PRIORITAIRE")?"VOIR PRIORITAIRE":"VOIR PRÉSENCE";
-     }
      if(!Array.isArray(S.history))S.history=["ACCUEIL"];
      REACHED_STAGES=new Set(S.history); REACHED_STAGES.add("ACCUEIL"); syncReached();
      if(S.stage && S.stage!=="ACCUEIL") S.resumeStage=S.stage;
