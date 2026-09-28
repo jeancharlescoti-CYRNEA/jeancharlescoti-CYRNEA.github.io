@@ -333,7 +333,7 @@ async function configureCloudSync(){
    home(false);
  }catch(e){
    localStorage.removeItem(SYNC_KEY_STORAGE);
-   alert("Clé refusée ou stockage central indisponible.");
+   alert("SYNCHRO REFUSÉE — "+String(e?.message||e));
  }
 }
 async function manualCloudSync(){
