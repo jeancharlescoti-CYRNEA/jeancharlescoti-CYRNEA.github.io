@@ -1836,7 +1836,7 @@ function nowStamp(){
   return `${pad2(n.getDate())}/${pad2(n.getMonth()+1)}/${n.getFullYear()} ${pad2(n.getHours())}:${pad2(n.getMinutes())}:${pad2(n.getSeconds())}`;
 }
 function markArrival(){
-  if(!S.arrivalAt)S.arrivalAt=nowStamp();
+  if(!S.arrivalAt){S.arrivalEpochMs=Date.now();S.arrivalAt=nowStamp();}
   save();
   terrain();
 }
@@ -1873,6 +1873,7 @@ function continueMultiAfterRestitution(){
   S.date=p.date;
   S.slot=p.time;
   S.arrivalAt="";
+  S.arrivalEpochMs=null;
   S.departureAt="";
   S.facts="";
   S.incident="";
@@ -1951,6 +1952,18 @@ function clientSmsHref(){
  const phone=clientContactNumber();
  return phone?"sms:"+phone:"#";
 }
+function overrunMissionSummary(){
+ const paid=["PAID_CONFIRMED","PAID","SEPA_RECEIVED"].includes(S.paymentStatus);
+ return [
+   "CYRNEA — "+(paid?"mission réglée":"mission réservée"),
+   "Référence : "+(S.missionId||"non renseignée"),
+   "Mission : "+(S.result?.mission||"non renseignée"),
+   "Objet prévu : "+(S.obj||"non renseigné"),
+   "Tarif de la mission : "+priceText(),
+   "Durée / cadre prévu : "+(S.result?.cap||"non renseigné")+(S.result?.multi?" — passage "+S.passage:""),
+   "Début réel de l’intervention : "+(S.arrivalAt||"non encore horodaté")
+ ].join("\n");
+}
 function overrunMessageText(){
  const el=document.querySelector(".readAloud");
  return String(el?.textContent||"").trim();
@@ -1971,10 +1984,10 @@ function overrunGuide(){
  const r=overrunRule();
  const phone=clientPhoneDisplay();
  if(!r.allowed){
-   const msg="La mission prévue arrive à sa limite de temps et je ne peux pas poursuivre automatiquement au-delà du cadre convenu. La situation nécessite une nouvelle validation avant toute action supplémentaire. Souhaitez-vous que je vous contacte pour requalifier la suite de la mission ?";
+   const msg=overrunMissionSummary()+"\n\nLa mission prévue arrive à sa limite de temps et je ne peux pas poursuivre automatiquement au-delà du cadre convenu. La situation nécessite une nouvelle validation avant toute action supplémentaire. Souhaitez-vous que je vous contacte pour requalifier la suite de la mission ?";
    return draw(`<div class="card"><h1>Temps / cadre dépassé</h1>
      <div class="stop"><b>NE PAS CONTINUER AUTOMATIQUEMENT</b><br>${esc(r.text)}</div>
-     <div class="readAloud">${esc(msg)}</div>
+     <div class="readAloud" style="white-space:pre-line">${esc(msg)}</div>
      <div class="row"><b>Client</b><span>${esc(S.name||"-")}</span></div>
      <div class="row"><b>Téléphone</b><span>${esc(phone||"NON RENSEIGNÉ")}</span></div>
      <div class="toolbar">
@@ -1987,11 +2000,11 @@ function overrunGuide(){
  }
  const maxAttr=r.max?` max="${r.max}"`:"";
  const maxText=r.max?`, dans la limite de ${r.max} tranche${r.max>1?"s":""} maximum`:"";
- const msg="La mission prévue arrive à sa limite de temps. Pour terminer correctement ce qui est prévu, une prolongation est nécessaire. Toute tranche de 30 minutes commencée est facturée "+r.unit+" € "+r.base+maxText+". Souhaitez-vous que je poursuive la mission dans ces conditions ? Merci de me confirmer expressément votre accord.";
+ const msg=overrunMissionSummary()+"\n\nLa mission prévue arrive à sa limite de temps. Pour terminer correctement ce qui est prévu, une prolongation est nécessaire. Toute tranche de 30 minutes commencée est facturée "+r.unit+" € "+r.base+maxText+". Souhaitez-vous que je poursuive la mission dans ces conditions ? Merci de me confirmer expressément votre accord. Sans votre accord exprès pour cette prolongation, la mission prendra fin à l’issue de la durée convenue.";
  draw(`<div class="card"><h1>Prolongation imprévue</h1>
    <div class="warn"><b>RÈGLE</b><br>${esc(r.label)}. Uniquement si l’objet reste exactement le même et après accord exprès du client.</div>
    <div class="field"><label>Nombre de tranches de 30 min commencées</label><input id="overrunN" type="number" min="1"${maxAttr} value="1"></div>
-   <div class="readAloud">${esc(msg)}</div>
+   <div class="readAloud" style="white-space:pre-line">${esc(msg)}</div>
    <div class="row"><b>Client</b><span>${esc(S.name||"-")}</span></div>
    <div class="row"><b>Téléphone</b><span>${esc(phone||"NON RENSEIGNÉ")}</span></div>
    <div class="toolbar">
@@ -2208,6 +2221,7 @@ function boot(){
 boot();
 </script>
 
+<script src="./terrain-clock.js"></script>
 <script>
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
