@@ -1927,7 +1927,7 @@ function overrunRule(){
  return {allowed:false,text:"Aucune prolongation automatique n’est prévue pour cette mission. Arrêtez et faites requalifier avant d’élargir le périmètre."};
 }
 function clientContactNumber(){
- return String(S.phone||"").replace(/[^+\\d]/g,"");
+ return String(S.phone||"").replace(/[^+\d]/g,"");
 }
 function clientPhoneDisplay(){
  const phone=clientContactNumber();
