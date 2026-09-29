@@ -273,6 +273,112 @@ function activeMissionStatus(st){
  if(st.stage==="RÉSERVATION")return "RÉSERVATION / PAIEMENT";
  return st.stage||"MISSION EN COURS";
 }
+function getCalendarBridgeUrl(){
+ return String(localStorage.getItem(CALENDAR_BRIDGE_URL_STORAGE)||"").trim();
+}
+function getCalendarBridgeToken(){
+ return String(localStorage.getItem(CALENDAR_BRIDGE_TOKEN_STORAGE)||"").trim();
+}
+function configureCalendarBridge(){
+ const currentUrl=getCalendarBridgeUrl();
+ const url=prompt("URL du pont AGENDA CYRNEA",currentUrl);
+ if(url===null)return;
+ const cleanUrl=String(url||"").trim();
+ if(!/^https:\/\//.test(cleanUrl))return alert("URL Agenda invalide.");
+ const token=prompt("Clé locale AGENDA CYRNEA",getCalendarBridgeToken());
+ if(token===null)return;
+ const cleanToken=String(token||"").trim();
+ if(!cleanToken)return alert("Clé Agenda requise.");
+ localStorage.setItem(CALENDAR_BRIDGE_URL_STORAGE,cleanUrl);
+ localStorage.setItem(CALENDAR_BRIDGE_TOKEN_STORAGE,cleanToken);
+ alert("Agenda CYRNEA configuré sur cet appareil.");
+}
+function calendarDurationMinutes(st=S){
+ const cap=String(st?.result?.cap||"").toLowerCase();
+ if(cap.includes("3 x 1 h 30"))return 90;
+ if(cap.includes("3 x 75 min"))return 75;
+ if(cap.includes("3 h"))return 180;
+ if(cap.includes("2 h"))return 120;
+ if(cap.includes("1 h 30"))return 90;
+ if(cap.includes("75 min"))return 75;
+ if(cap.includes("60 min")||cap.includes("1 h"))return 60;
+ if(cap.includes("cadre court")||cap.includes("action unique"))return 30;
+ return 60;
+}
+function calendarPayloadsForMission(st=S,source="PWA"){
+ const refBase=String(st?.missionId||st?.tallyReference||activeMissionKey(st)||"").trim();
+ if(!refBase)return [];
+ const duration=calendarDurationMinutes(st);
+ const multi=!!st?.result?.multi && Array.isArray(st?.multiSlots) && st.multiSlots.length;
+ const slots=multi
+   ? st.multiSlots.map((p,i)=>({date:p.date,time:p.time,index:Number(p.index||i+1)}))
+   : [{date:st?.date,time:st?.slot,index:1}];
+ const out=[];
+ for(const p of slots){
+   const date=String(p.date||"").trim(),time=normalizeTime4(String(p.time||""));
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(time))continue;
+   const start=new Date(date+"T"+time+":00");
+   const startMs=start.getTime();
+   if(!Number.isFinite(startMs))continue;
+   const suffix=multi?"-P"+String(p.index):"";
+   out.push({
+     action:"upsert",
+     reference:refBase+suffix,
+     source,
+     title:"CYRNEA — "+String(st?.result?.mission||"MISSION")+(multi?" — passage "+String(p.index):""),
+     mission:String(st?.result?.mission||""),
+     client:String(st?.name||""),
+     object:String(st?.obj||""),
+     contract:String(st?.result?.contract||""),
+     location:String(st?.prep?.addr||""),
+     notes:"Tarif : "+String(st?.result?.price||"")+"\nRéférence dossier : "+refBase,
+     start_ms:startMs,
+     end_ms:startMs+duration*60000
+   });
+ }
+ return out;
+}
+async function calendarBridgePost(payload){
+ const url=getCalendarBridgeUrl(),token=getCalendarBridgeToken();
+ if(!url||!token)throw new Error("agenda_non_configuré");
+ await fetch(url,{
+   method:"POST",
+   mode:"no-cors",
+   headers:{"Content-Type":"text/plain;charset=UTF-8"},
+   cache:"no-store",
+   credentials:"omit",
+   body:JSON.stringify({...payload,secret:token})
+ });
+ return true;
+}
+async function calendarUpsertMission(st=S,source="PWA"){
+ const payloads=calendarPayloadsForMission(st,source);
+ if(!payloads.length)throw new Error("créneau_calendrier_incomplet");
+ for(const payload of payloads)await calendarBridgePost(payload);
+ return true;
+}
+async function calendarDeleteMission(st=S){
+ const url=getCalendarBridgeUrl(),token=getCalendarBridgeToken();
+ if(!url||!token)return false;
+ const refBase=String(st?.missionId||st?.tallyReference||activeMissionKey(st)||"").trim();
+ if(!refBase)return false;
+ const refs=[refBase];
+ if(st?.result?.multi && Array.isArray(st?.multiSlots)){
+   st.multiSlots.forEach((p,i)=>refs.push(refBase+"-P"+String(p.index||i+1)));
+ }
+ for(const reference of [...new Set(refs)])await calendarBridgePost({action:"delete",reference});
+ return true;
+}
+function shouldPwaWriteCalendar(st=S){
+ return ["TALLY","PWA"].includes(String(st?.calendarOrigin||""));
+}
+async function refreshPwaCalendarIfNeeded(st=S){
+ if(!shouldPwaWriteCalendar(st))return false;
+ if(!["CONFIRMED","CONFIRMED_AFTER_ALTERNATIVE"].includes(String(st?.decisionStatus||"")))return false;
+ if(!getCalendarBridgeUrl()||!getCalendarBridgeToken())return false;
+ await calendarUpsertMission(st,String(st.calendarOrigin||"PWA"));
+ return true;
+}
 function getSyncKey(){return String(localStorage.getItem(SYNC_KEY_STORAGE)||"").trim()}
 function loadDeletedIds(){
  try{
@@ -450,7 +556,7 @@ function home(remember=true){
    <button class="choice" onclick="newMission()"><span class="missionName">NOUVELLE MISSION</span><span class="missionGoal">Créer un nouveau dossier sans supprimer les missions actives.</span></button>
    <button class="choice" onclick="S.mode='CALLBACK';callback()"><span class="missionName">NOTER UN RAPPEL</span><span class="missionGoal">Nom, téléphone et motif en quelques secondes.</span></button>
  </div>
- <div class="toolbar" style="margin-top:10px"><button class="btn primary" onclick="configureCloudSync()">ACTIVER LA SYNCHRO MAC ↔ IPHONE</button><button class="btn ghost" onclick="manualCloudSync()">SYNCHRONISER MAINTENANT</button></div>
+ <div class="toolbar" style="margin-top:10px"><button class="btn primary" onclick="configureCloudSync()">ACTIVER LA SYNCHRO MAC ↔ IPHONE</button><button class="btn ghost" onclick="manualCloudSync()">SYNCHRONISER MAINTENANT</button></div><div class="toolbar" style="margin-top:8px"><button class="btn ghost" onclick="configureCalendarBridge()">ACTIVER AGENDA CYRNEA</button></div>
  <div class="operatorOnly">Les dossiers non terminés ou avec paiement restant dû restent actifs jusqu’à leur clôture définitive.</div>
  </div>`,remember);
 }
