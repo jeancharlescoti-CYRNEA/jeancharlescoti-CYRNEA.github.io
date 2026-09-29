@@ -401,6 +401,44 @@ async function manualCloudSync(){
    alert("Synchronisation impossible — "+(e?.name==="AbortError"?"le serveur ne répond pas":String(e?.message||e)));
  }
 }
+async function agendaBridgeSelfTest(action="upsert"){
+ const key=getSyncKey();
+ if(!key)return alert("SYNCHRONISATION CYRNEA NON ACTIVÉE SUR CET APPAREIL.");
+ const d=new Date();
+ d.setDate(d.getDate()+1);
+ d.setHours(12,0,0,0);
+ const payload=action==="delete"
+   ? {action:"delete",reference:"CYRNEA-AGENDA-SELFTEST"}
+   : {
+       action:"upsert",
+       reference:"CYRNEA-AGENDA-SELFTEST",
+       source:"PWA-TEST",
+       title:"CYRNEA — TEST AGENDA",
+       mission:"TEST AGENDA",
+       client:"TEST",
+       object:"Vérification technique — à supprimer",
+       contract:"TEST",
+       location:"",
+       notes:"Test technique du pont CYRNEA.",
+       start_ms:d.getTime(),
+       end_ms:d.getTime()+30*60000
+     };
+ try{
+   const res=await fetch(MISSIONS_API_URL+"/calendar",{
+     method:"POST",
+     headers:{"Content-Type":"text/plain;charset=UTF-8"},
+     cache:"no-store",
+     credentials:"omit",
+     body:JSON.stringify({key,...payload})
+   });
+   let data=null;
+   try{data=await res.json()}catch(e){}
+   if(!res.ok||!data?.ok)throw new Error(String(data?.error||("http_"+res.status)));
+   alert(action==="delete"?"TEST AGENDA SUPPRIMÉ.":"TEST AGENDA CRÉÉ POUR DEMAIN À 12:00.");
+ }catch(e){
+   alert("TEST AGENDA ÉCHOUÉ : "+String(e?.message||e));
+ }
+}
 function save(){
  let previous=null;
  try{previous=JSON.parse(localStorage.getItem(STATE_KEY)||"null")}catch(e){}
@@ -449,6 +487,7 @@ function home(remember=true){
    <button class="choice" onclick="S.mode='CALLBACK';callback()"><span class="missionName">NOTER UN RAPPEL</span><span class="missionGoal">Nom, téléphone et motif en quelques secondes.</span></button>
  </div>
  <div class="toolbar" style="margin-top:10px"><button class="btn primary" onclick="configureCloudSync()">ACTIVER LA SYNCHRO MAC ↔ IPHONE</button><button class="btn ghost" onclick="manualCloudSync()">SYNCHRONISER MAINTENANT</button></div>
+ ${new URLSearchParams(location.search).get("agenda-test")==="1"?`<div class="toolbar" style="margin-top:8px"><button class="btn ghost" onclick="agendaBridgeSelfTest(\'upsert\')">TESTER AGENDA</button><button class="btn ghost" onclick="agendaBridgeSelfTest(\'delete\')">SUPPRIMER TEST</button></div>`:""}
  <div class="operatorOnly">Les dossiers non terminés ou avec paiement restant dû restent actifs jusqu’à leur clôture définitive.</div>
  </div>`,remember);
 }
