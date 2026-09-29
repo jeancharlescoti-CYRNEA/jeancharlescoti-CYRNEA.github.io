@@ -1770,13 +1770,18 @@ function confirmAcceptedAlternative(){
  if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{});
  preparationMission();
 }
-function decisionRefunded(){
+async function decisionRefunded(){
  S.decisionStatus="REFUNDED";
  S.paymentStatus="REFUNDED";
- S.finalStatus="MISSION ANNULÉE — REMBOURSÉE";
  if(!S.missionId)S.missionId=missionId();
  save();
- if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{});
+ if(getSyncKey()){
+   try{await syncCentralMissions({silent:true})}catch(e){
+     alert("REMBOURSEMENT ENREGISTRÉ — SYNCHRONISATION AGENDA À CONTRÔLER.");
+   }
+ }
+ S.finalStatus="MISSION ANNULÉE — REMBOURSÉE";
+ save();
  archive();
 }
 function toggleContactChoice(){
