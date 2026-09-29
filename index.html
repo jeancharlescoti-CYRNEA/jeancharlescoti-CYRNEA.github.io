@@ -1934,6 +1934,7 @@ function collectPreparation(){
 
  S.prep=h;
  save();
+ if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{});
  ready();
 }
 
