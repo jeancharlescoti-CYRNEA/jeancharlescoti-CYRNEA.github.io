@@ -188,6 +188,7 @@ const ACTIVE_MISSIONS_KEY="cyrnea_active_missions_v1";
 const MISSIONS_API_URL="https://cyrnea-missions-api.jeancharles-coti.workers.dev";
 const SYNC_KEY_STORAGE="cyrnea_sync_key_v1";
 const SYNC_META_STORAGE="cyrnea_sync_meta_v1";
+const SYNC_DELETED_STORAGE="cyrnea_sync_deleted_v2";
 const LEGACY_STATE_KEY="cyrnea_assistant_v50";
 const PAYMENT_GATEWAY_URL="https://cyrnea-payment-gateway.jeancharles-coti.workers.dev";
 const RESERVATION_ACTIONS_URL="https://cyrnea-reservation-actions.jeancharles-coti.workers.dev";
@@ -270,176 +271,79 @@ function activeMissionStatus(st){
  return st.stage||"MISSION EN COURS";
 }
 function getSyncKey(){return String(localStorage.getItem(SYNC_KEY_STORAGE)||"").trim()}
-function syncHeaders(){return {"Content-Type":"application/json","X-Cyrnea-Key":getSyncKey()}}
-async function pushMissionToCloud(st){
- const key=getSyncKey();
- if(!key||!isActiveMissionState(st))return null;
- const id=activeMissionKey(st);
- if(!id)return null;
- const payload=JSON.parse(JSON.stringify(st));
- const res=await fetch(MISSIONS_API_URL+"/missions/"+encodeURIComponent(id),{
-   method:"PUT",headers:syncHeaders(),body:JSON.stringify({payload})
- });
- if(!res.ok)throw new Error("sync_put_"+res.status);
- return await res.json();
-}
-async function pullCloudMissions(){
- const key=getSyncKey();
- if(!key)return [];
- const res=await fetch(MISSIONS_API_URL+"/missions",{method:"GET",headers:syncHeaders(),cache:"no-store"});
- if(!res.ok)throw new Error("sync_get_"+res.status);
- const data=await res.json();
- return Array.isArray(data.missions)?data.missions:[];
-}
-async function deleteMissionFromCloud(st){
- const key=getSyncKey(),id=activeMissionKey(st);
- if(!key||!id)return false;
- const tombstone={_deleted:true,_deletedAt:Date.now(),missionId:id};
- const res=await fetch(MISSIONS_API_URL+"/missions/"+encodeURIComponent(id),{
-   method:"PUT",headers:syncHeaders(),body:JSON.stringify({payload:tombstone})
- });
- if(!res.ok)throw new Error("sync_delete_"+res.status);
- return true;
-}
-function loadSyncMeta(){
+function loadDeletedIds(){
  try{
-   const x=JSON.parse(localStorage.getItem(SYNC_META_STORAGE)||"{}");
-   return x&&typeof x==="object"&&!Array.isArray(x)?x:{};
- }catch(e){return {}}
+   const x=JSON.parse(localStorage.getItem(SYNC_DELETED_STORAGE)||"[]");
+   return Array.isArray(x)?x.map(String):[];
+ }catch(e){return []}
 }
-function writeSyncMeta(meta){
- localStorage.setItem(SYNC_META_STORAGE,JSON.stringify(meta||{}));
+function writeDeletedIds(ids){
+ localStorage.setItem(SYNC_DELETED_STORAGE,JSON.stringify([...new Set((ids||[]).map(String))]));
 }
 function missionSyncSnapshot(st){
  if(!st||typeof st!=="object")return "";
  const x=JSON.parse(JSON.stringify(st));
  delete x._localUpdatedAt;
+ delete x._serverUpdatedAt;
  return JSON.stringify(x);
 }
-async function reconcileCloudMissions(){
- if(!getSyncKey())return {ok:false,count:0,conflicts:0};
-
- const remote=await pullCloudMissions();
- const remoteById=new Map();
- for(const item of remote){
-   const st=item?.payload;
-   if(!st||typeof st!=="object")continue;
-   const id=String(item.id||activeMissionKey(st)||st.missionId||"");
-   if(id)remoteById.set(id,item);
- }
-
+function localActiveMissionArray(){
  const map=loadActiveMissionMap();
- const meta=loadSyncMeta();
- const ids=new Set([...Object.keys(map),...remoteById.keys()]);
- let conflicts=0;
+ return Object.values(map).filter(st=>isActiveMissionState(st)).map(st=>JSON.parse(JSON.stringify(st)));
+}
+async function syncCentralMissions(options={}){
+ const key=getSyncKey();
+ if(!key)throw new Error("sync_key_missing");
 
- for(const id of ids){
-   const local=map[id];
-   const item=remoteById.get(id);
-   const remoteState=item?.payload;
-   const m=meta[id]||null;
+ // Une seule requête globale pour Safari/iPhone et Mac.
+ const body={
+   key,
+   missions:localActiveMissionArray(),
+   deleted_ids:loadDeletedIds()
+ };
 
-   // Une suppression centrale gagne toujours.
-   if(remoteState?._deleted){
-     delete map[id];
-     delete meta[id];
-     continue;
-   }
+ const res=await fetch(MISSIONS_API_URL+"/sync",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   cache:"no-store",
+   body:JSON.stringify(body)
+ });
 
-   // Mission uniquement locale : l'envoyer une fois au central.
-   if(local && !item){
-     if(isActiveMissionState(local)){
-       const pushed=await pushMissionToCloud(local);
-       meta[id]={
-         remoteUpdatedAt:Number(pushed?.updated_at||Date.now()),
-         snapshot:missionSyncSnapshot(local)
-       };
-     }
-     continue;
-   }
-
-   // Mission uniquement centrale : la récupérer.
-   if(!local && item){
-     map[id]=remoteState;
-     meta[id]={
-       remoteUpdatedAt:Number(item.updated_at||0),
-       snapshot:missionSyncSnapshot(remoteState)
-     };
-     continue;
-   }
-
-   if(!local||!item)continue;
-
-   // Premier passage avec cette logique : comparer réellement les deux copies.
-   // Si elles diffèrent, conserver la plus récemment modifiée au lieu
-   // d'écraser systématiquement l'iPhone par la copie centrale.
-   if(!m){
-     const localSnap=missionSyncSnapshot(local);
-     const remoteSnap=missionSyncSnapshot(remoteState);
-     if(localSnap===remoteSnap){
-       meta[id]={
-         remoteUpdatedAt:Number(item.updated_at||0),
-         snapshot:remoteSnap
-       };
-     }else{
-       const localTime=Number(local?._localUpdatedAt||0);
-       const remoteTime=Number(remoteState?._localUpdatedAt||item.updated_at||0);
-       if(localTime>remoteTime){
-         const pushed=await pushMissionToCloud(local);
-         meta[id]={
-           remoteUpdatedAt:Number(pushed?.updated_at||Date.now()),
-           snapshot:localSnap
-         };
-       }else{
-         map[id]=remoteState;
-         meta[id]={
-           remoteUpdatedAt:Number(item.updated_at||0),
-           snapshot:remoteSnap
-         };
-       }
-     }
-     continue;
-   }
-
-   const localChanged=missionSyncSnapshot(local)!==String(m.snapshot||"");
-   const remoteChanged=Number(item.updated_at||0)!==Number(m.remoteUpdatedAt||0);
-
-   if(localChanged && !remoteChanged){
-     const pushed=await pushMissionToCloud(local);
-     meta[id]={
-       remoteUpdatedAt:Number(pushed?.updated_at||Date.now()),
-       snapshot:missionSyncSnapshot(local)
-     };
-   }else if(!localChanged && remoteChanged){
-     map[id]=remoteState;
-     meta[id]={
-       remoteUpdatedAt:Number(item.updated_at||0),
-       snapshot:missionSyncSnapshot(remoteState)
-     };
-   }else if(localChanged && remoteChanged){
-     // Modification simultanée sur deux appareils : ne jamais écraser silencieusement.
-     conflicts++;
-     map[id]=remoteState;
-     meta[id]={
-       remoteUpdatedAt:Number(item.updated_at||0),
-       snapshot:missionSyncSnapshot(remoteState)
-     };
-   }
+ let data=null;
+ try{data=await res.json()}catch(e){}
+ if(!res.ok||!data?.ok){
+   throw new Error(String(data?.error||("sync_http_"+res.status)));
  }
 
- writeActiveMissionMap(map);
- writeSyncMeta(meta);
+ const finalMap={};
+ for(const item of (Array.isArray(data.missions)?data.missions:[])){
+   if(!item||typeof item!=="object")continue;
+   const id=String(item.id||activeMissionKey(item)||item.missionId||item.draftKey||"");
+   if(!id)continue;
+   const st=JSON.parse(JSON.stringify(item));
+   delete st.id;
+   delete st._serverUpdatedAt;
+   finalMap[id]=st;
+ }
+ writeActiveMissionMap(finalMap);
+
+ // Les suppressions ont été accusées réception par le Worker.
+ writeDeletedIds([]);
 
  const currentId=activeMissionKey(S);
- if(currentId && map[currentId]){
-   S=JSON.parse(JSON.stringify(map[currentId]));
+ if(currentId && finalMap[currentId]){
+   S=JSON.parse(JSON.stringify(finalMap[currentId]));
    localStorage.setItem(STATE_KEY,JSON.stringify(S));
- }else if(currentId && !map[currentId]){
+ }else if(currentId && !finalMap[currentId]){
    localStorage.removeItem(STATE_KEY);
    localStorage.removeItem(STAGE_VIEWS_KEY);
  }
 
- return {ok:true,count:Object.keys(map).length,conflicts};
+ return {
+   ok:true,
+   received:Number(data.received||0),
+   count:Object.keys(finalMap).length
+ };
 }
 async function configureCloudSync(){
  const entered=prompt("Clé de synchronisation CYRNEA",getSyncKey());
@@ -448,9 +352,8 @@ async function configureCloudSync(){
  if(!key)return alert("Clé de synchronisation requise.");
  localStorage.setItem(SYNC_KEY_STORAGE,key);
  try{
-   await reconcileCloudMissions();
-   await pushMissionToCloud(S);
-   alert("Synchronisation CYRNEA activée sur cet appareil.");
+   const result=await syncCentralMissions();
+   alert("Synchronisation CYRNEA activée — "+String(result.count)+" mission(s) centrale(s).");
    home(false);
  }catch(e){
    localStorage.removeItem(SYNC_KEY_STORAGE);
@@ -460,57 +363,10 @@ async function configureCloudSync(){
 async function manualCloudSync(){
  if(!getSyncKey())return configureCloudSync();
  try{
-   // Synchronisation bidirectionnelle :
-   // - on conserve l'union des missions actives des deux appareils ;
-   // - seules les suppressions explicites (croix ×) suppriment une mission partout.
-   const localMap=loadActiveMissionMap();
-
-   // 1. Lire d'abord le central pour appliquer les suppressions explicites.
-   const remote=await pullCloudMissions();
-   const deletedIds=new Set();
-   for(const item of remote){
-     const st=item?.payload;
-     const id=String(item?.id||activeMissionKey(st)||st?.missionId||"");
-     if(id&&st?._deleted)deletedIds.add(id);
-   }
-
-   for(const id of deletedIds){
-     delete localMap[id];
-   }
-
-   // 2. Envoyer toutes les missions actives locales non supprimées.
-   let sent=0;
-   for(const [id,st] of Object.entries(localMap)){
-     if(deletedIds.has(id))continue;
-     if(isActiveMissionState(st)){
-       await pushMissionToCloud(st);
-       sent++;
-     }
-   }
-
-   // 3. Relire le central final et reconstruire la liste locale complète.
-   const finalRemote=await pullCloudMissions();
-   const finalMap={};
-   for(const item of finalRemote){
-     const st=item?.payload;
-     if(!st||typeof st!=="object"||st._deleted)continue;
-     const id=String(item.id||activeMissionKey(st)||st.missionId||"");
-     if(id)finalMap[id]=st;
-   }
-   writeActiveMissionMap(finalMap);
-
-   // 4. Mettre à jour le dossier actuellement ouvert s'il existe encore.
-   const currentId=activeMissionKey(S);
-   if(currentId && finalMap[currentId]){
-     S=JSON.parse(JSON.stringify(finalMap[currentId]));
-     localStorage.setItem(STATE_KEY,JSON.stringify(S));
-   }else if(currentId && !finalMap[currentId]){
-     localStorage.removeItem(STATE_KEY);
-     localStorage.removeItem(STAGE_VIEWS_KEY);
-   }
-
+   persistActiveSnapshot(S);
+   const result=await syncCentralMissions();
    home(false);
-   alert("Synchronisation terminée — "+Object.keys(finalMap).length+" mission(s) active(s) sur les deux appareils.");
+   alert("Synchronisation terminée — "+String(result.count)+" mission(s) active(s).");
  }catch(e){
    alert("Synchronisation impossible — "+String(e?.message||e));
  }
@@ -587,12 +443,15 @@ async function deleteActiveMission(id){
  const st=map[id];
  if(!st)return alert("Cette mission active n’existe plus.");
  const label=(st.result?.mission||"Mission")+" — "+(st.name||"Client");
- if(!confirm("SUPPRIMER CE DOSSIER ACTIF ?\n\n"+label+"\n\nÀ utiliser uniquement si le dossier a été créé par erreur. Cette suppression sera aussi répercutée sur les autres appareils synchronisés."))return;
+ if(!confirm("SUPPRIMER CE DOSSIER ACTIF ?\n\n"+label+"\n\nCette suppression sera synchronisée sur les autres appareils."))return;
+
  delete map[id];
  writeActiveMissionMap(map);
- const syncMeta=loadSyncMeta();
- delete syncMeta[id];
- writeSyncMeta(syncMeta);
+
+ const deleted=loadDeletedIds();
+ if(!deleted.includes(id))deleted.push(id);
+ writeDeletedIds(deleted);
+
  const currentId=activeMissionKey(S);
  if(currentId===id){
    localStorage.removeItem(STATE_KEY);
@@ -600,7 +459,10 @@ async function deleteActiveMission(id){
    STAGE_VIEWS={};NAV=[];LAST_VIEW=null;
    S={stage:"ACCUEIL",mode:"FULL",universe:null,caller:null,name:"",phone:"",email:"",city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",acceptedSlot:false,draftKey:key(),missionId:"",prep:{},facts:"",incident:"",terrainMedia:[],terrainDraft:null,arrivalAt:"",arrivalEpochMs:null,departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,paymentMethod:"",paymentState:"",specialPending:false,resumeStage:"",history:["ACCUEIL"]};
  }
- try{await deleteMissionFromCloud(st)}catch(e){}
+
+ try{
+   if(getSyncKey())await syncCentralMissions({silent:true});
+ }catch(e){}
  home(false);
 }
 function newMission(){
@@ -2607,7 +2469,7 @@ function finalizeArchive(){
  S.finalStatus=document.getElementById("fs")?.value||S.finalStatus||"MISSION CLÔTURÉE";
  save();archive();
 }
-function archive(){setStage("ARCHIVE");save();removeActiveSnapshot(S);deleteMissionFromCloud(S).catch(()=>{});const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la PWA conserve l’état opérationnel du dossier. L’archive iCloud reste le stockage documentaire de fond ; sur le terrain, vous travaillez depuis l’assistant.</div><div class="toolbar"><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
+function archive(){setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);removeActiveSnapshot(S);if(archivedId){const d=loadDeletedIds();if(!d.includes(archivedId))d.push(archivedId);writeDeletedIds(d);if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la PWA conserve l’état opérationnel du dossier. L’archive iCloud reste le stockage documentaire de fond ; sur le terrain, vous travaillez depuis l’assistant.</div><div class="toolbar"><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
 function exportJSON(){let b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(S.missionId||"CYRNEA-DEMO")+".json";a.click();URL.revokeObjectURL(a.href)}
 function boot(){
  try{STAGE_VIEWS=JSON.parse(localStorage.getItem(STAGE_VIEWS_KEY)||"{}")||{}}catch(e){STAGE_VIEWS={}}
@@ -2624,7 +2486,7 @@ function boot(){
    }catch(e){}
  }
  REACHED_STAGES=new Set(Array.isArray(S.history)?S.history:["ACCUEIL"]);REACHED_STAGES.add("ACCUEIL");syncReached(); NAV=[]; LAST_VIEW=null; drawTimeline(); home(false); updateBack();
- if(getSyncKey())reconcileCloudMissions().then(()=>home(false)).catch(()=>{});
+ if(getSyncKey())syncCentralMissions({silent:true}).then(()=>home(false)).catch(()=>{});
 }
 boot();
 </script>
