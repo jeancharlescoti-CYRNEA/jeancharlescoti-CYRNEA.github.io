@@ -264,6 +264,13 @@ function activeMissionList(){
  const map=loadActiveMissionMap();
  return Object.entries(map).map(([id,state])=>({id,state})).filter(x=>isActiveMissionState(x.state)).sort((a,b)=>String(a.state.date||"9999").localeCompare(String(b.state.date||"9999"))||String(a.state.slot||"99:99").localeCompare(String(b.state.slot||"99:99")));
 }
+function archivedMissionList(){
+ const map=loadActiveMissionMap();
+ return Object.entries(map)
+   .map(([id,state])=>({id,state}))
+   .filter(x=>isStoredMissionState(x.state) && (!!x.state.finalStatus || x.state.stage==="ARCHIVE"))
+   .sort((a,b)=>(Number(b.state._localUpdatedAt||0)-Number(a.state._localUpdatedAt||0)) || String(b.state.date||"").localeCompare(String(a.state.date||"")));
+}
 function activeMissionStatus(st){
  if(st.overrun?.accepted && st.overrun.paymentStatus!=="PAID")return "SUPPLÉMENT À ENCAISSER";
  if(st.paymentStatus==="PAID_PENDING_CONFIRMATION")return "PAIEMENT REÇU — À CONFIRMER";
@@ -398,7 +405,7 @@ async function manualCloudSync(){
    persistActiveSnapshot(S);
    const result=await syncCentralMissions();
    home(false);
-   alert("Synchronisation terminée — "+String(result.received)+" modification(s) envoyée(s), "+String(result.count)+" mission(s) active(s).");
+   alert("Synchronisation terminée — "+String(result.received)+" modification(s) envoyée(s), "+String(result.count)+" dossier(s) central(aux).");
  }catch(e){
    alert("Synchronisation impossible — "+(e?.name==="AbortError"?"le serveur ne répond pas":String(e?.message||e)));
  }
@@ -434,6 +441,7 @@ function home(remember=true){
  persistActiveSnapshot(S);
  const currentId=activeMissionKey(S);
  const active=activeMissionList();
+ const archived=archivedMissionList();
  setStage("ACCUEIL");
  const cards=active.map(({id,state})=>{
    const when=[state.date||"",displayTime4(state.slot||"")].filter(Boolean).join(" · ");
@@ -450,9 +458,39 @@ function home(remember=true){
    <button class="choice" onclick="newMission()"><span class="missionName">NOUVELLE MISSION</span><span class="missionGoal">Créer un nouveau dossier sans supprimer les missions actives.</span></button>
    <button class="choice" onclick="S.mode='CALLBACK';callback()"><span class="missionName">NOTER UN RAPPEL</span><span class="missionGoal">Nom, téléphone et motif en quelques secondes.</span></button>
  </div>
+ ${archived.length?`<div style="margin-top:12px"><button class="choice" onclick="archivedMissions()"><span class="missionName">MISSIONS ARCHIVÉES — ${archived.length}</span><span class="missionGoal">Consulter les dossiers clôturés conservés dans la base centrale.</span></button></div>`:""}
  <div class="toolbar" style="margin-top:10px"><button class="btn primary" onclick="configureCloudSync()">ACTIVER LA SYNCHRO MAC ↔ IPHONE</button><button class="btn ghost" onclick="manualCloudSync()">SYNCHRONISER MAINTENANT</button></div>
- <div class="operatorOnly">Les dossiers non terminés ou avec paiement restant dû restent actifs jusqu’à leur clôture définitive.</div>
+ <div class="operatorOnly">Les dossiers non terminés ou avec paiement restant dû restent actifs jusqu’à leur clôture définitive. Les dossiers clôturés restent consultables dans MISSIONS ARCHIVÉES.</div>
  </div>`,remember);
+}
+function archivedMissions(){
+ const archived=archivedMissionList();
+ const cards=archived.map(({id,state})=>{
+   const when=[state.date||"",displayTime4(state.slot||"")].filter(Boolean).join(" · ");
+   return `<button class="choice presence" onclick="openArchivedMission('${esc(id)}')"><span class="missionName">${esc(state.missionId||id)} — ${esc(state.result?.mission||"Mission")} — ${esc(state.name||"Client")}</span><span class="missionGoal">${esc(state.finalStatus||"MISSION ARCHIVÉE")}${when?" · "+esc(when):""}</span></button>`;
+ }).join("");
+ draw(`<div class="card"><h1>Missions archivées</h1>
+   <div class="muted">Dossiers clôturés conservés dans la base centrale CYRNEA.</div>
+   ${archived.length?`<div class="choices" style="margin-top:12px">${cards}</div>`:`<div class="neutral" style="margin-top:12px">Aucune mission archivée.</div>`}
+   <div class="toolbar"><button class="btn ghost" onclick="home(false)">← RETOUR ACCUEIL</button></div>
+ </div>`);
+}
+function openArchivedMission(id){
+ persistActiveSnapshot(S);
+ const map=loadActiveMissionMap();
+ const stored=map[id];
+ if(!stored)return alert("Cette mission archivée n’est plus disponible.");
+ S=JSON.parse(JSON.stringify(stored));
+ S.prep={...(S.prep||{})};
+ S.multiSlots=Array.isArray(S.multiSlots)?S.multiSlots:[];
+ S.availability={...(S.availability||{})};
+ S.overrun=S.overrun||null;
+ if(!Array.isArray(S.history))S.history=["ACCUEIL","ARCHIVE"];
+ localStorage.setItem(STATE_KEY,JSON.stringify(S));
+ localStorage.removeItem(STAGE_VIEWS_KEY);
+ STAGE_VIEWS={};NAV=[];LAST_VIEW=null;
+ REACHED_STAGES=new Set(S.history);REACHED_STAGES.add("ACCUEIL");REACHED_STAGES.add("ARCHIVE");syncReached();
+ archive();
 }
 function resumeStoredMission(id){
  persistActiveSnapshot(S);
