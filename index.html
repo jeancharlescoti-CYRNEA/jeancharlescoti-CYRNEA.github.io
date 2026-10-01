@@ -458,7 +458,7 @@ function home(remember=true){
    <button class="choice" onclick="newMission()"><span class="missionName">NOUVELLE MISSION</span><span class="missionGoal">Créer un nouveau dossier sans supprimer les missions actives.</span></button>
    <button class="choice" onclick="S.mode='CALLBACK';callback()"><span class="missionName">NOTER UN RAPPEL</span><span class="missionGoal">Nom, téléphone et motif en quelques secondes.</span></button>
  </div>
- <div style="margin-top:12px"><button class="choice" onclick="archivedMissions()"><span class="missionName">MISSIONS ARCHIVÉES — ${archived.length}</span><span class="missionGoal">Consulter les dossiers clôturés conservés dans la base centrale.</span></button></div>
+ <div style="margin-top:12px"><button type="button" class="choice" style="width:100%;display:block;cursor:pointer" onclick="archivedMissions();return false;"><span class="missionName">MISSIONS ARCHIVÉES — ${archived.length}</span><span class="missionGoal">Consulter les dossiers clôturés conservés dans la base centrale.</span></button></div>
  <div class="toolbar" style="margin-top:10px"><button class="btn primary" onclick="configureCloudSync()">ACTIVER LA SYNCHRO MAC ↔ IPHONE</button><button class="btn ghost" onclick="manualCloudSync()">SYNCHRONISER MAINTENANT</button></div>
  <div class="operatorOnly">Les dossiers non terminés ou avec paiement restant dû restent actifs jusqu’à leur clôture définitive. Les dossiers clôturés restent consultables dans MISSIONS ARCHIVÉES.</div>
  </div>`,remember);
@@ -467,7 +467,7 @@ function archivedMissions(){
  const archived=archivedMissionList();
  const cards=archived.map(({id,state})=>{
    const when=[state.date||"",displayTime4(state.slot||"")].filter(Boolean).join(" · ");
-   return `<button class="choice presence" onclick="openArchivedMission('${esc(id)}')"><span class="missionName">${esc(state.missionId||id)} — ${esc(state.result?.mission||"Mission")} — ${esc(state.name||"Client")}</span><span class="missionGoal">${esc(state.finalStatus||"MISSION ARCHIVÉE")}${when?" · "+esc(when):""}</span></button>`;
+   return `<button type="button" class="choice presence" style="width:100%;display:block;cursor:pointer" onclick="openArchivedMission(\'${esc(id)}\');return false;"><span class="missionName">${esc(state.missionId||id)} — ${esc(state.result?.mission||"Mission")} — ${esc(state.name||"Client")}</span><span class="missionGoal">${esc(state.finalStatus||"MISSION ARCHIVÉE")}${when?" · "+esc(when):""}</span></button>`;
  }).join("");
  draw(`<div class="card"><h1>Missions archivées</h1>
    <div class="muted">Dossiers clôturés conservés dans la base centrale CYRNEA.</div>
