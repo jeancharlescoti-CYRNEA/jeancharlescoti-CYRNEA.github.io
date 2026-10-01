@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-v53-final-20260929-calendar-final';
+const CACHE='cyrnea-assistant-v53-final-20261001-archive-fix-1';
 const ASSETS=['./index.html','./terrain-clock.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
@@ -14,6 +14,8 @@ self.addEventListener('activate',event=>{
     caches.keys()
       .then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
       .then(()=>self.clients.claim())
+      .then(()=>self.clients.matchAll({type:'window',includeUncontrolled:true}))
+      .then(clients=>Promise.all(clients.map(client=>client.navigate(client.url).catch(()=>null))))
   );
 });
 
