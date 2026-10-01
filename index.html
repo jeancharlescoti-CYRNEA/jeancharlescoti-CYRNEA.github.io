@@ -389,8 +389,7 @@ async function configureCloudSync(){
    alert("Synchronisation CYRNEA activée — "+String(result.count)+" mission(s) centrale(s).");
    home(false);
  }catch(e){
-   localStorage.removeItem(SYNC_KEY_STORAGE);
-   alert("SYNCHRO REFUSÉE — "+String(e?.message||e));
+   alert("SYNCHRO IMPOSSIBLE — clé conservée. "+String(e?.message||e));
  }
 }
 async function manualCloudSync(){
