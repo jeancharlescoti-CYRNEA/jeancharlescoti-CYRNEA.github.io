@@ -239,12 +239,15 @@ function activeMissionKey(st=S){return String(st?.missionId||st?.draftKey||"")}
 function isActiveMissionState(st=S){
  return !!(st && st.result && String(st.result.mission||"").trim() && String(st.result.contract||"").trim() && !st.finalStatus && st.stage!=="ARCHIVE");
 }
+function isStoredMissionState(st=S){
+ return !!(st && activeMissionKey(st) && st.result && String(st.result.mission||"").trim() && String(st.result.contract||"").trim());
+}
 function loadActiveMissionMap(){
  try{const x=JSON.parse(localStorage.getItem(ACTIVE_MISSIONS_KEY)||"{}");return x&&typeof x==="object"&&!Array.isArray(x)?x:{}}catch(e){return {}}
 }
 function writeActiveMissionMap(map){localStorage.setItem(ACTIVE_MISSIONS_KEY,JSON.stringify(map||{}))}
 function persistActiveSnapshot(st=S){
- if(!isActiveMissionState(st))return;
+ if(!isStoredMissionState(st))return;
  const id=activeMissionKey(st);
  if(!id)return;
  const map=loadActiveMissionMap();
@@ -292,7 +295,7 @@ function writeDirtyIds(ids){
 }
 function markMissionDirty(st=S){
  const id=activeMissionKey(st);
- if(!id||!isActiveMissionState(st))return;
+ if(!id||!isStoredMissionState(st))return;
  const dirty=loadDirtyIds();
  if(!dirty.includes(id))dirty.push(id);
  writeDirtyIds(dirty);
@@ -308,7 +311,7 @@ function localDirtyMissionArray(){
  const map=loadActiveMissionMap();
  const dirty=new Set(loadDirtyIds());
  return Object.entries(map)
-   .filter(([id,st])=>dirty.has(id)&&isActiveMissionState(st))
+   .filter(([id,st])=>dirty.has(id)&&isStoredMissionState(st))
    .map(([id,st])=>JSON.parse(JSON.stringify(st)));
 }
 async function syncCentralMissions(options={}){
@@ -2511,7 +2514,7 @@ function finalizeArchive(){
  S.finalStatus=document.getElementById("fs")?.value||S.finalStatus||"MISSION CLÔTURÉE";
  save();archive();
 }
-function archive(){setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);removeActiveSnapshot(S);if(archivedId){const d=loadDeletedIds();if(!d.includes(archivedId))d.push(archivedId);writeDeletedIds(d);writeDirtyIds(loadDirtyIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la PWA conserve l’état opérationnel du dossier. L’archive iCloud reste le stockage documentaire de fond ; sur le terrain, vous travaillez depuis l’assistant.</div><div class="toolbar"><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
+function archive(){setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
 function exportJSON(){let b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(S.missionId||"CYRNEA-DEMO")+".json";a.click();URL.revokeObjectURL(a.href)}
 function boot(){
  try{STAGE_VIEWS=JSON.parse(localStorage.getItem(STAGE_VIEWS_KEY)||"{}")||{}}catch(e){STAGE_VIEWS={}}
