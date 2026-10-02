@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-v53-final-20261002-media-local-1';
+const CACHE='cyrnea-assistant-v53-final-20261002-icloud-export-1';
 const ASSETS=['./index.html','./terrain-clock.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
