@@ -2228,6 +2228,145 @@ async function storeSelectedTerrainMedia(){
  }
 }
 
+
+function crc32(bytes){
+ let table=crc32._table;
+ if(!table){
+   table=new Uint32Array(256);
+   for(let n=0;n<256;n++){
+     let x=n;
+     for(let k=0;k<8;k++)x=(x&1)?(0xEDB88320^(x>>>1)):(x>>>1);
+     table[n]=x>>>0;
+   }
+   crc32._table=table;
+ }
+ let crc=0xFFFFFFFF;
+ for(let i=0;i<bytes.length;i++)crc=table[(crc^bytes[i])&0xFF]^(crc>>>8);
+ return (crc^0xFFFFFFFF)>>>0;
+}
+function u16(n){
+ const a=new Uint8Array(2),v=new DataView(a.buffer);v.setUint16(0,n,true);return a;
+}
+function u32(n){
+ const a=new Uint8Array(4),v=new DataView(a.buffer);v.setUint32(0,n>>>0,true);return a;
+}
+function concatBytes(parts){
+ const total=parts.reduce((s,p)=>s+p.length,0);
+ const out=new Uint8Array(total);
+ let o=0;
+ for(const p of parts){out.set(p,o);o+=p.length}
+ return out;
+}
+function dosDateTime(d=new Date()){
+ let year=Math.max(1980,d.getFullYear());
+ const time=((d.getHours()&31)<<11)|((d.getMinutes()&63)<<5)|((Math.floor(d.getSeconds()/2))&31);
+ const date=(((year-1980)&127)<<9)|(((d.getMonth()+1)&15)<<5)|(d.getDate()&31);
+ return {time,date};
+}
+async function makeStoredZip(entries){
+ const enc=new TextEncoder();
+ const locals=[],centrals=[];
+ let offset=0;
+ for(const entry of entries){
+   const nameBytes=enc.encode(entry.name);
+   const data=entry.data instanceof Uint8Array?entry.data:new Uint8Array(entry.data);
+   const crc=crc32(data);
+   const dt=dosDateTime(entry.date||new Date());
+   const flags=0x0800;
+   const local=concatBytes([
+     u32(0x04034b50),u16(20),u16(flags),u16(0),u16(dt.time),u16(dt.date),
+     u32(crc),u32(data.length),u32(data.length),u16(nameBytes.length),u16(0),
+     nameBytes,data
+   ]);
+   locals.push(local);
+   const central=concatBytes([
+     u32(0x02014b50),u16(20),u16(20),u16(flags),u16(0),u16(dt.time),u16(dt.date),
+     u32(crc),u32(data.length),u32(data.length),u16(nameBytes.length),u16(0),u16(0),
+     u16(0),u16(0),u32(0),u32(offset),nameBytes
+   ]);
+   centrals.push(central);
+   offset+=local.length;
+ }
+ const centralBytes=concatBytes(centrals);
+ const localBytes=concatBytes(locals);
+ const end=concatBytes([
+   u32(0x06054b50),u16(0),u16(0),u16(entries.length),u16(entries.length),
+   u32(centralBytes.length),u32(localBytes.length),u16(0)
+ ]);
+ return new Blob([localBytes,centralBytes,end],{type:"application/zip"});
+}
+function safeArchiveName(x){
+ return String(x||"CYRNEA-MISSION").replace(/[\\/:*?"<>|]+/g,"-").replace(/\s+/g,"_");
+}
+function missionArchiveText(){
+ const lines=[
+   "CYRNEA — DOSSIER DE MISSION",
+   "",
+   "Référence : "+(S.missionId||"-"),
+   "Client : "+(S.name||"-"),
+   "Mission : "+(S.result?.mission||"-"),
+   "Contrat : "+(S.result?.contract||"-"),
+   "Statut : "+(S.finalStatus||S.stage||"-"),
+   "Objet : "+(S.obj||"-"),
+   "Date / créneau : "+(typeof scheduleText==="function"?scheduleText():"-"),
+   "Adresse : "+(S.prep?.addr||S.city||"-"),
+   "Arrivée : "+(S.arrivalAt||"-"),
+   "Départ : "+(S.departureAt||"-"),
+   "Faits / actions : "+(S.facts||"-"),
+   "Incident / limite : "+(S.incident||"Aucun"),
+   "",
+   "Archive documentaire cible : iCloud Drive / CYRNEA / MISSIONS / "+(S.result?.contract==="RELAIS"?"RELAIS":"PRÉSENCE")+" / "+(S.missionId||"-"),
+   "",
+   "Ce dossier ZIP contient les données de mission et les fichiers terrain réellement conservés dans la PWA."
+ ];
+ return lines.join("\n");
+}
+async function exportMissionArchive(){
+ const btn=document.getElementById("archiveExportBtn");
+ if(btn){btn.disabled=true;btn.textContent="PRÉPARATION DU DOSSIER…"}
+ try{
+   const enc=new TextEncoder();
+   const entries=[];
+   entries.push({name:"DOSSIER_MISSION.txt",data:enc.encode(missionArchiveText())});
+   entries.push({name:"MISSION.json",data:enc.encode(JSON.stringify(S,null,2))});
+   let media=[];
+   try{media=await getTerrainMediaRecords(S,true)}catch(e){}
+   const used=new Map();
+   for(const r of media){
+     let base=String(r.name||"fichier");
+     const count=used.get(base)||0;
+     used.set(base,count+1);
+     if(count){
+       const dot=base.lastIndexOf(".");
+       base=dot>0?base.slice(0,dot)+"_"+(count+1)+base.slice(dot):base+"_"+(count+1);
+     }
+     const passage=String(r.passage||1).padStart(2,"0");
+     const ab=await r.blob.arrayBuffer();
+     entries.push({name:"MEDIA/PASSAGE_"+passage+"/"+base,data:new Uint8Array(ab)});
+   }
+   const zip=await makeStoredZip(entries);
+   const filename=safeArchiveName(S.missionId)+".zip";
+   const file=new File([zip],filename,{type:"application/zip"});
+   if(navigator.canShare && navigator.share && navigator.canShare({files:[file]})){
+     await navigator.share({
+       files:[file],
+       title:"Archive CYRNEA — "+(S.missionId||"mission"),
+       text:"Enregistrer dans Fichiers puis iCloud Drive / CYRNEA / MISSIONS / "+(S.result?.contract==="RELAIS"?"RELAIS":"PRÉSENCE")
+     });
+   }else{
+     const a=document.createElement("a");
+     const url=URL.createObjectURL(zip);
+     a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+     setTimeout(()=>URL.revokeObjectURL(url),30000);
+     alert("Le dossier ZIP a été préparé. Enregistrez-le dans iCloud Drive / CYRNEA / MISSIONS / "+(S.result?.contract==="RELAIS"?"RELAIS":"PRÉSENCE")+".");
+   }
+ }catch(e){
+   if(e?.name!=="AbortError")alert("Export impossible : "+String(e?.message||e));
+ }finally{
+   if(btn){btn.disabled=false;btn.textContent="EXPORTER LE DOSSIER → FICHIERS / iCLOUD"}
+ }
+}
+
 function nowStamp(){
   const n=new Date();
   return `${pad2(n.getDate())}/${pad2(n.getMonth()+1)}/${n.getFullYear()} ${pad2(n.getHours())}:${pad2(n.getMinutes())}:${pad2(n.getSeconds())}`;
@@ -2657,7 +2796,7 @@ function finalizeArchive(){
  S.finalStatus=document.getElementById("fs")?.value||S.finalStatus||"MISSION CLÔTURÉE";
  save();archive();
 }
-function archive(){setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
+function archive(){setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button id="archiveExportBtn" class="btn primary" onclick="exportMissionArchive()">EXPORTER LE DOSSIER → FICHIERS / iCLOUD</button><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
 function exportJSON(){let b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(S.missionId||"CYRNEA-DEMO")+".json";a.click();URL.revokeObjectURL(a.href)}
 function boot(){
  try{STAGE_VIEWS=JSON.parse(localStorage.getItem(STAGE_VIEWS_KEY)||"{}")||{}}catch(e){STAGE_VIEWS={}}
