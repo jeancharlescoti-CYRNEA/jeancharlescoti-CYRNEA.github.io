@@ -2124,6 +2124,110 @@ function toggleIncidentOther(){
   if(s&&w)w.classList.toggle("hidden",s.value!=="AUTRE");
 }
 
+const MEDIA_DB_NAME="cyrnea_media_v1";
+const MEDIA_DB_STORE="terrain_files";
+function openMediaDb(){
+ return new Promise((resolve,reject)=>{
+   if(!("indexedDB" in window))return reject(new Error("indexeddb_unavailable"));
+   const req=indexedDB.open(MEDIA_DB_NAME,1);
+   req.onupgradeneeded=()=>{
+     const db=req.result;
+     if(!db.objectStoreNames.contains(MEDIA_DB_STORE)){
+       const store=db.createObjectStore(MEDIA_DB_STORE,{keyPath:"id"});
+       store.createIndex("missionId","missionId",{unique:false});
+       store.createIndex("missionPassage","missionPassage",{unique:false});
+     }
+   };
+   req.onsuccess=()=>resolve(req.result);
+   req.onerror=()=>reject(req.error||new Error("indexeddb_open_failed"));
+ });
+}
+async function requestPersistentStorage(){
+ try{
+   if(navigator.storage?.persist)await navigator.storage.persist();
+ }catch(e){}
+}
+async function saveTerrainMediaFiles(files,st=S){
+ const missionId=activeMissionKey(st);
+ if(!missionId)throw new Error("mission_id_missing");
+ const passage=Number(st.passage||1);
+ const db=await openMediaDb();
+ await new Promise((resolve,reject)=>{
+   const tx=db.transaction(MEDIA_DB_STORE,"readwrite");
+   const store=tx.objectStore(MEDIA_DB_STORE);
+   [...files].forEach((file,i)=>{
+     const id=[missionId,passage,file.name,file.size,file.lastModified||0].join("::");
+     store.put({
+       id,
+       missionId,
+       passage,
+       missionPassage:missionId+"::"+passage,
+       name:file.name,
+       type:file.type||"application/octet-stream",
+       size:Number(file.size||0),
+       lastModified:Number(file.lastModified||0),
+       storedAt:Date.now(),
+       blob:file
+     });
+   });
+   tx.oncomplete=()=>resolve();
+   tx.onerror=()=>reject(tx.error||new Error("indexeddb_write_failed"));
+   tx.onabort=()=>reject(tx.error||new Error("indexeddb_write_aborted"));
+ });
+ db.close();
+}
+async function getTerrainMediaRecords(st=S,allPassages=false){
+ const missionId=activeMissionKey(st);
+ if(!missionId)return [];
+ const passage=Number(st.passage||1);
+ const db=await openMediaDb();
+ const records=await new Promise((resolve,reject)=>{
+   const tx=db.transaction(MEDIA_DB_STORE,"readonly");
+   const store=tx.objectStore(MEDIA_DB_STORE);
+   const index=store.index(allPassages?"missionId":"missionPassage");
+   const req=index.getAll(allPassages?missionId:(missionId+"::"+passage));
+   req.onsuccess=()=>resolve(Array.isArray(req.result)?req.result:[]);
+   req.onerror=()=>reject(req.error||new Error("indexeddb_read_failed"));
+ });
+ db.close();
+ return records.sort((a,b)=>(a.storedAt||0)-(b.storedAt||0));
+}
+function formatBytes(n){
+ const x=Number(n||0);
+ if(x<1024)return x+" o";
+ if(x<1024*1024)return (x/1024).toFixed(1)+" Ko";
+ return (x/(1024*1024)).toFixed(1)+" Mo";
+}
+async function refreshTerrainMediaStatus(){
+ const el=document.getElementById("terrainMediaStoredStatus");
+ if(!el)return;
+ try{
+   const records=await getTerrainMediaRecords(S,false);
+   if(!records.length){
+     el.innerHTML="<b>FICHIERS RÉELLEMENT CONSERVÉS : 0</b><br>Aucun fichier terrain enregistré pour ce passage.";
+     return;
+   }
+   el.innerHTML="<b>FICHIERS RÉELLEMENT CONSERVÉS : "+records.length+"</b><br>"+records.map(r=>esc(r.name)+" — "+esc(formatBytes(r.size))).join("<br>");
+ }catch(e){
+   el.innerHTML="<b>STOCKAGE LOCAL INDISPONIBLE</b><br>Ne quittez pas la mission avant contrôle.";
+ }
+}
+async function storeSelectedTerrainMedia(){
+ const input=document.getElementById("terrainMedia");
+ const files=[...(input?.files||[])];
+ if(!files.length)return refreshTerrainMediaStatus();
+ try{
+   await requestPersistentStorage();
+   await saveTerrainMediaFiles(files,S);
+   captureTerrainDraft();
+   await refreshTerrainMediaStatus();
+ }catch(e){
+   if(input)input.value="";
+   alert("La photo / le fichier n’a pas pu être conservé dans la PWA. Réessayez avant de quitter cet écran.");
+   await refreshTerrainMediaStatus();
+ }
+}
+
 function nowStamp(){
   const n=new Date();
   return `${pad2(n.getDate())}/${pad2(n.getMonth()+1)}/${n.getFullYear()} ${pad2(n.getHours())}:${pad2(n.getMinutes())}:${pad2(n.getSeconds())}`;
@@ -2448,8 +2552,9 @@ function terrain(){
 
  <div class="field">
    <label>PHOTOS / PREUVES TERRAIN (SI UTILES)</label>
-   <input id="terrainMedia" type="file" accept="image/*,video/*,.pdf" capture="environment" multiple>
-   <div class="muted">Sur iPhone : prendre directement une photo/vidéo ou choisir une pièce existante. Le prototype mémorise seulement les noms ; la production devra stocker les fichiers réels.</div>
+   <input id="terrainMedia" type="file" accept="image/*,video/*,.pdf" capture="environment" multiple onchange="storeSelectedTerrainMedia()">
+   <div class="muted">Sur iPhone : prendre directement une photo/vidéo ou choisir une pièce existante. Les fichiers sélectionnés sont maintenant conservés localement dans la PWA sur cet appareil, en attendant l’export documentaire iCloud.</div>
+   <div id="terrainMediaStoredStatus" class="notice"><b>FICHIERS RÉELLEMENT CONSERVÉS : contrôle en cours…</b></div>
  </div>
 
  <div class="field" id="incidentZone">
@@ -2487,6 +2592,7 @@ function terrain(){
  <button class="btn primary" onclick="collectTerrain()">J’AI TERMINÉ SUR PLACE</button>
  </div>`);
  restoreTerrainDraft();
+ setTimeout(refreshTerrainMediaStatus,0);
 }
 function restitution(){
  setStage("RESTITUTION");
