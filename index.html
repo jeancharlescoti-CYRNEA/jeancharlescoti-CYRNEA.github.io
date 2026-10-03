@@ -1362,15 +1362,25 @@ function toggleMultiJalon(i){
   saveMultiDraftFromDom();
 }
 function saveMultiDraftFromDom(){
+  const previous=(S.multiDraft && typeof S.multiDraft==="object")?S.multiDraft:{};
   const draft={};
   [1,2,3].forEach(i=>{
     const block=document.getElementById(`jalon_${i}`);
     const active=i===1 || (block && !block.classList.contains("hidden"));
     if(!active)return;
+
+    const liveDate=getDateValue(`d${i}`) || String(document.getElementById(`d${i}`)?.value||"").trim();
+    const liveTime=normalizeTime4(
+      getDropdownTime(`sl${i}`) ||
+      String(document.getElementById(`sl${i}`)?.value||"").trim()
+    );
+
     draft[i]={
       active:true,
-      date:getDateValue(`d${i}`) || String(document.getElementById(`d${i}`)?.value||"").trim(),
-      time:normalizeTime4(getDropdownTime(`sl${i}`) || String(document.getElementById(`sl${i}`)?.value||"").trim())
+      // Ne jamais effacer une valeur déjà sauvegardée simplement parce que Safari
+      // renvoie momentanément une valeur vide pendant le cycle d'événements du select.
+      date:liveDate || String(previous[i]?.date||""),
+      time:liveTime || normalizeTime4(previous[i]?.time||"")
     };
   });
   S.multiDraft=draft;
@@ -1422,10 +1432,16 @@ function readMultiPassage(i){
   const hh=selectedPart(hourEl);
   const mm=selectedPart(minuteEl);
   const visibleTime=(hh!=="" && mm!=="")?`${hh.padStart(2,"0")}:${mm.padStart(2,"0")}`:"";
-  const time=normalizeTime4(visibleTime || String(hiddenTimeEl?.value||"").trim());
+  const saved=(S.multiDraft && typeof S.multiDraft==="object")?S.multiDraft[i]:null;
+  const time=normalizeTime4(
+    visibleTime ||
+    String(hiddenTimeEl?.value||"").trim() ||
+    String(saved?.time||"").trim()
+  );
+  const finalDate=date || String(saved?.date||"").trim();
 
-  const c=autoConstraints(date,time);
-  return {index:i,date,time,priority:c.priority,evening:c.evening,night:c.night,sunday:c.sunday};
+  const c=autoConstraints(finalDate,time);
+  return {index:i,date:finalDate,time,priority:c.priority,evening:c.evening,night:c.night,sunday:c.sunday};
 }
 function multiPassagePricing(){
   // Sauvegarder d'abord exactement ce qui est visible à l'écran.
