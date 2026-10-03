@@ -1093,6 +1093,29 @@ function timeDropdownHtml(baseId,onchangeFn="refreshCalendarConstraints()"){
     <div class="muted">${hoursNote} Minutes : 00, 15, 30 ou 45 ; en STANDARD, seules 00 et 30 sont acceptées.</div>
   </div>`;
 }
+function ensureMultiDraftState(){
+  if(!S.multiDraft || typeof S.multiDraft!=="object")S.multiDraft={};
+  return S.multiDraft;
+}
+function setMultiField(i,field,value){
+  const draft=ensureMultiDraftState();
+  const prev=draft[i]&&typeof draft[i]==="object"?draft[i]:{};
+  const next={...prev,active:true};
+
+  if(field==="date"){
+    next.date=String(value||"").trim();
+    if(i===1)S.date=next.date;
+  }else if(field==="time"){
+    next.time=normalizeTime4(value||"");
+    if(i===1)S.slot=next.time;
+  }
+
+  draft[i]=next;
+  S.multiDraft=draft;
+  save();
+  refreshCalendarConstraints();
+}
+
 function multiDateDropdownHtml(id){
   const start=new Date();
   start.setHours(12,0,0,0);
@@ -1105,7 +1128,7 @@ function multiDateDropdownHtml(id){
     values.push({iso,label});
   }
   return `<div class="field"><label>Date</label>
-    <select id="${id}" onchange="refreshCalendarConstraints();saveMultiDraftFromDom()">
+    <select id="${id}" onchange="setMultiField(Number(String('${id}').replace('d','')),'date',this.value)">
       <option value="">Choisir la date</option>
       ${values.map(x=>`<option value="${x.iso}">${x.label}</option>`).join("")}
     </select>
@@ -1134,7 +1157,7 @@ function multiTimeDropdownHtml(baseId){
   }
 
   return `<div class="field"><label>Heure</label>
-    <select id="${baseId}" onchange="refreshCalendarConstraints();saveMultiDraftFromDom()">
+    <select id="${baseId}" onchange="setMultiField(Number(String('${baseId}').replace('sl','')),'time',this.value)">
       <option value="">Choisir l’heure</option>
       ${values.map(v=>`<option value="${v}">${v}</option>`).join("")}
     </select>
@@ -1435,7 +1458,13 @@ function saveMultiDraftFromDom(){
   save();
 }
 function restoreMultiDraftToDom(){
-  const draft=(S.multiDraft && typeof S.multiDraft==="object")?S.multiDraft:{};
+  const draft=ensureMultiDraftState();
+  if(!draft[1])draft[1]={active:true,date:String(S.date||""),time:normalizeTime4(S.slot||"")};
+  else{
+    if(!draft[1].date && S.date)draft[1].date=String(S.date);
+    if(!draft[1].time && S.slot)draft[1].time=normalizeTime4(S.slot);
+  }
+  S.multiDraft=draft;
   [1,2,3].forEach(i=>{
     const d=draft[i];
     if(!d||!d.active)return;
@@ -1501,11 +1530,24 @@ function readMultiPassage(i){
   return {index:i,date:finalDate,time,priority:c.priority,evening:c.evening,night:c.night,sunday:c.sunday};
 }
 function multiPassagePricing(){
-  // Sauvegarder d'abord exactement ce qui est visible à l'écran.
-  // Ainsi, même si la validation affiche une alerte, le brouillon ne se perd pas.
-  saveMultiDraftFromDom();
+  const draft=ensureMultiDraftState();
+
+  // Source de vérité = état PWA sauvegardé à chaque sélection.
+  // Le DOM n'est plus la source principale sur Safari.
+  const passages=[1,2,3].map(i=>{
+    const block=document.getElementById(`jalon_${i}`);
+    const active=i===1 || !!draft[i]?.active || (block && !block.classList.contains("hidden"));
+    if(!active)return null;
+
+    const domDate=String(document.getElementById(`d${i}`)?.value||"").trim();
+    const domTime=normalizeTime4(String(document.getElementById(`sl${i}`)?.value||"").trim());
+    const date=String(draft[i]?.date||domDate||(i===1?S.date:"")||"").trim();
+    const time=normalizeTime4(draft[i]?.time||domTime||(i===1?S.slot:"")||"");
+    const cc=autoConstraints(date,time);
+    return {index:i,date,time,priority:cc.priority,evening:cc.evening,night:cc.night,sunday:cc.sunday};
+  }).filter(Boolean);
+
   const m=baseMissionName(S.result.mission);
-  const passages=[1,2,3].map(readMultiPassage).filter(Boolean);
   for(const p of passages){
     const check=validateMissionTimeRules(p.date,p.time,`le passage / jalon ${p.index}`);
     if(!check.ok) return alert(check.msg);
@@ -1520,6 +1562,7 @@ function multiPassagePricing(){
     S.multiSlots=passages;
     S.date=passages[0].date;
     S.slot=passages[0].time;
+    S.multiDraft=Object.fromEntries(passages.map(p=>[p.index,{active:true,date:p.date,time:p.time}]));
     S.availability={multi:true};
     S.result.availabilityLabel="Selon devis accepté — contraintes intégrées au devis";
     S.acceptedSlot=true;
@@ -1551,6 +1594,7 @@ function multiPassagePricing(){
   S.multiSlots=passages;
   S.date=passages[0].date;
   S.slot=passages[0].time;
+  S.multiDraft=Object.fromEntries(passages.map(p=>[p.index,{active:true,date:p.date,time:p.time}]));
   S.availability={multi:true};
   S.result.price=total.toLocaleString("fr-FR")+" "+suffix;
   S.result.availabilityLabel=passages.length===1
