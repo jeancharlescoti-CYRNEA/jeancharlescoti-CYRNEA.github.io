@@ -1550,7 +1550,24 @@ function multiPassagePricing(){
   const m=baseMissionName(S.result.mission);
   for(const p of passages){
     const check=validateMissionTimeRules(p.date,p.time,`le passage / jalon ${p.index}`);
-    if(!check.ok) return alert(check.msg);
+    if(!check.ok){
+      const i=p.index;
+      const domDate=String(document.getElementById(`d${i}`)?.value||"");
+      const domTime=String(document.getElementById(`sl${i}`)?.value||"");
+      const saved=(S.multiDraft && typeof S.multiDraft==="object")?S.multiDraft[i]:null;
+      return alert(
+        check.msg+
+        "\n\nDIAGNOSTIC JALON "+i+
+        "\nDOM date = ["+domDate+"]"+
+        "\nDOM heure = ["+domTime+"]"+
+        "\nSTATE date = ["+String(saved?.date||"")+"]"+
+        "\nSTATE heure = ["+String(saved?.time||"")+"]"+
+        "\nS.date = ["+String(S.date||"")+"]"+
+        "\nS.slot = ["+String(S.slot||"")+"]"+
+        "\nFINAL date = ["+String(p.date||"")+"]"+
+        "\nFINAL heure = ["+String(p.time||"")+"]"
+      );
+    }
   }
   if(!passages.length) return alert("Le premier passage / jalon doit être renseigné.");
 
