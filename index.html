@@ -1093,6 +1093,25 @@ function timeDropdownHtml(baseId,onchangeFn="refreshCalendarConstraints()"){
     <div class="muted">${hoursNote} Minutes : 00, 15, 30 ou 45 ; en STANDARD, seules 00 et 30 sont acceptées.</div>
   </div>`;
 }
+function multiDateDropdownHtml(id){
+  const start=new Date();
+  start.setHours(12,0,0,0);
+  const values=[];
+  for(let n=0;n<731;n++){
+    const d=new Date(start.getTime());
+    d.setDate(start.getDate()+n);
+    const iso=`${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+    const label=`${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`;
+    values.push({iso,label});
+  }
+  return `<div class="field"><label>Date</label>
+    <select id="${id}" onchange="refreshCalendarConstraints();saveMultiDraftFromDom()">
+      <option value="">Choisir la date</option>
+      ${values.map(x=>`<option value="${x.iso}">${x.label}</option>`).join("")}
+    </select>
+  </div>`;
+}
+
 function multiTimeDropdownHtml(baseId){
   const contract=S.result?.contract||"";
   const isB2B=contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
@@ -1364,7 +1383,7 @@ function refreshCalendarConstraints(){
   pairs.forEach(([dId,tId,prefix])=>{
     const d=document.getElementById(dId), t=document.getElementById(tId);
     if(!d||!t) return;
-    d.min=today;
+    if(d.tagName==="INPUT") d.min=today;
     if(d.value && d.value<today)d.value="";
     // Safari : pour les missions multi-jalons, ne pas reconstruire les <select>
     // après saisie. La validation finale bloque déjà tout créneau passé/invalide.
@@ -1727,7 +1746,7 @@ function slot(){
    const jalonBlock=(i, hidden)=>`
      <div id="jalon_${i}" class="checkZone${hidden?" hidden":""}">
        <div class="checkIntro">PASSAGE / JALON ${i}${i>1?" — UNIQUEMENT SI DATE CONNUE":""}</div>
-       <div class="field"><label>Date</label><input id="d${i}" type="date" min="${todayLocalISO()}" onchange="refreshCalendarConstraints();saveMultiDraftFromDom()"></div>
+       ${multiDateDropdownHtml(`d${i}`)}
        ${multiTimeDropdownHtml(`sl${i}`)}
        <div class="muted" style="margin-bottom:6px">Contraintes détectées automatiquement selon la date, l’heure et l’heure actuelle :</div>
        <label class="check"><input type="checkbox" id="prio24_${i}" disabled> <span>Demandé sous 24 h — ${pri}</span></label>
