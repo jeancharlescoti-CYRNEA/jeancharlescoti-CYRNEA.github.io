@@ -1579,6 +1579,13 @@ function standardSimplyBookUrl(){
  return OWNER_SERVICE_URLS[m]||"";
 }
 function tallyAvailabilityMode(){
+ if(S.result?.isQuote)return "quote";
+ if(Array.isArray(S.multiSlots)&&S.multiSlots.length){
+   if(S.multiSlots.some(p=>p?.sunday))return "sunday";
+   if(S.multiSlots.some(p=>p?.night))return "night";
+   if(S.multiSlots.some(p=>p?.evening))return "evening";
+   if(S.multiSlots.some(p=>p?.priority || Number(p?.surcharge||0)>0))return "priority";
+ }
  const s=String(S.result?.availabilityLabel||"Standard").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
  if(s.includes("dimanche")||s.includes("ferie"))return "sunday";
  if(s.includes("nuit"))return "night";
@@ -1587,7 +1594,7 @@ function tallyAvailabilityMode(){
  return "standard";
 }
 function tallyBaseUrl(){
- const standard=tallyAvailabilityMode()==="standard";
+ const standard=!isHorsStandard();
  if(S.result?.contract==="RELAIS")return standard?TALLY_URLS.RELAIS_STANDARD:TALLY_URLS.RELAIS_HS;
  if(S.result?.contract==="PRÉSENCE ENTREPRISES")return standard?TALLY_URLS.B2B_STANDARD:TALLY_URLS.B2B_HS;
  return standard?TALLY_URLS.PRESENCE_STANDARD:TALLY_URLS.PRESENCE_HS;
