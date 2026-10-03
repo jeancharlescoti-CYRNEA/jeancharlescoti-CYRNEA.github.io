@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-20261003-state-driven-v10';
+const CACHE='cyrnea-assistant-20261003-multijalon-debug-v11';
 const ASSETS=['./index.html','./terrain-clock.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
