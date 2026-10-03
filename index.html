@@ -1682,7 +1682,10 @@ function tallyBaseUrl(){
 }
 function tallyMissionValue(){
  const m=String(S.result?.mission||"");
- if(S.result?.contract==="PRÉSENCE ENTREPRISES")return B2B_TALLY_MISSION[m]||m;
+ if(S.result?.contract==="PRÉSENCE ENTREPRISES"){
+   if(m==="CONTINUITÉ PROJET" && isHorsStandard())return "CONTINUITÉ PROJET - 1 190 € HT";
+   return B2B_TALLY_MISSION[m]||m;
+ }
  if(S.result?.contract==="RELAIS" && m==="VOIR PRIORITAIRE")return "VOIR PRIORITAIRE RELAIS";
  return m;
 }
