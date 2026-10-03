@@ -1093,6 +1093,36 @@ function timeDropdownHtml(baseId,onchangeFn="refreshCalendarConstraints()"){
     <div class="muted">${hoursNote} Minutes : 00, 15, 30 ou 45 ; en STANDARD, seules 00 et 30 sont acceptées.</div>
   </div>`;
 }
+function multiTimeDropdownHtml(baseId){
+  const contract=S.result?.contract||"";
+  const isB2B=contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
+  const isOwnerPresence=contract==="PRÉSENCE PROPRIÉTAIRES";
+  const projectNightOpen=isB2B && nightAllowedForMission(S.result?.mission);
+
+  let startHour=8,endHour=18;
+  let note="Heures ouvertes : départ de 08 h 00 à 18 h 45.";
+  if(projectNightOpen){
+    startHour=0;endHour=23;
+    note="Heures ouvertes : H24. Avant 08 h et à partir de 19 h, le créneau bascule en HORS STANDARD.";
+  }else if(isOwnerPresence){
+    startHour=8;endHour=20;
+    note="Heures ouvertes : départ de 08 h 00 à 20 h 45. De 19 h 00 à 20 h 59 : SOIR / HORS STANDARD.";
+  }
+
+  const values=[];
+  for(let h=startHour;h<=endHour;h++){
+    for(const m of ["00","15","30","45"]) values.push(`${pad2(h)}:${m}`);
+  }
+
+  return `<div class="field"><label>Heure</label>
+    <select id="${baseId}" onchange="refreshCalendarConstraints();saveMultiDraftFromDom()">
+      <option value="">Choisir l’heure</option>
+      ${values.map(v=>`<option value="${v}">${v}</option>`).join("")}
+    </select>
+    <div class="muted">${note} En STANDARD, seules 00 et 30 sont acceptées ; 15 et 45 restent disponibles en HORS STANDARD.</div>
+  </div>`;
+}
+
 function selectedValue(id){
   const el=document.getElementById(id);
   if(!el)return "";
@@ -1340,8 +1370,7 @@ function refreshCalendarConstraints(){
     // après saisie. La validation finale bloque déjà tout créneau passé/invalide.
     // Cela évite qu'une valeur visuellement sélectionnée soit perdue dans le DOM.
     const multiJalon=["sl1","sl2","sl3"].includes(tId);
-    if(multiJalon) syncTimeDropdown(tId);
-    else refreshTimeDropdownAvailability(dId,tId);
+    if(!multiJalon) refreshTimeDropdownAvailability(dId,tId);
     setAutoConstraint(prefix,dId,tId);
   });
 }
@@ -1400,11 +1429,16 @@ function restoreMultiDraftToDom(){
     if(dateEl && d.date)dateEl.value=d.date;
     const t=normalizeTime4(d.time||"");
     if(t){
-      const h=document.getElementById(`sl${i}H`);
-      const m=document.getElementById(`sl${i}M`);
-      if(h)h.value=t.slice(0,2);
-      if(m)m.value=t.slice(3,5);
-      syncTimeDropdown(`sl${i}`);
+      const direct=document.getElementById(`sl${i}`);
+      if(direct && direct.tagName==="SELECT"){
+        direct.value=t;
+      }else{
+        const h=document.getElementById(`sl${i}H`);
+        const m=document.getElementById(`sl${i}M`);
+        if(h)h.value=t.slice(0,2);
+        if(m)m.value=t.slice(3,5);
+        syncTimeDropdown(`sl${i}`);
+      }
     }
   });
   refreshCalendarConstraints();
@@ -1429,11 +1463,15 @@ function readMultiPassage(i){
     return String(opt?.value ?? opt?.textContent ?? "").trim();
   };
 
+  const directTime=(hiddenTimeEl && hiddenTimeEl.tagName==="SELECT")
+    ? String(hiddenTimeEl.value||"").trim()
+    : "";
   const hh=selectedPart(hourEl);
   const mm=selectedPart(minuteEl);
   const visibleTime=(hh!=="" && mm!=="")?`${hh.padStart(2,"0")}:${mm.padStart(2,"0")}`:"";
   const saved=(S.multiDraft && typeof S.multiDraft==="object")?S.multiDraft[i]:null;
   const time=normalizeTime4(
+    directTime ||
     visibleTime ||
     String(hiddenTimeEl?.value||"").trim() ||
     String(saved?.time||"").trim()
@@ -1690,7 +1728,7 @@ function slot(){
      <div id="jalon_${i}" class="checkZone${hidden?" hidden":""}">
        <div class="checkIntro">PASSAGE / JALON ${i}${i>1?" — UNIQUEMENT SI DATE CONNUE":""}</div>
        <div class="field"><label>Date</label><input id="d${i}" type="date" min="${todayLocalISO()}" onchange="refreshCalendarConstraints();saveMultiDraftFromDom()"></div>
-       ${timeDropdownHtml(`sl${i}`,"refreshCalendarConstraints();saveMultiDraftFromDom()")}
+       ${multiTimeDropdownHtml(`sl${i}`)}
        <div class="muted" style="margin-bottom:6px">Contraintes détectées automatiquement selon la date, l’heure et l’heure actuelle :</div>
        <label class="check"><input type="checkbox" id="prio24_${i}" disabled> <span>Demandé sous 24 h — ${pri}</span></label>
        ${(S.result?.contract==="PRÉSENCE PROPRIÉTAIRES" || (isB2B&&nightAllowedForMission(S.result?.mission)))?`<label class="check"><input type="checkbox" id="evening_${i}" disabled> <span>Soir 19 h–20 h 59 — ${pri}</span></label>`:""}
