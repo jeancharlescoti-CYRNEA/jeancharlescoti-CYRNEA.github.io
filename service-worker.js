@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-20261003-multijalon-single-select-v8';
+const CACHE='cyrnea-assistant-20261003-multijalon-date-select-v9';
 const ASSETS=['./index.html','./terrain-clock.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
