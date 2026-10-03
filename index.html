@@ -1076,11 +1076,15 @@ function timeDropdownHtml(baseId,onchangeFn="refreshCalendarConstraints()"){
   const minutes=["00","15","30","45"];
   return `<div class="field"><label>Heure</label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <select id="${baseId}H" data-hours="${hours.join(",")}" onchange="syncTimeDropdown('${baseId}');${onchangeFn}">
+      <select id="${baseId}H" data-hours="${hours.join(",")}"
+        oninput="syncTimeDropdown('${baseId}');if(/^sl[123]$/.test('${baseId}')&&typeof saveMultiDraftFromDom==='function')saveMultiDraftFromDom()"
+        onchange="syncTimeDropdown('${baseId}');${onchangeFn}">
         <option value="">Heure</option>
         ${hours.map(h=>`<option value="${h}">${h}</option>`).join("")}
       </select>
-      <select id="${baseId}M" data-minutes="${minutes.join(",")}" onchange="syncTimeDropdown('${baseId}');${onchangeFn}">
+      <select id="${baseId}M" data-minutes="${minutes.join(",")}"
+        oninput="syncTimeDropdown('${baseId}');if(/^sl[123]$/.test('${baseId}')&&typeof saveMultiDraftFromDom==='function')saveMultiDraftFromDom()"
+        onchange="syncTimeDropdown('${baseId}');${onchangeFn}">
         <option value="">Minutes</option>
         ${minutes.map(m=>`<option value="${m}">${m}</option>`).join("")}
       </select>
@@ -1170,6 +1174,16 @@ function refreshTimeDropdownAvailability(dateId,baseId){
 
   syncTimeDropdown(baseId);
 }
+function persistVisibleMultiDraftBeforeLeave(){
+  try{
+    if(document.getElementById("d1") && typeof saveMultiDraftFromDom==="function"){
+      saveMultiDraftFromDom();
+    }
+  }catch(e){}
+}
+window.addEventListener("pagehide",persistVisibleMultiDraftBeforeLeave);
+window.addEventListener("beforeunload",persistVisibleMultiDraftBeforeLeave);
+
 function displayTime4(v){
   const t=normalizeTime4(v);
   return t || v || "";
@@ -1414,6 +1428,9 @@ function readMultiPassage(i){
   return {index:i,date,time,priority:c.priority,evening:c.evening,night:c.night,sunday:c.sunday};
 }
 function multiPassagePricing(){
+  // Sauvegarder d'abord exactement ce qui est visible à l'écran.
+  // Ainsi, même si la validation affiche une alerte, le brouillon ne se perd pas.
+  saveMultiDraftFromDom();
   const m=baseMissionName(S.result.mission);
   const passages=[1,2,3].map(readMultiPassage).filter(Boolean);
   for(const p of passages){
