@@ -1310,6 +1310,45 @@ function toggleMultiJalon(i){
     const b3=document.getElementById("add_jalon_3");
     if(b3) b3.classList.remove("hidden");
   }
+  saveMultiDraftFromDom();
+}
+function saveMultiDraftFromDom(){
+  const draft={};
+  [1,2,3].forEach(i=>{
+    const block=document.getElementById(`jalon_${i}`);
+    const active=i===1 || (block && !block.classList.contains("hidden"));
+    if(!active)return;
+    draft[i]={
+      active:true,
+      date:getDateValue(`d${i}`) || String(document.getElementById(`d${i}`)?.value||"").trim(),
+      time:normalizeTime4(getDropdownTime(`sl${i}`) || String(document.getElementById(`sl${i}`)?.value||"").trim())
+    };
+  });
+  S.multiDraft=draft;
+  save();
+}
+function restoreMultiDraftToDom(){
+  const draft=(S.multiDraft && typeof S.multiDraft==="object")?S.multiDraft:{};
+  [1,2,3].forEach(i=>{
+    const d=draft[i];
+    if(!d||!d.active)return;
+    const block=document.getElementById(`jalon_${i}`);
+    const btn=document.getElementById(`add_jalon_${i}`);
+    if(i>1 && block)block.classList.remove("hidden");
+    if(i>1 && btn)btn.classList.add("hidden");
+    if(i===2 && document.getElementById("add_jalon_3"))document.getElementById("add_jalon_3").classList.remove("hidden");
+    const dateEl=document.getElementById(`d${i}`);
+    if(dateEl && d.date)dateEl.value=d.date;
+    const t=normalizeTime4(d.time||"");
+    if(t){
+      const h=document.getElementById(`sl${i}H`);
+      const m=document.getElementById(`sl${i}M`);
+      if(h)h.value=t.slice(0,2);
+      if(m)m.value=t.slice(3,5);
+      syncTimeDropdown(`sl${i}`);
+    }
+  });
+  refreshCalendarConstraints();
 }
 function readMultiPassage(i){
   const block=document.getElementById(`jalon_${i}`);
@@ -1582,8 +1621,8 @@ function slot(){
    const jalonBlock=(i, hidden)=>`
      <div id="jalon_${i}" class="checkZone${hidden?" hidden":""}">
        <div class="checkIntro">PASSAGE / JALON ${i}${i>1?" — UNIQUEMENT SI DATE CONNUE":""}</div>
-       <div class="field"><label>Date</label><input id="d${i}" type="date" min="${todayLocalISO()}" onchange="refreshCalendarConstraints()"></div>
-       ${timeDropdownHtml(`sl${i}`)}
+       <div class="field"><label>Date</label><input id="d${i}" type="date" min="${todayLocalISO()}" onchange="refreshCalendarConstraints();saveMultiDraftFromDom()"></div>
+       ${timeDropdownHtml(`sl${i}`,"refreshCalendarConstraints();saveMultiDraftFromDom()")}
        <div class="muted" style="margin-bottom:6px">Contraintes détectées automatiquement selon la date, l’heure et l’heure actuelle :</div>
        <label class="check"><input type="checkbox" id="prio24_${i}" disabled> <span>Demandé sous 24 h — ${pri}</span></label>
        ${(S.result?.contract==="PRÉSENCE PROPRIÉTAIRES" || (isB2B&&nightAllowedForMission(S.result?.mission)))?`<label class="check"><input type="checkbox" id="evening_${i}" disabled> <span>Soir 19 h–20 h 59 — ${pri}</span></label>`:""}
@@ -1605,7 +1644,7 @@ function slot(){
    <div class="notice">Les jalons non datés aujourd’hui restent inclus dans la mission et seront programmés ultérieurement. Leur éventuelle majoration de disponibilité sera appliquée au moment où leur créneau sera fixé.</div>
    <button class="btn primary" onclick="multiPassagePricing()">VÉRIFIER DISPONIBILITÉ ET TARIF</button>
    </div>`);
-   setTimeout(startCalendarTicker,0);
+   setTimeout(()=>{restoreMultiDraftToDom();startCalendarTicker()},0);
    return;
  }
 
