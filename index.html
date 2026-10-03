@@ -1014,8 +1014,19 @@ function normalizeTime4(v){
   return `${pad2(Number(m[1]))}:${m[2]}`;
 }
 function timeDropdownHtml(baseId,onchangeFn="refreshCalendarConstraints()"){
-  const hours=Array.from({length:24},(_,i)=>pad2(i));
+  const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
+  const projectNightOpen=isB2B && nightAllowedForMission(S.result?.mission);
+  // B2B : n'afficher que les heures réellement ouvertes.
+  // Missions projet autorisées soir/nuit : H24. Autres missions B2B : départs 08 h 00–18 h 45.
+  const hours=isB2B
+    ? (projectNightOpen ? Array.from({length:24},(_,i)=>pad2(i)) : Array.from({length:11},(_,i)=>pad2(i+8)))
+    : Array.from({length:24},(_,i)=>pad2(i));
   const minutes=["00","15","30","45"];
+  const hoursNote=isB2B
+    ? (projectNightOpen
+        ? "Heures ouvertes : H24. En STANDARD, départ avant 19 h ; soir/nuit basculent en HORS STANDARD."
+        : "Heures ouvertes : départ de 08 h 00 à 18 h 45. Aucun départ à partir de 19 h.")
+    : "Minutes : 00, 15, 30 ou 45.";
   return `<div class="field"><label>Heure</label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <select id="${baseId}H" onchange="syncTimeDropdown('${baseId}');${onchangeFn}">
@@ -1028,7 +1039,7 @@ function timeDropdownHtml(baseId,onchangeFn="refreshCalendarConstraints()"){
       </select>
     </div>
     <input id="${baseId}" type="hidden" value="">
-    <div class="muted">Minutes : 00, 15, 30 ou 45.</div>
+    <div class="muted">${hoursNote} Minutes : 00, 15, 30 ou 45 ; en STANDARD, seules 00 et 30 sont acceptées.</div>
   </div>`;
 }
 function selectedValue(id){
