@@ -328,11 +328,19 @@ async function syncCentralMissions(options={}){
  const key=getSyncKey();
  if(!key)throw new Error("sync_key_missing");
 
- // Une seule requête globale pour Safari/iPhone et Mac.
+ // Snapshot local AVANT l'appel : il ne doit jamais être écrasé par une
+ // réponse centrale plus ancienne ou qui omet momentanément un brouillon local.
+ const localMapBefore=loadActiveMissionMap();
+ const dirtyBefore=new Set(loadDirtyIds());
+ const deletedBefore=new Set(loadDeletedIds());
+ const currentIdBefore=activeMissionKey(S);
+
  const body={
    key,
-   missions:localDirtyMissionArray(),
-   deleted_ids:loadDeletedIds()
+   missions:Object.entries(localMapBefore)
+     .filter(([id,st])=>dirtyBefore.has(id)&&isStoredMissionState(st)&&!deletedBefore.has(id))
+     .map(([id,st])=>JSON.parse(JSON.stringify(st))),
+   deleted_ids:[...deletedBefore]
  };
 
  const controller=new AbortController();
@@ -357,29 +365,53 @@ async function syncCentralMissions(options={}){
    throw new Error(String(data?.error||("sync_http_"+res.status)));
  }
 
- const finalMap={};
+ const serverMap={};
  for(const item of (Array.isArray(data.missions)?data.missions:[])){
    if(!item||typeof item!=="object")continue;
    const id=String(item.id||activeMissionKey(item)||item.missionId||item.draftKey||"");
-   if(!id)continue;
+   if(!id||deletedBefore.has(id))continue;
    const st=JSON.parse(JSON.stringify(item));
    delete st.id;
    delete st._serverUpdatedAt;
-   finalMap[id]=st;
+   serverMap[id]=st;
+ }
+
+ // Base = serveur, puis protection des écritures locales en cours.
+ const finalMap={...serverMap};
+ for(const [id,st] of Object.entries(localMapBefore)){
+   if(deletedBefore.has(id)||!isStoredMissionState(st))continue;
+   if(dirtyBefore.has(id)||id===currentIdBefore){
+     finalMap[id]=JSON.parse(JSON.stringify(st));
+   }
  }
  writeActiveMissionMap(finalMap);
 
- // Les modifications/suppressions envoyées ont été accusées réception par le Worker.
+ // Une suppression explicitement envoyée peut être vidée après réponse OK.
  writeDeletedIds([]);
- writeDirtyIds([]);
 
- const currentId=activeMissionKey(S);
- if(currentId && finalMap[currentId]){
-   S=JSON.parse(JSON.stringify(finalMap[currentId]));
-   localStorage.setItem(STATE_KEY,JSON.stringify(S));
- }else if(currentId && !finalMap[currentId]){
-   localStorage.removeItem(STATE_KEY);
-   localStorage.removeItem(STAGE_VIEWS_KEY);
+ // Ne retirer le marqueur "dirty" que si le serveur renvoie exactement
+ // la même mission. Sinon on la renverra au prochain cycle au lieu de la perdre.
+ const dirtyAfter=[];
+ for(const id of dirtyBefore){
+   if(deletedBefore.has(id))continue;
+   const local=localMapBefore[id];
+   const remote=serverMap[id];
+   if(!local)continue;
+   if(!remote || missionSyncSnapshot(local)!==missionSyncSnapshot(remote))dirtyAfter.push(id);
+ }
+ writeDirtyIds(dirtyAfter);
+
+ // Surtout : ne jamais supprimer l'état courant parce qu'une réponse centrale
+ // n'a pas renvoyé ce brouillon. Le local reste prioritaire tant qu'il est actif.
+ if(currentIdBefore){
+   const localCurrent=localMapBefore[currentIdBefore];
+   const chosen=(dirtyBefore.has(currentIdBefore)&&localCurrent)
+     ? localCurrent
+     : (finalMap[currentIdBefore]||localCurrent);
+   if(chosen){
+     S=JSON.parse(JSON.stringify(chosen));
+     localStorage.setItem(STATE_KEY,JSON.stringify(S));
+   }
  }
 
  return {
@@ -3010,7 +3042,37 @@ function finalizeArchive(){
 }
 function archive(){setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button id="archiveExportBtn" class="btn primary" onclick="exportMissionArchive()">EXPORTER LE DOSSIER → FICHIERS / iCLOUD</button><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
 function exportJSON(){let b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(S.missionId||"CYRNEA-DEMO")+".json";a.click();URL.revokeObjectURL(a.href)}
+function recoverNewerStageViewState(){
+ const baseId=activeMissionKey(S);
+ let best=null;
+ let bestTs=Number(S?._localUpdatedAt||0);
+
+ for(const view of Object.values(STAGE_VIEWS||{})){
+   if(!view?.s)continue;
+   try{
+     const candidate=JSON.parse(view.s);
+     if(!candidate||typeof candidate!=="object"||!candidate.result||candidate.finalStatus||candidate.stage==="ARCHIVE")continue;
+     const candidateId=activeMissionKey(candidate);
+     if(baseId && candidateId && candidateId!==baseId)continue;
+     const ts=Number(candidate._localUpdatedAt||0);
+     const isUsefulStage=candidate.stage && candidate.stage!=="ACCUEIL";
+     if(isUsefulStage && (ts>bestTs || (S.stage==="ACCUEIL" && ts===bestTs))){
+       best=candidate;
+       bestTs=ts;
+     }
+   }catch(e){}
+ }
+
+ if(best){
+   S={...S,...best,prep:{...(best.prep||{})},multiSlots:Array.isArray(best.multiSlots)?best.multiSlots:[],availability:{...(best.availability||{})},overrun:best.overrun||null};
+   localStorage.setItem(STATE_KEY,JSON.stringify(S));
+   persistActiveSnapshot(S);
+   markMissionDirty(S);
+ }
+}
 function renderBootState(){
+ recoverNewerStageViewState();
+
  REACHED_STAGES=new Set(Array.isArray(S.history)?S.history:["ACCUEIL"]);
  REACHED_STAGES.add("ACCUEIL");
  syncReached();
@@ -3019,8 +3081,7 @@ function renderBootState(){
  drawTimeline();
 
  // Une actualisation ne doit jamais faire "disparaître" le formulaire en cours.
- // Si une étape était active avant le rechargement, on la reconstruit immédiatement
- // à partir de l'état sauvegardé au lieu de renvoyer l'opérateur à l'accueil.
+ // Si une étape était active avant le rechargement, on la reconstruit immédiatement.
  if(S.stage && S.stage!=="ACCUEIL"){
    S.resumeStage=S.stage;
    return resumeActiveMission();
@@ -3051,9 +3112,9 @@ function boot(){
  renderBootState();
 
  if(getSyncKey()){
-   syncCentralMissions({silent:true})
-     .then(()=>renderBootState())
-     .catch(()=>{});
+   // Synchronisation en arrière-plan : elle ne doit jamais changer l'écran
+   // que l'opérateur est en train de remplir.
+   syncCentralMissions({silent:true}).catch(()=>{});
  }
 }
 boot();
