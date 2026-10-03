@@ -1631,14 +1631,35 @@ function buildTallyUrl(){
 }
 async function registerTallyIntent(){
  if(!assertVoirContractInvariant())throw new Error("Incohérence VOIR / contrat.");
- const ref=ensureTallyReference();
  const cents=gatewayPaymentCents();
  if(!Number.isInteger(cents)||cents<=0)throw new Error("Montant de paiement invalide.");
- const body={reference:ref,universe:S.universe||"",contract:S.result?.contract||"",mission:tallyMissionValue(),object:S.obj||"",schedule:scheduleText(),email:S.email||"",customer_name:S.name||"",customer_email:S.email||"",customer_phone:S.phone||"",amount_cents:cents,currency:"eur",price_text:paymentAmountText(),availability_mode:tallyAvailabilityMode(),availability_label:S.result?.availabilityLabel||"Standard"};
- const r=await fetch(PAYMENT_GATEWAY_URL+"/intent",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify(body),cache:"no-store"});
- const data=await r.json().catch(()=>({}));
- if(!r.ok)throw new Error(data.error||`Gateway HTTP ${r.status}`);
- S.tallyIntentReady=true;save();return data;
+
+ const sendIntent=async()=>{
+   const ref=ensureTallyReference();
+   const body={reference:ref,universe:S.universe||"",contract:S.result?.contract||"",mission:tallyMissionValue(),object:S.obj||"",schedule:scheduleText(),email:S.email||"",customer_name:S.name||"",customer_email:S.email||"",customer_phone:S.phone||"",amount_cents:cents,currency:"eur",price_text:paymentAmountText(),availability_mode:tallyAvailabilityMode(),availability_label:S.result?.availabilityLabel||"Standard"};
+   const controller=new AbortController();
+   const timer=setTimeout(()=>controller.abort(),12000);
+   try{
+     const r=await fetch(PAYMENT_GATEWAY_URL+"/intent",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify(body),cache:"no-store",signal:controller.signal});
+     const data=await r.json().catch(()=>({}));
+     return {r,data};
+   }catch(err){
+     if(err?.name==="AbortError")throw new Error("Gateway indisponible après 12 secondes");
+     throw err;
+   }finally{
+     clearTimeout(timer);
+   }
+ };
+
+ let out=await sendIntent();
+ if(out.r.status===409 && out.data?.error==="reference_conflict"){
+   S.tallyReference="";
+   S.tallyIntentReady=false;
+   save();
+   out=await sendIntent();
+ }
+ if(!out.r.ok)throw new Error(out.data?.error||`Gateway HTTP ${out.r.status}`);
+ S.tallyIntentReady=true;save();return out.data;
 }
 async function openTallySecure(){
  const popup=window.open("about:blank","_blank");
