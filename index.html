@@ -1715,6 +1715,7 @@ function buildTallyUrl(){
  q.set("email_client",S.email||"");
  q.set("telephone_client",S.phone||"");
  q.set("cadre_client",S.caller==="B2B"?"ENTREPRISE / DONNEUR D’ORDRE PROFESSIONNEL":"PROPRIÉTAIRE PARTICULIER");
+ q.set("availability_mode",tallyAvailabilityMode());
  return tallyBaseUrl()+"?"+q.toString();
 }
 async function registerTallyIntent(){
