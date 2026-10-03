@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-20261003-b2b-open-hours';
+const CACHE='cyrnea-assistant-20261003-all-open-hours';
 const ASSETS=['./index.html','./terrain-clock.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
