@@ -1290,9 +1290,12 @@ function refreshCalendarConstraints(){
     if(!d||!t) return;
     d.min=today;
     if(d.value && d.value<today)d.value="";
-    // Pour aujourd'hui, ne jamais proposer une heure ou une minute déjà passée.
-    // Pour une date future, la plage complète autorisée par l'univers réapparaît.
-    refreshTimeDropdownAvailability(dId,tId);
+    // Safari : pour les missions multi-jalons, ne pas reconstruire les <select>
+    // après saisie. La validation finale bloque déjà tout créneau passé/invalide.
+    // Cela évite qu'une valeur visuellement sélectionnée soit perdue dans le DOM.
+    const multiJalon=["sl1","sl2","sl3"].includes(tId);
+    if(multiJalon) syncTimeDropdown(tId);
+    else refreshTimeDropdownAvailability(dId,tId);
     setAutoConstraint(prefix,dId,tId);
   });
 }
