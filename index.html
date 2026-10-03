@@ -1726,41 +1726,69 @@ async function registerTallyIntent(){
    const ref=ensureTallyReference();
    const body={reference:ref,universe:S.universe||"",contract:S.result?.contract||"",mission:tallyMissionValue(),object:S.obj||"",schedule:scheduleText(),email:S.email||"",customer_name:S.name||"",customer_email:S.email||"",customer_phone:S.phone||"",amount_cents:cents,currency:"eur",price_text:paymentAmountText(),availability_mode:tallyAvailabilityMode(),availability_label:S.result?.availabilityLabel||"Standard"};
    const controller=new AbortController();
-   const timer=setTimeout(()=>controller.abort(),12000);
+   const timer=setTimeout(()=>controller.abort(),10000);
    try{
      const r=await fetch(PAYMENT_GATEWAY_URL+"/intent",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify(body),cache:"no-store",signal:controller.signal});
      const data=await r.json().catch(()=>({}));
      return {r,data};
    }catch(err){
-     if(err?.name==="AbortError")throw new Error("Gateway indisponible après 12 secondes");
+     if(err?.name==="AbortError")throw new Error("Gateway indisponible après 10 secondes");
      throw err;
    }finally{
      clearTimeout(timer);
    }
  };
 
- let out=await sendIntent();
- if(out.r.status===409 && out.data?.error==="reference_conflict"){
+ let out;
+ let lastNetworkError=null;
+ // Une seconde tentative réseau est sûre : la création d'intention est idempotente pour une même référence.
+ for(let attempt=1;attempt<=2;attempt++){
+   try{
+     out=await sendIntent();
+     lastNetworkError=null;
+     break;
+   }catch(err){
+     lastNetworkError=err;
+     if(attempt===2)throw err;
+   }
+ }
+ if(!out && lastNetworkError)throw lastNetworkError;
+
+ const conflictErrors=new Set(["reference_conflict","reference_already_exists_with_different_data"]);
+ if(out.r.status===409 && conflictErrors.has(String(out.data?.error||""))){
    S.tallyReference="";
    S.tallyIntentReady=false;
    save();
    out=await sendIntent();
  }
  if(!out.r.ok)throw new Error(out.data?.error||`Gateway HTTP ${out.r.status}`);
- S.tallyIntentReady=true;save();return out.data;
+ S.tallyIntentReady=true;
+ save();
+ return out.data;
 }
 async function openTallySecure(){
  const popup=window.open("about:blank","_blank");
  if(!popup)return alert("Le navigateur a bloqué l’ouverture de Tally. Autorisez les fenêtres surgissantes pour cette PWA.");
+
+ const renderPopup=(html)=>{
+   try{
+     popup.document.title="CYRNEA — ouverture Tally";
+     popup.document.body.innerHTML=`<div style="font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;padding:28px;line-height:1.45;max-width:720px">${html}</div>`;
+   }catch(e){}
+ };
+
+ renderPopup("<b>Sécurisation de la mission…</b><p>Création de la référence de paiement CYRNEA avant ouverture de Tally.</p>");
+
  try{
-   popup.opener=null;
-   popup.document.title="CYRNEA — ouverture Tally";
-   popup.document.body.innerHTML="<p style='font-family:-apple-system,Arial;padding:24px'>Sécurisation de la mission…</p>";
    await registerTallyIntent();
-   popup.location.replace(buildTallyUrl());
+   const url=buildTallyUrl();
+   renderPopup("<b>Référence sécurisée.</b><p>Ouverture de Tally…</p>");
+   popup.location.replace(url);
+   try{popup.opener=null}catch(e){}
  }catch(err){
-   try{popup.close()}catch(e){}
-   alert("Tally bloqué : "+String(err?.message||err)+". Aucun paiement ne doit être lancé.");
+   const message=String(err?.message||err||"Erreur inconnue");
+   renderPopup(`<b>Impossible d’ouvrir Tally.</b><p>${esc(message)}</p><p>Aucun paiement n’a été lancé. Fermez cette fenêtre puis relancez depuis la PWA.</p>`);
+   alert("Tally bloqué : "+message+". Aucun paiement n’a été lancé.");
  }
 }
 function openSimplyBook(){
