@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-20261003-tally-handoff-robust';
+const CACHE='cyrnea-assistant-20261003-tally-availability-mode';
 const ASSETS=['./index.html','./terrain-clock.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
