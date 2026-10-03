@@ -3010,6 +3010,25 @@ function finalizeArchive(){
 }
 function archive(){setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button id="archiveExportBtn" class="btn primary" onclick="exportMissionArchive()">EXPORTER LE DOSSIER → FICHIERS / iCLOUD</button><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
 function exportJSON(){let b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(S.missionId||"CYRNEA-DEMO")+".json";a.click();URL.revokeObjectURL(a.href)}
+function renderBootState(){
+ REACHED_STAGES=new Set(Array.isArray(S.history)?S.history:["ACCUEIL"]);
+ REACHED_STAGES.add("ACCUEIL");
+ syncReached();
+ NAV=[];
+ LAST_VIEW=null;
+ drawTimeline();
+
+ // Une actualisation ne doit jamais faire "disparaître" le formulaire en cours.
+ // Si une étape était active avant le rechargement, on la reconstruit immédiatement
+ // à partir de l'état sauvegardé au lieu de renvoyer l'opérateur à l'accueil.
+ if(S.stage && S.stage!=="ACCUEIL"){
+   S.resumeStage=S.stage;
+   return resumeActiveMission();
+ }
+
+ home(false);
+ updateBack();
+}
 function boot(){
  try{STAGE_VIEWS=JSON.parse(localStorage.getItem(STAGE_VIEWS_KEY)||"{}")||{}}catch(e){STAGE_VIEWS={}}
  const raw=localStorage.getItem(STATE_KEY)||localStorage.getItem(LEGACY_STATE_KEY);
@@ -3028,8 +3047,14 @@ function boot(){
      }
    }catch(e){}
  }
- REACHED_STAGES=new Set(Array.isArray(S.history)?S.history:["ACCUEIL"]);REACHED_STAGES.add("ACCUEIL");syncReached(); NAV=[]; LAST_VIEW=null; drawTimeline(); home(false); updateBack();
- if(getSyncKey())syncCentralMissions({silent:true}).then(()=>home(false)).catch(()=>{});
+
+ renderBootState();
+
+ if(getSyncKey()){
+   syncCentralMissions({silent:true})
+     .then(()=>renderBootState())
+     .catch(()=>{});
+ }
 }
 boot();
 </script>
