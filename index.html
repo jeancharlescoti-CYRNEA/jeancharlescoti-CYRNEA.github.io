@@ -1315,8 +1315,27 @@ function readMultiPassage(i){
   const block=document.getElementById(`jalon_${i}`);
   const active=i===1 || (block && !block.classList.contains("hidden"));
   if(!active) return null;
-  const date=getDateValue(`d${i}`);
-  const time=normalizeTime4(getDropdownTime(`sl${i}`));
+
+  const dateEl=document.getElementById(`d${i}`);
+  const hourEl=document.getElementById(`sl${i}H`);
+  const minuteEl=document.getElementById(`sl${i}M`);
+  const hiddenTimeEl=document.getElementById(`sl${i}`);
+
+  const date=(getDateValue(`d${i}`) || String(dateEl?.value||"").trim());
+
+  const selectedPart=(el)=>{
+    if(!el)return "";
+    const direct=String(el.value??"").trim();
+    if(direct!=="")return direct;
+    const opt=el.options?.[el.selectedIndex];
+    return String(opt?.value ?? opt?.textContent ?? "").trim();
+  };
+
+  const hh=selectedPart(hourEl);
+  const mm=selectedPart(minuteEl);
+  const visibleTime=(hh!=="" && mm!=="")?`${hh.padStart(2,"0")}:${mm.padStart(2,"0")}`:"";
+  const time=normalizeTime4(visibleTime || String(hiddenTimeEl?.value||"").trim());
+
   const c=autoConstraints(date,time);
   return {index:i,date,time,priority:c.priority,evening:c.evening,night:c.night,sunday:c.sunday};
 }
