@@ -1,10 +1,10 @@
-<!-- V53 FINAL 28/09/2026 — base V53 + routage STANDARD/HORS STANDARD, cloisonnement VOIR, CGV/CGS V14/V7/V8, décision humaine après paiement HORS STANDARD, calendrier futur strict. -->
+<!-- ÉTAT ACTIF 03/10/2026 — base PWA validée + Tally STANDARD/HORS STANDARD, cloisonnement VOIR, CGV/CGS V15/V8/V9, décision humaine après tout paiement, garde-fous juridiques côté réservation, calendrier futur strict. -->
 <!doctype html>
 <html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CYRNEA - Assistant interne V53 FINAL 28/09/2026</title>
+<title>CYRNEA - Assistant interne — 03/10/2026</title>
 <style>
 :root{--bg:#f5f3ef;--card:#fff;--ink:#1d2733;--muted:#6d7680;--line:#d7d2ca;--accent:#29415f;--ok:#326047;--warn:#8b5d19;--danger:#8b3434}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink)}
@@ -199,9 +199,12 @@ const RELAIS_OVERRUN_PAYMENT_LINKS={
 };
 const B2B_PAYMENT_CAPABILITIES={CARD:true,PAYPAL:true,SEPA_TRANSFER:false};
 const TALLY_URLS={
-  RELAIS:"https://tally.so/r/b5oz46",
-  PRESENCE:"https://tally.so/r/GxZbE2",
-  B2B:"https://tally.so/r/RGp0PQ"
+  RELAIS_HS:"https://tally.so/r/b5oz46",
+  RELAIS_STANDARD:"https://tally.so/r/xXOqpk",
+  PRESENCE_HS:"https://tally.so/r/GxZbE2",
+  PRESENCE_STANDARD:"https://tally.so/r/7R6AZa",
+  B2B_HS:"https://tally.so/r/RGp0PQ",
+  B2B_STANDARD:"https://tally.so/r/2EQWLD"
 };
 const OWNER_SERVICE_URLS={
   "RELAIS SIMPLE":"https://cyrneapresencerelais.simplybook.it/v2/#book/service/2/count/1/",
@@ -1157,11 +1160,7 @@ function validateMissionTimeRules(dateStr,timeStr,label="créneau"){
   if(!projectNightOpen && (check.dt.getHours()<8 || check.dt.getHours()>=19)){
     return {ok:false,msg:"Ce type de mission : départ possible uniquement entre 08 h 00 et 18 h 45. Aucun nouveau départ à partir de 19 h. Une mission déjà commencée peut toutefois se terminer ou être prolongée selon la règle terrain."};
   }
-  const c=autoConstraints(dateStr,timeStr);
-  const horsStandard=!!S.result?.isQuote || c.priority || c.evening || c.night || c.sunday;
-  if(!horsStandard && !["00","30"].includes(String(timeStr||"").slice(3,5))){
-    return {ok:false,msg:"Créneau STANDARD : choisissez 00 ou 30 minutes, comme dans SimplyBook. Les quarts d’heure 15 et 45 restent disponibles uniquement en HORS STANDARD."};
-  }
+  // Tally accepte les quarts d’heure également en STANDARD.
   return check;
 }
 function autoConstraints(dateStr,timeStr){
@@ -1524,7 +1523,7 @@ function slot(){
  <label class="check"><input type="checkbox" id="sunholiday" disabled> <span>Dimanche ou jour férié — détecté automatiquement.</span></label>
  <div class="muted">Les contraintes ne se cumulent pas.</div></div>`}
 
- <div class="notice">Le tarif affiché sert à orienter correctement le client. La réservation et le paiement seront orientés automatiquement vers SimplyBook en standard ou vers Tally en hors standard / supplément.</div>
+ <div class="notice">Le tarif affiché sert à orienter correctement le client. La réservation et le paiement sont orientés vers Tally, en STANDARD comme en HORS STANDARD / supplément.</div>
  <button class="btn primary" onclick="confirmSlot()">VÉRIFIER DISPONIBILITÉ ET TARIF</button>
  </div>`);
  setTimeout(startCalendarTicker,0);
@@ -1553,9 +1552,9 @@ function bookingPortalKind(){
 }
 function contractRef(){
  const c=S.result?.contract;
- if(c==="RELAIS") return "CGV RELAIS PROPRIÉTAIRE V14 CM2C — 27/09/2026";
- if(c==="PRÉSENCE PROPRIÉTAIRES") return "CGV CYRNEA PRÉSENCE — PROPRIÉTAIRES V7 CM2C — 26/09/2026";
- return "CGS CYRNEA PRÉSENCE — ENTREPRISES V8 — 27/09/2026";
+ if(c==="RELAIS") return "CGV RELAIS PROPRIÉTAIRE V15 CM2C — 02/10/2026";
+ if(c==="PRÉSENCE PROPRIÉTAIRES") return "CGV CYRNEA PRÉSENCE — PROPRIÉTAIRES V8 CM2C — 02/10/2026";
+ return "CGS CYRNEA PRÉSENCE — ENTREPRISES V9 — 02/10/2026";
 }
 function isHorsStandard(){
  if(S.result?.isQuote)return true;
@@ -1568,17 +1567,18 @@ function isHorsStandard(){
  const a=S.availability||{};
  return !!(a.priority||a.evening||a.night||a.sunday);
 }
-function routeKind(){return isHorsStandard()?"TALLY":"SIMPLYBOOK";}
-function routeLabel(){return routeKind()==="TALLY"?"HORS STANDARD / SUP → TALLY":"STANDARD → SIMPLYBOOK";}
+function routeKind(){return "TALLY";}
+function routeLabel(){return isHorsStandard()?"HORS STANDARD / SUP → TALLY":"STANDARD → TALLY";}
 function standardSimplyBookUrl(){
  const m=String(S.result?.mission||"");
  if(S.result?.contract==="PRÉSENCE ENTREPRISES") return B2B_SERVICE_URLS[m]||"";
  return OWNER_SERVICE_URLS[m]||"";
 }
 function tallyBaseUrl(){
- if(S.result?.contract==="RELAIS")return TALLY_URLS.RELAIS;
- if(S.result?.contract==="PRÉSENCE ENTREPRISES")return TALLY_URLS.B2B;
- return TALLY_URLS.PRESENCE;
+ const standard=!isHorsStandard();
+ if(S.result?.contract==="RELAIS")return standard?TALLY_URLS.RELAIS_STANDARD:TALLY_URLS.RELAIS_HS;
+ if(S.result?.contract==="PRÉSENCE ENTREPRISES")return standard?TALLY_URLS.B2B_STANDARD:TALLY_URLS.B2B_HS;
+ return standard?TALLY_URLS.PRESENCE_STANDARD:TALLY_URLS.PRESENCE_HS;
 }
 function tallyMissionValue(){
  const m=String(S.result?.mission||"");
@@ -1622,7 +1622,7 @@ async function registerTallyIntent(){
  const ref=ensureTallyReference();
  const cents=gatewayPaymentCents();
  if(!Number.isInteger(cents)||cents<=0)throw new Error("Montant de paiement invalide.");
- const body={reference:ref,universe:S.universe||"",contract:S.result?.contract||"",mission:tallyMissionValue(),object:S.obj||"",schedule:scheduleText(),email:S.email||"",customer_name:S.name||"",customer_email:S.email||"",customer_phone:S.phone||"",amount_cents:cents,currency:"eur",price_text:paymentAmountText()};
+ const body={reference:ref,universe:S.universe||"",contract:S.result?.contract||"",mission:tallyMissionValue(),object:S.obj||"",schedule:scheduleText(),email:S.email||"",customer_name:S.name||"",customer_email:S.email||"",customer_phone:S.phone||"",amount_cents:cents,currency:"eur",price_text:paymentAmountText(),availability_mode:isHorsStandard()?"hors_standard":"standard",availability_label:S.result?.availabilityLabel||"Standard"};
  const r=await fetch(PAYMENT_GATEWAY_URL+"/intent",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify(body),cache:"no-store"});
  const data=await r.json().catch(()=>({}));
  if(!r.ok)throw new Error(data.error||`Gateway HTTP ${r.status}`);
@@ -1670,10 +1670,8 @@ function bookingHandoff(){
  ${S.result?.contract==="PRÉSENCE ENTREPRISES"?`<div class="neutral"><b>PAIEMENT B2B — ARCHITECTURE PRÉVUE</b>Carte bancaire et PayPal restent les moyens actifs via le portail. Le virement SEPA est prévu dans la PWA mais n’est pas encore activé. Lorsqu’il sera activé, une mission réglée par virement ne pourra jamais passer en PRÊTE / TERRAIN tant que la réception effective des fonds n’aura pas été confirmée.</div>`:""}
  <div class="row"><b>Conditions</b><span>${esc(contractRef())}</span></div>
  ${multi?multiPassageRows():""}
- ${multi?`<div class="neutral"><b>MISSION EN PLUSIEURS PASSAGES / JALONS</b>${route==="TALLY"?"La mission hors standard est transmise à Tally avec les passages connus et leurs suppléments.":"La réservation SimplyBook porte sur le premier passage. Les suivants restent rattachés au même dossier et seront programmés ensuite."}</div>`:""}
- ${route==="TALLY"
-   ? `<div class="warn"><b>HORS STANDARD — CONFIRMATION HUMAINE</b>Le paiement ne confirme jamais automatiquement la mission. Après paiement : vérifier la disponibilité puis CONFIRMER, PROPOSER UNE ALTERNATIVE ou REMBOURSER.</div>`
-   : `<div class="notice"><b>STANDARD</b>SimplyBook gère la réservation. Vérifiez la confirmation avant de préparer la mission.</div>`}
+ ${multi?`<div class="neutral"><b>MISSION EN PLUSIEURS PASSAGES / JALONS</b>La mission est transmise à Tally avec les passages connus. Les jalons suivants restent rattachés au même dossier et toute majoration éventuelle est traitée selon le créneau concerné.</div>`:""}
+ <div class="warn"><b>PAIEMENT — CONFIRMATION HUMAINE</b>Le paiement ne confirme jamais automatiquement la mission, y compris en STANDARD. Après paiement : vérifier la disponibilité puis CONFIRMER, PROPOSER UNE ALTERNATIVE ou REMBOURSER.</div>
  <div class="phoneScript"><b>PHRASE À DIRE AU CLIENT</b>
  « La mission adaptée est <b>${esc(S.result.mission)}</b>, au tarif de <b>${esc(priceText())}</b>. Le créneau choisi est pris en compte et vous sera confirmé. Vous pourrez indiquer une autre possibilité avant le paiement. »
  </div>
@@ -1752,13 +1750,13 @@ function postPaymentDecision(){
  setStage("RÉSERVATION");
  if(!GATEWAY_REF_RE.test(String(S.tallyReference||"")))ensureTallyReference();
  draw(`<div class="card"><h1>Paiement reçu — décision humaine</h1>
-   <div class="stop"><b>NE PAS PARTIR EN MISSION</b>Un paiement HORS STANDARD n’est pas une confirmation de disponibilité.</div>
+   <div class="stop"><b>NE PAS PARTIR EN MISSION</b>Un paiement, STANDARD ou HORS STANDARD, n’est jamais une confirmation de disponibilité.</div>
    <div class="row"><b>Mission</b><span>${esc(S.result?.mission||"-")}</span></div>
    <div class="row"><b>Créneau demandé</b><span>${esc(scheduleText())}</span></div>
    <div class="row"><b>Référence</b><span>${esc(S.tallyReference||"-")}</span></div>
    <div class="toolbar"><button class="btn primary" onclick="openReservationActions()">OUVRIR CONFIRMER / ALTERNATIVE / REMBOURSER</button></div>
    <div class="checkZone"><div class="checkIntro">APRÈS AVOIR EFFECTUÉ L’ACTION</div>
-     <button class="btn primary" onclick="decisionConfirmed()">J’AI CONFIRMÉ LA MISSION</button>
+     <button class="btn primary" onclick="decisionConfirmed()">J’AI CONFIRMÉ LA MISSION DANS CYRNEA</button>
      <button class="btn ghost" onclick="decisionAlternative()" style="margin-top:8px">J’AI PROPOSÉ UNE ALTERNATIVE</button>
      <button class="btn danger" onclick="decisionRefunded()" style="margin-top:8px">J’AI REMBOURSÉ — ANNULER LE DOSSIER</button>
    </div>
@@ -2430,7 +2428,7 @@ function continueMultiAfterRestitution(){
   if(!p){
     return draw(`<div class="card"><h1>Passage / jalon ${next} à programmer</h1>
       <div class="warn"><b>ARRÊT NORMAL</b>Le prochain créneau n’est pas fixé. Aucun passage suivant ne peut être lancé sans date, heure, contrôle d’agenda et éventuelle majoration.</div>
-      <div class="notice">En pratique : créneau → disponibilité → réservation SimplyBook → préparation interne → mission prête.</div>
+      <div class="notice">En pratique : créneau → Tally / paiement → confirmation humaine CYRNEA → préparation interne → mission prête.</div>
       <button class="btn ghost" onclick="archivePartialMulti()">CONSERVER LA MISSION EN COURS</button>
     </div>`);
   }
