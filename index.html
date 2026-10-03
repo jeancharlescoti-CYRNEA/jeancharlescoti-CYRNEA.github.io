@@ -1014,19 +1014,34 @@ function normalizeTime4(v){
   return `${pad2(Number(m[1]))}:${m[2]}`;
 }
 function timeDropdownHtml(baseId,onchangeFn="refreshCalendarConstraints()"){
-  const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
+  const contract=S.result?.contract||"";
+  const isB2B=contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
+  const isOwnerPresence=contract==="PRÉSENCE PROPRIÉTAIRES";
+  const isRelais=contract==="RELAIS";
   const projectNightOpen=isB2B && nightAllowedForMission(S.result?.mission);
-  // B2B : n'afficher que les heures réellement ouvertes.
-  // Missions projet autorisées soir/nuit : H24. Autres missions B2B : départs 08 h 00–18 h 45.
-  const hours=isB2B
-    ? (projectNightOpen ? Array.from({length:24},(_,i)=>pad2(i)) : Array.from({length:11},(_,i)=>pad2(i+8)))
-    : Array.from({length:24},(_,i)=>pad2(i));
+
+  // N'afficher que les heures réellement ouvertes selon l'univers.
+  // RELAIS : 08 h 00–18 h 45.
+  // PRÉSENCE propriétaires : 08 h 00–20 h 45, avec 19 h–20 h 59 en HORS STANDARD.
+  // B2B logistique / VTP : 08 h 00–18 h 45.
+  // B2B Projet / Étendue / Continuité : H24.
+  let hours;
+  let hoursNote;
+  if(projectNightOpen){
+    hours=Array.from({length:24},(_,i)=>pad2(i));
+    hoursNote="Heures ouvertes : H24. Avant 08 h et à partir de 19 h, le créneau bascule en HORS STANDARD.";
+  } else if(isOwnerPresence){
+    hours=Array.from({length:13},(_,i)=>pad2(i+8));
+    hoursNote="Heures ouvertes : départ de 08 h 00 à 20 h 45. De 19 h 00 à 20 h 59 : SOIR / HORS STANDARD. Aucun départ à partir de 21 h.";
+  } else if(isRelais || isB2B){
+    hours=Array.from({length:11},(_,i)=>pad2(i+8));
+    hoursNote="Heures ouvertes : départ de 08 h 00 à 18 h 45. Aucun départ à partir de 19 h.";
+  } else {
+    hours=Array.from({length:11},(_,i)=>pad2(i+8));
+    hoursNote="Heures ouvertes : départ de 08 h 00 à 18 h 45.";
+  }
+
   const minutes=["00","15","30","45"];
-  const hoursNote=isB2B
-    ? (projectNightOpen
-        ? "Heures ouvertes : H24. En STANDARD, départ avant 19 h ; soir/nuit basculent en HORS STANDARD."
-        : "Heures ouvertes : départ de 08 h 00 à 18 h 45. Aucun départ à partir de 19 h.")
-    : "Minutes : 00, 15, 30 ou 45.";
   return `<div class="field"><label>Heure</label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <select id="${baseId}H" onchange="syncTimeDropdown('${baseId}');${onchangeFn}">
@@ -1166,11 +1181,19 @@ function validateFutureSlot(dateStr,timeStr,label="créneau"){
 function validateMissionTimeRules(dateStr,timeStr,label="créneau"){
   const check=validateFutureSlot(dateStr,timeStr,label);
   if(!check.ok)return check;
-  const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
+  const contract=S.result?.contract||"";
+  const isB2B=contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
+  const isOwnerPresence=contract==="PRÉSENCE PROPRIÉTAIRES";
   const projectNightOpen=isB2B && nightAllowedForMission(S.result?.mission);
-  if(!projectNightOpen && (check.dt.getHours()<8 || check.dt.getHours()>=19)){
+  const hour=check.dt.getHours();
+
+  if(isOwnerPresence && (hour<8 || hour>=21)){
+    return {ok:false,msg:"PRÉSENCE Propriétaires : départ possible de 08 h 00 à 20 h 45. Aucun nouveau départ à partir de 21 h."};
+  }
+  if(!isOwnerPresence && !projectNightOpen && (hour<8 || hour>=19)){
     return {ok:false,msg:"Ce type de mission : départ possible uniquement entre 08 h 00 et 18 h 45. Aucun nouveau départ à partir de 19 h. Une mission déjà commencée peut toutefois se terminer ou être prolongée selon la règle terrain."};
   }
+
   const c=autoConstraints(dateStr,timeStr);
   const horsStandard=!!S.result?.isQuote || c.priority || c.evening || c.night || c.sunday;
   if(!horsStandard && !["00","30"].includes(String(timeStr||"").slice(3,5))){
@@ -1185,10 +1208,13 @@ function autoConstraints(dateStr,timeStr){
   const diff=dt.getTime()-now.getTime();
   const priority=diff>0 && diff<24*60*60*1000;
   const hour=dt.getHours();
-  const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
+  const contract=S.result?.contract||"";
+  const isB2B=contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
+  const isOwnerPresence=contract==="PRÉSENCE PROPRIÉTAIRES";
   const projectNightOpen=isB2B && nightAllowedForMission(S.result?.mission);
-  const evening=projectNightOpen && hour>=19 && hour<21;
-  const night=projectNightOpen && hour>=21;
+  const evening=(isOwnerPresence || projectNightOpen) && hour>=19 && hour<21;
+  // Pour les missions B2B H24, la nuit couvre 21 h 00–07 h 59.
+  const night=projectNightOpen && (hour>=21 || hour<8);
   const sunday=dt.getDay()===0 || isFrenchPublicHoliday(dateStr);
   return {priority,evening,night,sunday};
 }
@@ -1284,7 +1310,7 @@ function multiPassagePricing(){
   passages.forEach(p=>{
     let add=0,label="Standard";
     if(p.priority){add=unitPriority;label="Prioritaire sous 24 h";}
-    if(m==="CONTINUITÉ PROJET" && p.evening){add=unitPriority;label="Soir 19 h–20 h 59";}
+    if(p.evening){add=unitPriority;label="Soir 19 h–20 h 59";}
     if(m==="CONTINUITÉ PROJET" && p.night){add=unitSunday;label="Nuit à partir de 21 h";}
     if(p.sunday){add=unitSunday;label="Dimanche / jour férié";}
     p.surcharge=add;
@@ -1318,14 +1344,11 @@ function availabilityPricing(){
   if(!assertVoirContractInvariant())return;
   let m=baseMissionName(S.result.mission);
   refreshCalendarConstraints();
-  let priority=!!document.getElementById("prio24")?.checked;
-  const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES";
-  const projectNightOpen=isB2B && nightAllowedForMission(S.result?.mission);
-  let evening=projectNightOpen && !!document.getElementById("evening")?.checked;
-  let sunday=!!document.getElementById("sunholiday")?.checked;
   const automatic=autoConstraints(S.date,S.slot);
+  const priority=!!automatic.priority;
+  const evening=!!automatic.evening;
   const night=!!automatic.night;
-  sunday=!!automatic.sunday || sunday;
+  const sunday=!!automatic.sunday;
 
   S.availability={priority,evening,night,sunday};
   S.result.mission=m;
@@ -1354,7 +1377,7 @@ function availabilityPricing(){
 
   if(m==="VOIR RELAIS"){
     let price=260,label="Standard";
-    if(priority){price=350;label="Prioritaire sous 24 h";}
+    if(priority||evening){price=350;label=evening?"Soir 19 h–20 h 59":"Prioritaire sous 24 h";}
     if(sunday){price=380;label="Dimanche / jour férié";}
     S.result.price=price+" € TTC";
     S.result.mission=priority?"VOIR PRIORITAIRE RELAIS":"VOIR RELAIS";
@@ -1372,13 +1395,13 @@ function availabilityPricing(){
   }
   if(m==="DÉCIDER"){
     let price=480,label="Standard";
-    if(priority){price=570;label="Prioritaire sous 24 h";}
+    if(priority||evening){price=570;label=evening?"Soir 19 h–20 h 59":"Prioritaire sous 24 h";}
     if(sunday){price=600;label="Dimanche / jour férié";}
     S.result.price=price+" € TTC"; S.result.availabilityLabel=label; return;
   }
   if(m==="SUIVRE"){
     let add=0,label="Standard";
-    if(priority){add=90;label="Prioritaire sous 24 h — passage concerné";}
+    if(priority||evening){add=90;label=evening?"Soir 19 h–20 h 59 — passage concerné":"Prioritaire sous 24 h — passage concerné";}
     if(sunday){add=120;label="Dimanche / jour férié — passage concerné";}
     S.result.price=(980+add)+" € TTC";
     S.result.availabilityLabel=label;
@@ -1497,7 +1520,7 @@ function slot(){
        ${timeDropdownHtml(`sl${i}`)}
        <div class="muted" style="margin-bottom:6px">Contraintes détectées automatiquement selon la date, l’heure et l’heure actuelle :</div>
        <label class="check"><input type="checkbox" id="prio24_${i}" disabled> <span>Demandé sous 24 h — ${pri}</span></label>
-       ${isB2B&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="evening_${i}" disabled> <span>Soir 19 h–20 h 59 — ${pri}</span></label>`:""}
+       ${(S.result?.contract==="PRÉSENCE PROPRIÉTAIRES" || (isB2B&&nightAllowedForMission(S.result?.mission)))?`<label class="check"><input type="checkbox" id="evening_${i}" disabled> <span>Soir 19 h–20 h 59 — ${pri}</span></label>`:""}
        ${isB2B&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="night_${i}" disabled> <span>Nuit à partir de 21 h — ${sun}</span></label>`:""}
        <label class="check"><input type="checkbox" id="sunholiday_${i}" disabled> <span>Dimanche ou jour férié — ${sun}</span></label>
      </div>`;
@@ -1526,14 +1549,14 @@ function slot(){
 
  ${supportsPriority()?`<div class="checkZone"><div class="checkIntro">CONTRAINTE DE DISPONIBILITÉ</div>
  <label class="check"><input type="checkbox" id="prio24" disabled> <span><b>Intervention sous 24 h</b> — détectée automatiquement selon l’heure réelle.</span></label>
- ${S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="evening" disabled> <span>Soir 19 h–20 h 59 — détecté automatiquement.</span></label>`:""}
+ ${(S.result?.contract==="PRÉSENCE PROPRIÉTAIRES" || (S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)))?`<label class="check"><input type="checkbox" id="evening" disabled> <span>Soir 19 h–20 h 59 — détecté automatiquement.</span></label>`:""}
  ${S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="night" disabled> <span>Nuit à partir de 21 h — détectée automatiquement.</span></label>`:""}
  <label class="check"><input type="checkbox" id="sunholiday" disabled> <span>Dimanche ou jour férié — détecté automatiquement.</span></label>
  <div class="muted">Les contraintes ne se cumulent pas : le tarif correspondant à la contrainte la plus élevée s’applique. Pour RELAIS / logistique B2B simple : sous 24 h = même majoration que soirée ; dimanche/jour férié reste la contrainte supérieure.</div>
  </div>`:
  `<div class="checkZone"><div class="checkIntro">CONTRAINTE DE CRÉNEAU</div>
  <label class="check"><input type="checkbox" id="prio24" disabled> <span><b>Intervention sous 24 h</b> — détectée automatiquement selon l’heure réelle.</span></label>
- ${S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="evening" disabled> <span>Soir 19 h–20 h 59 — détecté automatiquement.</span></label>`:""}
+ ${(S.result?.contract==="PRÉSENCE PROPRIÉTAIRES" || (S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)))?`<label class="check"><input type="checkbox" id="evening" disabled> <span>Soir 19 h–20 h 59 — détecté automatiquement.</span></label>`:""}
  ${S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="night" disabled> <span>Nuit à partir de 21 h — détectée automatiquement.</span></label>`:""}
  <label class="check"><input type="checkbox" id="sunholiday" disabled> <span>Dimanche ou jour férié — détecté automatiquement.</span></label>
  <div class="muted">Les contraintes ne se cumulent pas.</div></div>`}
