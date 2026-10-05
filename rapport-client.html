@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CYRNEA — Préparer le compte rendu client</title>
+<style>
+:root{--bg:#f5f3ef;--card:#fff;--ink:#1d2733;--muted:#6d7680;--line:#d7d2ca;--accent:#29415f;--ok:#326047;--warn:#8b5d19}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink)}
+.wrap{max-width:1040px;margin:auto;padding:16px}.header{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.brand{font-weight:800;font-size:18px}.brand small{display:block;color:var(--muted);font-weight:500;margin-top:3px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin:12px 0;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+h1{font-size:24px;margin:0 0 8px}h2{font-size:18px;margin:18px 0 8px}h3{font-size:15px;margin:14px 0 6px}p{line-height:1.45}.muted{color:var(--muted);font-size:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:12px;padding:13px 15px;font:inherit;font-weight:800;cursor:pointer;text-decoration:none}
+.primary{background:var(--accent);color:#fff}.secondary{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.ok{background:#edf6ef;border-left:4px solid var(--ok);padding:12px;border-radius:10px;margin:10px 0}.warn{background:#fff8e9;border-left:4px solid var(--warn);padding:12px;border-radius:10px;margin:10px 0}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.field{margin:12px 0}.field label{display:block;font-weight:800;font-size:13px;margin-bottom:5px}
+input,textarea,select{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 11px;font:inherit;background:#fff;color:var(--ink)}textarea{min-height:96px;resize:vertical}
+.row{display:grid;grid-template-columns:220px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid #eee}.row:last-child{border-bottom:0}
+.mediaGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}.mediaCard{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff}
+.mediaCard img{width:100%;height:160px;object-fit:cover;border-radius:8px;background:#eee}.mediaCard label{display:flex;gap:8px;align-items:flex-start;margin:7px 0;font-size:13px}.mediaCard input[type="checkbox"]{width:auto;margin-top:3px}
+#report{background:#fff;color:#111;padding:28px;max-width:900px;margin:18px auto;border:1px solid var(--line)}
+#report .docHeader{text-align:center;border-bottom:2px solid #222;padding-bottom:14px;margin-bottom:18px}#report .docBrand{font-weight:800;font-size:20px}.docTitle{font-size:22px;font-weight:800;margin-top:8px}
+#report .docMeta{display:grid;grid-template-columns:190px 1fr;gap:7px 12px;margin:16px 0}.section{margin:18px 0}.section h2{font-size:15px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid #999;padding-bottom:5px}.section p{white-space:pre-wrap;margin:7px 0}
+#report .photos{display:grid;grid-template-columns:1fr 1fr;gap:14px}.photo img{width:100%;max-height:340px;object-fit:contain;border:1px solid #ddd}.caption{font-size:12px;margin-top:5px}.hidden{display:none!important}
+@media(max-width:760px){.row,.docMeta{grid-template-columns:1fr}.mediaGrid{grid-template-columns:1fr}}
+@media print{body{background:#fff}.noPrint,.header,#editorCard,#sourceCard{display:none!important}.wrap{max-width:none;padding:0}#report{display:block!important;border:0;padding:0;margin:0;max-width:none}@page{size:A4;margin:14mm}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header noPrint">
+    <div class="brand">CYRNEA — COMPTE RENDU CLIENT<small>Préparation sur Mac · données mission reprises automatiquement · validation humaine</small></div>
+    <a class="btn secondary" href="./">← RETOUR À LA PWA</a>
+  </div>
+
+  <div id="sourceCard" class="card noPrint">
+    <h1>Préparer le compte rendu client</h1>
+    <p class="muted">Si la mission est déjà ouverte dans la PWA sur ce Mac, ses données sont reprises automatiquement. Chargez ensuite le ZIP exporté depuis l’iPhone pour récupérer les médias terrain.</p>
+    <div id="stateStatus" class="warn">Recherche de la mission active…</div>
+    <div class="field">
+      <label>Dossier de travail exporté depuis la PWA (.zip) — recommandé pour les photos / vidéos</label>
+      <input id="sourceFile" type="file" accept=".zip,.json,application/zip,application/json">
+    </div>
+    <div class="toolbar">
+      <button class="btn secondary" type="button" onclick="document.getElementById('sourceFile').click()">CHOISIR LE ZIP DE MISSION</button>
+      <button class="btn secondary" type="button" onclick="loadLocalMission()">REPRENDRE LA MISSION OUVERTE DANS LA PWA</button>
+    </div>
+  </div>
+
+  <div id="editorCard" class="card noPrint hidden">
+    <h1 id="editorTitle">Compte rendu client</h1>
+    <div id="missionSummary"></div>
+    <div class="warn"><b>RÈGLE DE RÉDACTION</b><br>Décrire uniquement ce qui a été vu, fait, dit, remis ou impossible à vérifier. Ne pas transformer une observation en diagnostic, expertise, contrôle de conformité, réception technique ou avis juridique.</div>
+    <div id="dynamicFields"></div>
+    <h2>Médias utiles au client</h2>
+    <p class="muted">Les originaux restent dans le dossier mission. Cochez seulement les images réellement utiles au compte rendu et ajoutez une légende factuelle.</p>
+    <div id="mediaGrid" class="mediaGrid"></div>
+    <div class="field">
+      <label>Statut final qui figurera dans le PDF</label>
+      <select id="finalStatus" onchange="renderReport()">
+        <option>MISSION RÉALISÉE ET CLÔTURÉE</option>
+        <option>MISSION PARTIELLEMENT RÉALISÉE ET CLÔTURÉE</option>
+        <option>MISSION IMPOSSIBLE À RÉALISER - CLÔTURÉE AVEC MOTIF DOCUMENTÉ</option>
+      </select>
+    </div>
+    <div class="toolbar">
+      <button class="btn secondary" type="button" onclick="renderReport()">ACTUALISER L’APERÇU</button>
+      <button class="btn primary" type="button" onclick="window.print()">IMPRIMER / ENREGISTRER EN PDF</button>
+    </div>
+    <div class="field">
+      <label style="display:flex;gap:8px;align-items:flex-start;font-weight:700">
+        <input id="pdfSaved" type="checkbox" style="width:auto;margin-top:3px">
+        <span>Je confirme avoir enregistré le PDF final dans le dossier mission iCloud.</span>
+      </label>
+    </div>
+    <button class="btn primary" type="button" onclick="markReportReady()">RAPPORT FINAL PRÊT → RETOUR PWA</button>
+  </div>
+
+  <article id="report" class="hidden"></article>
+</div>
+
+<script>
+const STATE_KEY="cyrnea_assistant_v53_final_20260928";
+let M=null, MEDIA=[];
+function esc(x){return String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
+function cleanText(x){return String(x??"").trim()}
+function frDate(iso){const m=String(iso||"").match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+"/"+m[2]+"/"+m[1]:String(iso||"-")}
+function displayTime(t){const m=String(t||"").match(/^(\d{2}):(\d{2})/);return m?m[1]+":"+m[2]:String(t||"")}
+function nowStamp(){const n=new Date(),p=v=>String(v).padStart(2,"0");return p(n.getDate())+"/"+p(n.getMonth()+1)+"/"+n.getFullYear()+" "+p(n.getHours())+":"+p(n.getMinutes())+":"+p(n.getSeconds())}
+function missionName(){return cleanText(M?.result?.mission||M?.mission||"-")}function contractName(){return cleanText(M?.result?.contract||M?.contract||"")}
+function brandName(){return contractName()==="RELAIS"?"RELAIS PROPRIÉTAIRE":"CABINET CYRNEA PRÉSENCE"}
+function reportKind(){const m=missionName().toUpperCase();if(m==="SUIVRE"||m.includes("CONTINUITÉ"))return"multi";if(m.includes("DÉCIDER")||m.includes("PRÉSENCE PROJET"))return"mission";if(m.includes("VOIR")||m.includes("VISITE TERRAIN"))return"observation";return"simple"}
+function reportLabel(){return({simple:"RESTITUTION SIMPLE",observation:"COMPTE RENDU D’OBSERVATION",mission:"COMPTE RENDU DE MISSION",multi:"SUIVI MULTI-PASSAGES"})[reportKind()]}
+function localState(){try{return JSON.parse(localStorage.getItem(STATE_KEY)||"null")}catch(e){return null}}
+function loadLocalMission(){const s=localState();if(!s||!s.result||!s.missionId){document.getElementById("stateStatus").className="warn";document.getElementById("stateStatus").innerHTML="<b>AUCUNE MISSION ACTIVE TROUVÉE SUR CE MAC.</b><br>Chargez le ZIP exporté depuis la PWA.";return}M=s;document.getElementById("stateStatus").className="ok";document.getElementById("stateStatus").innerHTML="<b>MISSION REPRISE DEPUIS LA PWA :</b> "+esc(M.missionId)+" — "+esc(missionName());buildEditor()}
+function u16(d,o){return d[o]|(d[o+1]<<8)}function u32(d,o){return(d[o]|(d[o+1]<<8)|(d[o+2]<<16)|(d[o+3]<<24))>>>0}
+function mimeFor(name){const e=String(name).toLowerCase().split(".").pop();return({jpg:"image/jpeg",jpeg:"image/jpeg",png:"image/png",webp:"image/webp",gif:"image/gif",heic:"image/heic",heif:"image/heif",mp4:"video/mp4",mov:"video/quicktime",pdf:"application/pdf"})[e]||"application/octet-stream"}
+async function parseStoredZip(file){const d=new Uint8Array(await file.arrayBuffer()),dec=new TextDecoder();let o=0,entries=[];while(o+30<=d.length&&u32(d,o)===0x04034b50){const method=u16(d,o+8),csize=u32(d,o+18),usize=u32(d,o+22),nlen=u16(d,o+26),xlen=u16(d,o+28);if(method!==0)throw new Error("Le ZIP n’est pas au format CYRNEA attendu.");const name=dec.decode(d.slice(o+30,o+30+nlen)),start=o+30+nlen+xlen,end=start+csize;if(end>d.length)throw new Error("ZIP incomplet.");entries.push({name,data:d.slice(start,end),size:usize});o=end}return entries}
+async function loadSourceFile(file){if(!file)return;try{if(file.name.toLowerCase().endsWith(".json")){M=JSON.parse(await file.text());MEDIA=[]}else{const entries=await parseStoredZip(file),mission=entries.find(x=>x.name==="MISSION.json");if(!mission)throw new Error("MISSION.json est absent du ZIP.");M=JSON.parse(new TextDecoder().decode(mission.data));MEDIA=entries.filter(x=>x.name.startsWith("MEDIA/")&&!x.name.endsWith("/")).map((x,i)=>({id:"m"+i,name:x.name.split("/").pop(),path:x.name,type:mimeFor(x.name),url:URL.createObjectURL(new Blob([x.data],{type:mimeFor(x.name)})),selected:false,caption:""}))}document.getElementById("stateStatus").className="ok";document.getElementById("stateStatus").innerHTML="<b>DOSSIER DE MISSION CHARGÉ :</b> "+esc(M.missionId||"-")+" — "+esc(missionName());buildEditor()}catch(e){alert("Impossible de lire ce dossier : "+String(e?.message||e))}}
+document.getElementById("sourceFile").addEventListener("change",e=>loadSourceFile(e.target.files?.[0]));
+function field(id,label,value,rows=4){return'<div class="field"><label>'+esc(label)+'</label><textarea id="'+id+'" rows="'+rows+'" oninput="renderReport()">'+esc(value||"")+'</textarea></div>'}
+function passageRows(){let ps=Array.isArray(M?.passageReports)?M.passageReports:[];if(!ps.length&&(M?.facts||M?.arrivalAt||M?.departureAt))ps=[{passage:M?.passage||1,date:M?.date||"",slot:M?.slot||"",arrivalAt:M?.arrivalAt||"",departureAt:M?.departureAt||"",facts:M?.facts||"",incident:M?.incident||"Aucun"}];return ps.sort((a,b)=>(a.passage||0)-(b.passage||0)).map(p=>'<div class="card" style="box-shadow:none"><h3>Passage / jalon '+esc(p.passage||"-")+' — '+esc(frDate(p.date||""))+' '+esc(displayTime(p.slot||""))+'</h3><div class="row"><b>Arrivée</b><span>'+esc(p.arrivalAt||"-")+'</span></div><div class="row"><b>Départ</b><span>'+esc(p.departureAt||"-")+'</span></div><div class="row"><b>Faits / actions</b><span>'+esc(p.facts||"-")+'</span></div><div class="row"><b>Incident / limite</b><span>'+esc(p.incident||"Aucun")+'</span></div></div>').join("")}
+function buildEditor(){if(!M)return;document.getElementById("editorCard").classList.remove("hidden");document.getElementById("report").classList.remove("hidden");document.getElementById("editorTitle").textContent=reportLabel();document.getElementById("missionSummary").innerHTML='<div class="row"><b>Référence</b><span>'+esc(M.missionId||"-")+'</span></div><div class="row"><b>Client</b><span>'+esc(M.name||"-")+'</span></div><div class="row"><b>Mission</b><span>'+esc(missionName())+'</span></div><div class="row"><b>Site</b><span>'+esc(M?.prep?.addr||M.city||"-")+'</span></div><div class="row"><b>Date / créneau</b><span>'+esc(frDate(M.date||""))+' '+esc(displayTime(M.slot||""))+'</span></div><div class="row"><b>Arrivée / départ</b><span>'+esc(M.arrivalAt||"-")+' → '+esc(M.departureAt||"-")+'</span></div>';const k=reportKind();let h="";if(k==="simple"){h+=field("f_actions","Action(s) réalisée(s)",M.facts||"");h+=field("f_notdone","Action(s) non réalisée(s) + motif","");h+=field("f_third","Tiers / professionnel — identité, présence ou absence si pertinent","");h+=field("f_proof","Preuve(s) utile(s) — photo, heure, confirmation","");h+=field("f_limits","Incident / limite",M.incident||"Aucun");h+=field("f_summary","Synthèse factuelle courte","")}else if(k==="observation"){h+=field("f_scope","Périmètre effectivement observé",M.obj||"");h+=field("f_facts","Observations factuelles",M.facts||"");h+=field("f_third","Déclarations de tiers — séparées et attribuées","");h+=field("f_docs","Documents vus / remis","");h+=field("f_unknown","Éléments non vérifiés / non accessibles","");h+=field("f_limits","Incident / limites",M.incident||"Aucun");h+=field("f_summary","Synthèse factuelle courte","")}else if(k==="mission"){h+=field("f_goal","Objectif / décision concernée",M.obj||"");h+=field("f_scope","Cahier des charges effectivement traité",M.obj||"");h+=field("f_people","Participants et rôles","");h+=field("f_flow","Déroulé synthétique","");h+=field("f_facts","Faits directement constatés",M.facts||"");h+=field("f_qa","Questions posées / réponses attribuées","");h+=field("f_docs","Documents montrés ou remis","");h+=field("f_known","Ce qui est désormais connu","");h+=field("f_unknown","Ce qui reste inconnu, non vérifiable ou à faire apprécier","");h+=field("f_open","Points ouverts","");h+=field("f_limits","Incident / limites",M.incident||"Aucun");h+=field("f_summary","Synthèse factuelle courte — la décision reste au client","")}else{h+='<h2>Passages / jalons enregistrés</h2>'+passageRows();h+=field("f_evolution","Évolutions observées entre les passages","");h+=field("f_noncomp","Éléments non comparables / non vérifiables","");h+=field("f_open","Points encore ouverts","");h+=field("f_summary","Synthèse comparative factuelle","")}document.getElementById("dynamicFields").innerHTML=h;renderMedia();renderReport()}
+function renderMedia(){const el=document.getElementById("mediaGrid");if(!MEDIA.length){el.innerHTML='<div class="muted">Aucun média chargé. Le compte rendu peut être finalisé sans photo si aucune n’est utile.</div>';return}el.innerHTML=MEDIA.map((m,i)=>{const image=m.type.startsWith("image/");return'<div class="mediaCard">'+(image?'<img src="'+m.url+'" alt="">':'<div class="warn">Fichier non affichable dans le PDF : '+esc(m.name)+'<br>À transmettre séparément si nécessaire.</div>')+'<label><input type="checkbox" '+(m.selected?"checked":"")+' onchange="MEDIA['+i+'].selected=this.checked;renderReport()"><span>Inclure dans le compte rendu : <b>'+esc(m.name)+'</b></span></label>'+(image?'<input type="text" placeholder="Légende factuelle courte" value="'+esc(m.caption)+'" oninput="MEDIA['+i+'].caption=this.value;renderReport()">':"")+'</div>'}).join("")}
+function val(id){return cleanText(document.getElementById(id)?.value||"")}function section(title,text){if(!cleanText(text))return"";return'<section class="section"><h2>'+esc(title)+'</h2><p>'+esc(text)+'</p></section>'}function selectedPhotos(){return MEDIA.filter(x=>x.selected&&x.type.startsWith("image/"))}
+function reportSections(){const k=reportKind();let a=[];if(k==="simple"){a=[["Objet convenu",M.obj||""],["Action(s) réalisée(s)",val("f_actions")],["Action(s) non réalisée(s) / motif",val("f_notdone")],["Tiers / professionnel",val("f_third")],["Preuves utiles",val("f_proof")],["Incident / limite",val("f_limits")],["Synthèse factuelle",val("f_summary")]]}else if(k==="observation"){a=[["Objet / brief validé",M.obj||""],["Périmètre effectivement observé",val("f_scope")],["Observations factuelles",val("f_facts")],["Déclarations de tiers",val("f_third")],["Documents vus / remis",val("f_docs")],["Éléments non vérifiés / non accessibles",val("f_unknown")],["Incident / limites",val("f_limits")],["Synthèse factuelle",val("f_summary")]]}else if(k==="mission"){a=[["Objectif / décision concernée",val("f_goal")],["Cahier des charges traité",val("f_scope")],["Participants et rôles",val("f_people")],["Déroulé synthétique",val("f_flow")],["Faits directement constatés",val("f_facts")],["Questions / réponses attribuées",val("f_qa")],["Documents montrés ou remis",val("f_docs")],["Ce qui est désormais connu",val("f_known")],["Ce qui reste inconnu / non vérifiable",val("f_unknown")],["Points ouverts",val("f_open")],["Incident / limites",val("f_limits")],["Synthèse factuelle",val("f_summary")]]}else{const ps=Array.isArray(M?.passageReports)&&M.passageReports.length?M.passageReports:[{passage:M?.passage||1,date:M?.date,slot:M?.slot,arrivalAt:M?.arrivalAt,departureAt:M?.departureAt,facts:M?.facts,incident:M?.incident}];a.push(["Objet / grille commune",M.obj||""]);ps.sort((x,y)=>(x.passage||0)-(y.passage||0)).forEach(p=>a.push(["Passage / jalon "+(p.passage||"-")+" — "+frDate(p.date||"")+" "+displayTime(p.slot||""),(p.facts||"-")+(p.incident&&p.incident!=="Aucun"?"\nIncident / limite : "+p.incident:"")]));a.push(["Évolutions observées",val("f_evolution")],["Éléments non comparables / non vérifiables",val("f_noncomp")],["Points encore ouverts",val("f_open")],["Synthèse comparative factuelle",val("f_summary")])}return a.map(([t,v])=>section(t,v)).join("")}
+function renderReport(){if(!M)return;const photos=selectedPhotos(),status=document.getElementById("finalStatus")?.value||"MISSION RÉALISÉE ET CLÔTURÉE";const extra=reportKind()==="mission"?'<p><b>Rappel :</b> la décision finale reste au client.</p>':reportKind()==="simple"&&contractName()==="RELAIS"?'<p><b>Rappel :</b> cette restitution matérialise la mission convenue et ne constitue pas une inspection générale du bien.</p>':"";document.getElementById("report").innerHTML='<div class="docHeader"><div class="docBrand">'+esc(brandName())+'</div><div class="docTitle">'+esc(reportLabel())+'</div></div><div class="docMeta"><b>Référence mission</b><span>'+esc(M.missionId||"-")+'</span><b>Client</b><span>'+esc(M.name||"-")+'</span><b>Site</b><span>'+esc(M?.prep?.addr||M.city||"-")+'</span><b>Mission</b><span>'+esc(missionName())+'</span><b>Date / créneau prévu</b><span>'+esc(frDate(M.date||""))+' '+esc(displayTime(M.slot||""))+'</span><b>Horaires réels</b><span>'+esc(M.arrivalAt||"-")+' → '+esc(M.departureAt||"-")+'</span></div>'+reportSections()+(photos.length?'<section class="section"><h2>Photographies utiles</h2><div class="photos">'+photos.map(p=>'<div class="photo"><img src="'+p.url+'" alt=""><div class="caption">'+esc(p.caption||p.name)+'</div></div>').join("")+'</div></section>':"")+'<section class="section"><h2>Statut final</h2><p><b>'+esc(status)+'</b></p></section><section class="section"><h2>Cadre de la restitution</h2><p>Restitution factuelle limitée à la mission convenue. Ce document ne constitue ni une expertise, ni un diagnostic, ni un contrôle de conformité, ni une réception technique, ni une maîtrise d’œuvre, ni une appréciation juridique.</p>'+extra+'</section>'}
+function reportReadyKey(){return"cyrnea_report_ready_"+String(M?.missionId||"").trim()}
+function markReportReady(){if(!M)return;if(!document.getElementById("pdfSaved").checked)return alert("Confirmez d’abord que le PDF final a été enregistré dans le dossier mission iCloud.");const meta={missionId:M.missionId||"",type:reportLabel(),readyAt:nowStamp(),storedAt:nowStamp(),finalStatus:document.getElementById("finalStatus")?.value||"MISSION RÉALISÉE ET CLÔTURÉE"};localStorage.setItem(reportReadyKey(),JSON.stringify(meta));const cur=localState();if(cur&&cur.missionId===M.missionId){cur.clientReportReady=true;cur.clientReportReadyAt=meta.readyAt;cur.clientReportStoredAt=meta.storedAt;cur.clientReportType=meta.type;cur.clientReportFinalStatus=meta.finalStatus;localStorage.setItem(STATE_KEY,JSON.stringify(cur))}location.href="./"}
+loadLocalMission();
+</script>
+</body>
+</html>
