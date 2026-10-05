@@ -97,7 +97,7 @@ input,select,textarea{font-size:18px;min-height:52px}
 </div>
 <script>
 const STATES=["ACCUEIL","QUALIFICATION","CADRAGE","CRÉNEAU","RÉSERVATION","PRÊTE","TERRAIN","RESTITUTION","CLÔTURE","ARCHIVE"];
-let S={stage:"ACCUEIL",mode:null,universe:null,caller:null,name:"",phone:"",email:"",city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",acceptedSlot:false,draftKey:"",missionId:"",prep:{},facts:"",incident:"",terrainMedia:[],arrivalAt:"",departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,paymentMethod:"",paymentState:"",specialPending:false,resumeStage:"",history:["ACCUEIL"]};
+let S={stage:"ACCUEIL",mode:null,universe:null,caller:null,name:"",phone:"",email:"",city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",acceptedSlot:false,draftKey:"",missionId:"",prep:{},facts:"",incident:"",terrainMedia:[],arrivalAt:"",departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,paymentMethod:"",paymentState:"",specialPending:false,resumeStage:"",passageReports:[],clientReportReady:false,clientReportReadyAt:"",clientReportStoredAt:"",clientReportType:"",clientReportFinalStatus:"",clientSentAt:"",clientSendChannel:"",history:["ACCUEIL"]};
 let NAV=[];
 let LAST_VIEW=null;
 const ZONES=["porto-vecchio","porto vecchio","lecci","sotta","sainte-lucie","sainte lucie","pinarello","tarco"];
@@ -565,7 +565,7 @@ async function deleteActiveMission(id){
    localStorage.removeItem(STATE_KEY);
    localStorage.removeItem(STAGE_VIEWS_KEY);
    STAGE_VIEWS={};NAV=[];LAST_VIEW=null;
-   S={stage:"ACCUEIL",mode:"FULL",universe:null,caller:null,name:"",phone:"",email:"",city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",acceptedSlot:false,draftKey:key(),missionId:"",prep:{},facts:"",incident:"",terrainMedia:[],terrainDraft:null,arrivalAt:"",arrivalEpochMs:null,departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,paymentMethod:"",paymentState:"",specialPending:false,resumeStage:"",history:["ACCUEIL"]};
+   S={stage:"ACCUEIL",mode:"FULL",universe:null,caller:null,name:"",phone:"",email:"",city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",acceptedSlot:false,draftKey:key(),missionId:"",prep:{},facts:"",incident:"",terrainMedia:[],terrainDraft:null,arrivalAt:"",arrivalEpochMs:null,departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,paymentMethod:"",paymentState:"",specialPending:false,resumeStage:"",passageReports:[],clientReportReady:false,clientReportReadyAt:"",clientReportStoredAt:"",clientReportType:"",clientReportFinalStatus:"",clientSentAt:"",clientSendChannel:"",history:["ACCUEIL"]};
  }
 
  try{
@@ -576,7 +576,7 @@ async function deleteActiveMission(id){
 function newMission(){
  persistActiveSnapshot(S);
  localStorage.removeItem(STATE_KEY); localStorage.removeItem(LEGACY_STATE_KEY); localStorage.removeItem(STAGE_VIEWS_KEY); STAGE_VIEWS={}; REACHED_STAGES=new Set(["ACCUEIL"]);
- S={stage:"ACCUEIL",mode:"FULL",universe:null,caller:null,name:"",phone:"",email:"",city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",acceptedSlot:false,draftKey:key(),missionId:"",prep:{},facts:"",incident:"",terrainMedia:[],terrainDraft:null,arrivalAt:"",arrivalEpochMs:null,departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,paymentMethod:"",paymentState:"",specialPending:false,resumeStage:"",history:["ACCUEIL"]};
+ S={stage:"ACCUEIL",mode:"FULL",universe:null,caller:null,name:"",phone:"",email:"",city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",acceptedSlot:false,draftKey:key(),missionId:"",prep:{},facts:"",incident:"",terrainMedia:[],terrainDraft:null,arrivalAt:"",arrivalEpochMs:null,departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,paymentMethod:"",paymentState:"",specialPending:false,resumeStage:"",passageReports:[],clientReportReady:false,clientReportReadyAt:"",clientReportStoredAt:"",clientReportType:"",clientReportFinalStatus:"",clientSentAt:"",clientSendChannel:"",history:["ACCUEIL"]};
  NAV=[]; LAST_VIEW=null;
  identify();
  updateBack(); save();
@@ -2709,6 +2709,10 @@ function missionArchiveText(){
    "Départ : "+(S.departureAt||"-"),
    "Faits / actions : "+(S.facts||"-"),
    "Incident / limite : "+(S.incident||"Aucun"),
+   "Compte rendu client : "+(S.clientReportType||clientRestitutionLabel()),
+   "Rapport final prêt : "+(S.clientReportReadyAt||"-"),
+   "PDF final classé : "+(S.clientReportStoredAt||"-"),
+   "Envoi client : "+(S.clientSendChannel||"-")+" — "+(S.clientSentAt||"-"),
    "",
    "Archive documentaire cible : iCloud Drive / CYRNEA / MISSIONS / "+(S.result?.contract==="RELAIS"?"RELAIS":"PRÉSENCE")+" / "+(S.missionId||"-"),
    "",
@@ -3135,16 +3139,80 @@ function clientRestitutionLabel(){
  if(m.includes("VOIR")||m.includes("VISITE TERRAIN")) return "COMPTE RENDU D’OBSERVATION";
  return "RESTITUTION SIMPLE";
 }
-function markClientReportReady(){
- S.clientReportReady=true;
- S.clientReportReadyAt=nowStamp();
- S.clientSentAt="";
- S.clientSendChannel="";
+function clientReportStorageKey(){
+ return "cyrnea_report_ready_"+String(S.missionId||"").trim();
+}
+function hydrateClientReportStatus(){
+ if(!S.missionId)return;
+ try{
+   const raw=localStorage.getItem(clientReportStorageKey());
+   if(!raw)return;
+   const meta=JSON.parse(raw);
+   if(meta?.missionId!==S.missionId)return;
+   if(!S.clientReportReady || !S.clientReportReadyAt){
+     S.clientReportReady=true;
+     S.clientReportReadyAt=meta.readyAt||S.clientReportReadyAt||"";
+     S.clientReportStoredAt=meta.storedAt||S.clientReportStoredAt||"";
+     S.clientReportType=meta.type||S.clientReportType||clientRestitutionLabel();
+     S.clientReportFinalStatus=meta.finalStatus||S.clientReportFinalStatus||"";
+   }
+ }catch(e){}
+}
+function captureCurrentPassageReport(){
+ if(!S.result?.multi || !S.departureAt)return;
+ if(!Array.isArray(S.passageReports))S.passageReports=[];
+ const snap={
+   passage:Number(S.passage||1),
+   date:S.date||"",
+   slot:S.slot||"",
+   arrivalAt:S.arrivalAt||"",
+   departureAt:S.departureAt||"",
+   facts:S.facts||"",
+   incident:S.incident||"Aucun",
+   terrainMedia:Array.isArray(S.terrainMedia)?[...S.terrainMedia]:[],
+   overrun:S.overrun?JSON.parse(JSON.stringify(S.overrun)):null
+ };
+ const i=S.passageReports.findIndex(x=>Number(x?.passage||0)===snap.passage);
+ if(i>=0)S.passageReports[i]=snap; else S.passageReports.push(snap);
+ S.passageReports.sort((x,y)=>Number(x.passage||0)-Number(y.passage||0));
+}
+function openClientReportGenerator(){
+ captureCurrentPassageReport();
  save();
- restitution();
+ window.location.href="./rapport-client.html";
+}
+function clientInterventionDate(){
+ const m=String(S.date||"").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+ return m?m[3]+"/"+m[2]+"/"+m[1]:String(S.date||"-");
+}
+function openClientRestitutionEmail(){
+ const email=String(S.email||"").trim();
+ if(!email)return alert("Aucune adresse e-mail client n’est enregistrée dans ce dossier.");
+ const relais=S.result?.contract==="RELAIS";
+ const brand=relais?"RELAIS PROPRIÉTAIRE":"CYRNEA PRÉSENCE";
+ const subject="Restitution de votre mission "+brand;
+ const body=[
+   "Bonjour "+(S.name||"")+",",
+   "",
+   "Votre mission "+brand+" a été réalisée.",
+   "Référence : "+(S.missionId||"-"),
+   "Mission : "+(S.result?.mission||"-"),
+   "Date d’intervention : "+clientInterventionDate(),
+   "",
+   "Vous trouverez ci-joint votre restitution, accompagnée des photographies ou éléments prévus lorsqu’ils sont utiles.",
+   "Les éventuels points non observables, limites rencontrées ou éléments n’ayant pas pu être vérifiés sont précisés directement dans la restitution.",
+   "Cette restitution clôture la mission.",
+   "",
+   "Cordialement,",
+   relais?"RELAIS PROPRIÉTAIRE":"CABINET CYRNEA PRÉSENCE",
+   relais?"":"Sur place en Corse, quand vous êtes à distance."
+ ].join("\n");
+ window.location.href="mailto:"+encodeURIComponent(email)+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
 }
 function markClientSent(){
+ hydrateClientReportStatus();
  if(!S.clientReportReady)return alert("Le rapport final doit être prêt avant d’enregistrer l’envoi client.");
+ if(!S.clientReportStoredAt)return alert("Le PDF final doit être enregistré dans le dossier mission iCloud avant l’envoi.");
  const channel=(document.getElementById("clientSendChannel")?.value||"").trim();
  if(!channel)return alert("Choisissez le canal réellement utilisé pour l’envoi client.");
  S.clientSendChannel=channel;
@@ -3153,6 +3221,8 @@ function markClientSent(){
  restitution();
 }
 function restitution(){
+ captureCurrentPassageReport();
+ hydrateClientReportStatus();
  setStage("RESTITUTION");
  const interim=S.result.multi&&S.passage<3;
  const clientLabel=clientRestitutionLabel();
@@ -3171,20 +3241,22 @@ function restitution(){
  <div class="row"><b>Supplément</b><span>${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":S.overrun.paymentStatus==="PENDING"?"À ENCAISSER":"À VÉRIFIER")}</span></div>`:""}
  <div class="row"><b>Médias / preuves</b><span>${S.terrainMedia.length?esc(S.terrainMedia.join(" • ")):"AUCUN FICHIER AJOUTÉ"}</span></div>
  <div class="row"><b>Document client</b><span>${esc(clientLabel)}</span></div>
- <div class="notice">La PWA rassemble les données du terrain. Le document client est préparé sur Mac à partir du dossier de mission, puis relu avant envoi.</div>
  ${interim
-   ? `<button class="btn primary" onclick="continueMultiAfterRestitution()">ENREGISTRER L’INTERMÉDIAIRE ET PRÉPARER LE PASSAGE ${S.passage+1}</button>`
-   : `<div class="guideTitle">PRÉPARATION DU DOCUMENT CLIENT</div>
-      <button class="btn ghost" onclick="exportMissionArchive()">EXPORTER LE DOSSIER DE TRAVAIL → FICHIERS / iCLOUD</button>
-      <div class="muted" style="margin-top:8px">Sur Mac : préparer le ${esc(clientLabel)}, le relire, ajouter les médias utiles si nécessaire, puis produire le PDF final.</div>
+   ? `<div class="notice">Ce passage est conservé dans le dossier de suivi. La mission reste ouverte jusqu’au dernier passage.</div><button class="btn primary" onclick="continueMultiAfterRestitution()">ENREGISTRER L’INTERMÉDIAIRE ET PRÉPARER LE PASSAGE ${S.passage+1}</button>`
+   : `<div class="guideTitle">COMPTE RENDU CLIENT</div>
+      <div class="notice">1. Exporter le dossier de travail depuis l’iPhone si des médias doivent être repris.<br>2. Sur le Mac, ouvrir le générateur pour préparer et relire le document client.<br>3. Enregistrer le PDF final dans le dossier mission iCloud.</div>
+      <div class="toolbar">
+        <button id="archiveExportBtn" class="btn ghost" onclick="exportMissionArchive()">EXPORTER LE DOSSIER DE TRAVAIL → FICHIERS / iCLOUD</button>
+        <button class="btn primary" onclick="openClientReportGenerator()">PRÉPARER LE COMPTE RENDU CLIENT</button>
+      </div>
       ${!reportReady
-        ? `<button class="btn primary" style="margin-top:12px" onclick="markClientReportReady()">RAPPORT FINAL PRÊT</button>`
-        : `<div class="notice" style="margin-top:12px"><b>RAPPORT FINAL PRÊT</b><br>${esc(S.clientReportReadyAt||"")}</div>`}
+        ? `<div class="muted" style="margin-top:10px">Le bouton « RAPPORT FINAL PRÊT » se trouve dans le générateur, après l’enregistrement du PDF final.</div>`
+        : `<div class="notice" style="margin-top:12px"><b>RAPPORT FINAL PRÊT</b><br>${esc(S.clientReportType||clientLabel)} — ${esc(S.clientReportReadyAt||"")}<br>PDF classé dans le dossier mission : ${esc(S.clientReportStoredAt||"-")}</div>`}
       ${reportReady&&!sent
-        ? `<div class="field"><label>Canal réellement utilisé pour l’envoi client</label><select id="clientSendChannel"><option value="">Choisir…</option><option>E-mail</option><option>SMS / messagerie</option><option>Remise directe</option><option>Autre</option></select></div><button class="btn primary" onclick="markClientSent()">ENVOI CLIENT EFFECTUÉ</button>`
+        ? `<div class="toolbar">${S.email?`<button class="btn ghost" onclick="openClientRestitutionEmail()">OUVRIR L’E-MAIL CLIENT</button>`:""}</div><div class="muted">Ajoutez le PDF final à l’e-mail avant l’envoi.</div><div class="field"><label>Canal réellement utilisé pour l’envoi client</label><select id="clientSendChannel"><option value="">Choisir…</option><option>E-mail</option><option>SMS / messagerie</option><option>Remise directe</option><option>Autre</option></select></div><button class="btn primary" onclick="markClientSent()">ENVOI CLIENT EFFECTUÉ</button>`
         : ""}
       ${sent
-        ? `<div class="notice"><b>ENVOI CLIENT ENREGISTRÉ</b><br>${esc(S.clientSendChannel||"-")} — ${esc(S.clientSentAt||"-")}</div><button class="btn primary" onclick="closeMission()">PASSER À LA CLÔTURE</button>`
+        ? `<div class="notice"><b>ENVOI CLIENT ENREGISTRÉ</b><br>${esc(S.clientSendChannel||"-")} — ${esc(S.clientSentAt||"-")}</div><button class="btn primary" onclick="closeMission()">CLÔTURER LA MISSION</button>`
         : ""}
       ${S.result.multi&&S.passage>=3?`<button class="btn ghost" onclick="extraMomentInfo()" style="margin-top:10px">UN 4e / 5e PASSAGE LIÉ EST ENVISAGÉ</button>`:""}`}
  </div>`);
@@ -3192,9 +3264,12 @@ function restitution(){
 }
 function closeMission(){
  if(!S.departureAt)return alert("Impossible de clôturer sans contrôle terrain terminé et heure de départ.");
+ hydrateClientReportStatus();
+ if(!S.clientReportReady || !S.clientReportStoredAt)return alert("Le rapport final doit être prêt et son PDF classé dans iCloud avant la clôture.");
  if(!S.clientSentAt)return alert("L’envoi client doit être enregistré avant de passer à la clôture.");
  setStage("CLÔTURE");
  const ov=S.overrun?.accepted?S.overrun:null;
+ const reportFinalStatus=String(S.clientReportFinalStatus||"").trim();
  const unpaidOverrun=!!(ov&&ov.paymentStatus!=="PAID");
  const paymentBlock=ov?`
    <div class="${ov.paymentStatus==="PAID"?"notice":"warn"}"><b>SUPPLÉMENT DE PROLONGATION</b><br>
@@ -3215,7 +3290,9 @@ function closeMission(){
  ${paymentBlock}
  ${unpaidOverrun
    ? `<div class="row"><b>Statut du dossier</b><span>MISSION TERRAIN TERMINÉE — SUPPLÉMENT À ENCAISSER</span></div>`
-   : `<div class="field"><label>Statut final</label><select id="fs">
+   : reportFinalStatus
+     ? `<div class="row"><b>Statut final du rapport</b><span>${esc(reportFinalStatus)}</span></div>`
+     : `<div class="field"><label>Statut final</label><select id="fs">
        <option>MISSION RÉALISÉE ET CLÔTURÉE</option>
        <option>MISSION PARTIELLEMENT RÉALISÉE ET CLÔTURÉE</option>
        <option>MISSION IMPOSSIBLE À RÉALISER - CLÔTURÉE AVEC MOTIF DOCUMENTÉ</option>
@@ -3227,13 +3304,20 @@ function closeMission(){
  </div>`);
 }
 function finalizeArchive(){
+ hydrateClientReportStatus();
+ if(!S.clientReportReady || !S.clientReportStoredAt){
+   return alert("Rapport final non validé ou PDF final non classé dans le dossier mission iCloud.");
+ }
+ if(!S.clientSentAt){
+   return alert("L’envoi client n’est pas enregistré. Le dossier ne peut pas être archivé.");
+ }
  if(S.overrun?.accepted && S.overrun.paymentStatus!=="PAID"){
    return alert("Supplément de prolongation non réglé. La mission ne peut pas être archivée définitivement tant que le paiement n’est pas confirmé.");
  }
- S.finalStatus=document.getElementById("fs")?.value||S.finalStatus||"MISSION CLÔTURÉE";
+ S.finalStatus=S.clientReportFinalStatus||document.getElementById("fs")?.value||S.finalStatus||"MISSION CLÔTURÉE";
  save();archive();
 }
-function archive(){setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button id="archiveExportBtn" class="btn primary" onclick="exportMissionArchive()">EXPORTER LE DOSSIER → FICHIERS / iCLOUD</button><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
+function archive(){setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div><div class="row"><b>Compte rendu client</b><span>${esc(S.clientReportType||clientRestitutionLabel())} — prêt ${esc(S.clientReportReadyAt||"-")}</span></div><div class="row"><b>Envoi client</b><span>${esc(S.clientSendChannel||"-")} — ${esc(S.clientSentAt||"-")}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button id="archiveExportBtn" class="btn primary" onclick="exportMissionArchive()">EXPORTER LE DOSSIER → FICHIERS / iCLOUD</button><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
 function exportJSON(){let b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(S.missionId||"CYRNEA-DEMO")+".json";a.click();URL.revokeObjectURL(a.href)}
 function recoverNewerStageViewState(){
  const baseId=activeMissionKey(S);
