@@ -1,5 +1,5 @@
-const CACHE='cyrnea-assistant-20261003-multijalon-debug-v11';
-const ASSETS=['./index.html','./terrain-clock.js','./manifest.webmanifest','./icons/icon-192.png'];
+const CACHE='cyrnea-assistant-20261006-restitution-client-v1';
+const ASSETS=['./index.html','./rapport-client.html','./terrain-clock.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(
@@ -29,14 +29,15 @@ self.addEventListener('fetch',event=>{
   if(requestUrl.origin!==self.location.origin)return;
 
   if(event.request.mode==='navigate'){
+    const target=requestUrl.pathname.endsWith('/rapport-client.html')?'./rapport-client.html':'./index.html';
     event.respondWith(
-      fetch('./index.html',{cache:'no-store'})
+      fetch(target,{cache:'no-store'})
         .then(response=>{
           const copy=response.clone();
-          caches.open(CACHE).then(cache=>cache.put('./index.html',copy));
+          caches.open(CACHE).then(cache=>cache.put(target,copy));
           return response;
         })
-        .catch(()=>caches.match('./index.html'))
+        .catch(()=>caches.match(target))
     );
     return;
   }
