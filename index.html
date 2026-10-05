@@ -194,8 +194,8 @@ const LEGACY_STATE_KEY="cyrnea_assistant_v50";
 const PAYMENT_GATEWAY_URL="https://cyrnea-payment-gateway.jeancharles-coti.workers.dev";
 const RESERVATION_ACTIONS_URL="https://cyrnea-reservation-actions.jeancharles-coti.workers.dev";
 const RELAIS_OVERRUN_PAYMENT_LINKS={
-  25:"https://buy.stripe.com/eVq4gAf2Th1B9WM4yR1ZS00",
-  50:"https://buy.stripe.com/28EcN6g6X8v57OE4yR1ZS01"
+  40:"https://buy.stripe.com/cNi28s6wnfXxed27L31ZS02",
+  80:"https://buy.stripe.com/8x27sM7ArdPp2uke9r1ZS03"
 };
 const B2B_PAYMENT_CAPABILITIES={CARD:true,PAYPAL:true,SEPA_TRANSFER:false};
 const TALLY_URLS={
@@ -2885,7 +2885,7 @@ function needsWaitGuard(){
 function overrunRule(){
  const contract=String(S.result?.contract||"");
  if(contract==="RELAIS")
-   return {allowed:true,unit:25,base:"TTC",max:2,label:"+25 € TTC par tranche de 30 min commencée, maximum 2 tranches, avec accord exprès"};
+   return {allowed:true,unit:40,base:"TTC",max:2,label:"+40 € TTC par tranche de 30 min commencée, maximum 2 tranches, avec accord exprès"};
  if(contract==="PRÉSENCE PROPRIÉTAIRES")
    return {allowed:true,unit:60,base:"TTC",max:null,label:"+60 € TTC par tranche de 30 min commencée, avec accord exprès"};
  if(contract==="PRÉSENCE ENTREPRISES")
