@@ -3128,9 +3128,36 @@ function terrain(){
  restoreTerrainDraft();
  setTimeout(refreshTerrainMediaStatus,0);
 }
+function clientRestitutionLabel(){
+ const m=String(S.result?.mission||"").toUpperCase();
+ if(m.includes("CONTINUITÉ")||m==="SUIVRE") return "SUIVI MULTI-PASSAGES";
+ if(m.includes("DÉCIDER")||m.includes("PRÉSENCE PROJET")) return "COMPTE RENDU DE MISSION";
+ if(m.includes("VOIR")||m.includes("VISITE TERRAIN")) return "COMPTE RENDU D’OBSERVATION";
+ return "RESTITUTION SIMPLE";
+}
+function markClientReportReady(){
+ S.clientReportReady=true;
+ S.clientReportReadyAt=nowStamp();
+ S.clientSentAt="";
+ S.clientSendChannel="";
+ save();
+ restitution();
+}
+function markClientSent(){
+ if(!S.clientReportReady)return alert("Le rapport final doit être prêt avant d’enregistrer l’envoi client.");
+ const channel=(document.getElementById("clientSendChannel")?.value||"").trim();
+ if(!channel)return alert("Choisissez le canal réellement utilisé pour l’envoi client.");
+ S.clientSendChannel=channel;
+ S.clientSentAt=nowStamp();
+ save();
+ restitution();
+}
 function restitution(){
  setStage("RESTITUTION");
  const interim=S.result.multi&&S.passage<3;
+ const clientLabel=clientRestitutionLabel();
+ const reportReady=!!S.clientReportReady;
+ const sent=!!S.clientSentAt;
  draw(`<div class="card"><h1>${interim?"Restitution intermédiaire":"Restitution finale"}</h1><div class="operatorOnly">Décrivez uniquement ce qui a été vu, fait, dit ou impossible à vérifier. Pas d’interprétation technique.</div>
  <div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div>
  <div class="row"><b>Passage</b><span>${esc(String(S.passage))}</span></div>
@@ -3143,15 +3170,29 @@ function restitution(){
  <div class="row"><b>Accord client</b><span>${esc(S.overrun.agreementMethod==="SMS"?"SMS reçu":"Accord téléphonique")} — ${esc(S.overrun.agreementAt||"-")}</span></div>
  <div class="row"><b>Supplément</b><span>${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":S.overrun.paymentStatus==="PENDING"?"À ENCAISSER":"À VÉRIFIER")}</span></div>`:""}
  <div class="row"><b>Médias / preuves</b><span>${S.terrainMedia.length?esc(S.terrainMedia.join(" • ")):"AUCUN FICHIER AJOUTÉ"}</span></div>
- <div class="notice">La PWA rassemble les données nécessaires à la restitution R0/R1/R2/R3 et évite de ressaisir les informations déjà connues.</div>
+ <div class="row"><b>Document client</b><span>${esc(clientLabel)}</span></div>
+ <div class="notice">La PWA rassemble les données du terrain. Le document client est préparé sur Mac à partir du dossier de mission, puis relu avant envoi.</div>
  ${interim
    ? `<button class="btn primary" onclick="continueMultiAfterRestitution()">ENREGISTRER L’INTERMÉDIAIRE ET PRÉPARER LE PASSAGE ${S.passage+1}</button>`
-   : `<button class="btn primary" onclick="closeMission()">VALIDER LA RESTITUTION FINALE</button>${S.result.multi&&S.passage>=3?`<button class="btn ghost" onclick="extraMomentInfo()" style="margin-top:10px">UN 4e / 5e PASSAGE LIÉ EST ENVISAGÉ</button>`:""}`}
+   : `<div class="guideTitle">PRÉPARATION DU DOCUMENT CLIENT</div>
+      <button class="btn ghost" onclick="exportMissionArchive()">EXPORTER LE DOSSIER DE TRAVAIL → FICHIERS / iCLOUD</button>
+      <div class="muted" style="margin-top:8px">Sur Mac : préparer le ${esc(clientLabel)}, le relire, ajouter les médias utiles si nécessaire, puis produire le PDF final.</div>
+      ${!reportReady
+        ? `<button class="btn primary" style="margin-top:12px" onclick="markClientReportReady()">RAPPORT FINAL PRÊT</button>`
+        : `<div class="notice" style="margin-top:12px"><b>RAPPORT FINAL PRÊT</b><br>${esc(S.clientReportReadyAt||"")}</div>`}
+      ${reportReady&&!sent
+        ? `<div class="field"><label>Canal réellement utilisé pour l’envoi client</label><select id="clientSendChannel"><option value="">Choisir…</option><option>E-mail</option><option>SMS / messagerie</option><option>Remise directe</option><option>Autre</option></select></div><button class="btn primary" onclick="markClientSent()">ENVOI CLIENT EFFECTUÉ</button>`
+        : ""}
+      ${sent
+        ? `<div class="notice"><b>ENVOI CLIENT ENREGISTRÉ</b><br>${esc(S.clientSendChannel||"-")} — ${esc(S.clientSentAt||"-")}</div><button class="btn primary" onclick="closeMission()">PASSER À LA CLÔTURE</button>`
+        : ""}
+      ${S.result.multi&&S.passage>=3?`<button class="btn ghost" onclick="extraMomentInfo()" style="margin-top:10px">UN 4e / 5e PASSAGE LIÉ EST ENVISAGÉ</button>`:""}`}
  </div>`);
  save();
 }
 function closeMission(){
  if(!S.departureAt)return alert("Impossible de clôturer sans contrôle terrain terminé et heure de départ.");
+ if(!S.clientSentAt)return alert("L’envoi client doit être enregistré avant de passer à la clôture.");
  setStage("CLÔTURE");
  const ov=S.overrun?.accepted?S.overrun:null;
  const unpaidOverrun=!!(ov&&ov.paymentStatus!=="PAID");
@@ -3170,6 +3211,7 @@ function closeMission(){
  <div class="row"><b>Arrivée</b><span>${esc(S.arrivalAt)}</span></div>
  <div class="row"><b>Départ</b><span>${esc(S.departureAt)}</span></div>
  <div class="row"><b>Incident</b><span>${esc(S.incident||"Aucun")}</span></div>
+ <div class="row"><b>Envoi client</b><span>${esc(S.clientSendChannel||"-")} — ${esc(S.clientSentAt||"-")}</span></div>
  ${paymentBlock}
  ${unpaidOverrun
    ? `<div class="row"><b>Statut du dossier</b><span>MISSION TERRAIN TERMINÉE — SUPPLÉMENT À ENCAISSER</span></div>`
@@ -3178,7 +3220,7 @@ function closeMission(){
        <option>MISSION PARTIELLEMENT RÉALISÉE ET CLÔTURÉE</option>
        <option>MISSION IMPOSSIBLE À RÉALISER - CLÔTURÉE AVEC MOTIF DOCUMENTÉ</option>
      </select></div>`}
- <div class="notice">${S.result.contract.startsWith("PRÉSENCE")?"H5 / restitution finale à envoyer.":"Restitution RELAIS à envoyer."}</div>
+ <div class="notice">Document client envoyé et envoi enregistré. L’archivage définitif peut maintenant être effectué.</div>
  ${unpaidOverrun
    ? `<button class="btn primary" onclick="goHome()">CONSERVER EN ATTENTE DE PAIEMENT → ACCUEIL</button><div class="muted">Cette mission reste dans MISSIONS ACTIVES. Elle pourra être rouverte dès réception du supplément.</div>`
    : `<button class="btn primary" onclick="finalizeArchive()">ARCHIVER LE DOSSIER</button>`}
