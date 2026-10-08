@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CYRNEA — Charger test multi-passages</title></head>
+<body>
+<script>
+(function(){
+  const STATE_KEY="cyrnea_assistant_v53_final_20260928";
+  const ACTIVE_MISSIONS_KEY="cyrnea_active_missions_v1";
+  const DIRTY_KEY="cyrnea_sync_dirty_v3";
+  const missionId="B2B-2026-TEST-MULTI";
+  const now=Date.now();
+  const S={
+    stage:"PRÊTE",mode:"FULL",universe:"B2B",caller:"ENTREPRISE",
+    name:"ENTREPRISE TEST",phone:"+33 6 00 00 00 00",email:"test@example.invalid",
+    city:"Porto-Vecchio",need:"PROJECT",sub:null,
+    result:{
+      mission:"CONTINUITÉ PROJET",
+      contract:"PRÉSENCE ENTREPRISES",
+      price:"1 190 € HT",
+      cap:"3 présences / jalons",
+      multi:true,
+      status:"PROPOSER",
+      availabilityLabel:"3 passages / jalons de test"
+    },
+    obj:"Suivre le même périmètre sur trois jalons successifs et documenter factuellement les évolutions observées.",
+    date:"2026-10-09",slot:"10:00",acceptedSlot:true,
+    draftKey:"D-20261009-TEST-MULTI",missionId,
+    prep:{
+      addr:"Adresse test B2B — Porto-Vecchio",
+      access:"Accès test",
+      mode:"Présence locale",
+      contactChoice:"CONTACT",
+      contact:"Interlocuteur test",
+      docsChoice:"AUCUN",docs:[],
+      note:"Mission fictive de recette multi-passages"
+    },
+    facts:"",incident:"",terrainMedia:[],terrainDraft:null,
+    arrivalAt:"",arrivalEpochMs:null,departureAt:"",
+    finalStatus:"",
+    passage:1,
+    multiSlots:[
+      {index:1,date:"2026-10-09",time:"10:00",label:"Standard",surcharge:0},
+      {index:2,date:"2026-10-10",time:"10:30",label:"Standard",surcharge:0},
+      {index:3,date:"2026-10-12",time:"11:00",label:"Standard",surcharge:0}
+    ],
+    multiDraft:{
+      1:{active:true,date:"2026-10-09",time:"10:00"},
+      2:{active:true,date:"2026-10-10",time:"10:30"},
+      3:{active:true,date:"2026-10-12",time:"11:00"}
+    },
+    availability:{multi:true},
+    overrun:null,
+    paymentMethod:"TEST",
+    paymentState:"PAID",
+    paymentStatus:"PAID_CONFIRMED",
+    decisionStatus:"CONFIRMED",
+    specialPending:false,resumeStage:"PRÊTE",
+    passageReports:[],
+    clientReportReady:false,clientReportReadyAt:"",clientReportStoredAt:"",
+    clientReportType:"",clientReportFinalStatus:"",
+    clientSentAt:"",clientSendChannel:"",
+    history:["ACCUEIL","QUALIFICATION","CADRAGE","CRÉNEAU","RÉSERVATION","PRÊTE"],
+    _localUpdatedAt:now
+  };
+  let map={};
+  try{map=JSON.parse(localStorage.getItem(ACTIVE_MISSIONS_KEY)||"{}");if(!map||typeof map!=="object"||Array.isArray(map))map={}}catch(e){map={}}
+  map[missionId]=S;
+  localStorage.setItem(ACTIVE_MISSIONS_KEY,JSON.stringify(map));
+  localStorage.setItem(STATE_KEY,JSON.stringify(S));
+  let dirty=[];
+  try{dirty=JSON.parse(localStorage.getItem(DIRTY_KEY)||"[]");if(!Array.isArray(dirty))dirty=[]}catch(e){dirty=[]}
+  if(!dirty.includes(missionId))dirty.push(missionId);
+  localStorage.setItem(DIRTY_KEY,JSON.stringify(dirty));
+  document.body.innerHTML="<p style='font-family:Arial,sans-serif;padding:24px'>Mission test multi-passages chargée. Redirection vers la PWA…</p>";
+  location.replace("./index.html");
+})();
+</script>
+</body>
+</html>
