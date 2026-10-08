@@ -2383,18 +2383,18 @@ function docPack(){
   let fiche="Fiche mission";
   let checklist="Checklist courte adaptée";
   let support="Aucun document supplémentaire";
-  let rest=S.result?.rest||"R0";
+  let rest="RESTITUTION SIMPLE";
 
-  if(m==="DÉCIDER"){support="Cahier des charges validé";rest="R2"}
-  else if(m==="SUIVRE"){support="Cahier des charges commun aux 3 passages";rest="R3 comparative"}
-  else if(m==="PRÉSENCE PROJET"){support="Cahier des charges validé";rest="R2 B2B"}
-  else if(m==="PRÉSENCE PROJET ÉTENDUE"){support="Objectif unique + brief validé";rest="R2 B2B"}
-  else if(m==="CONTINUITÉ PROJET"){support="Cahier des charges commun aux 3 jalons";rest="R3 B2B"}
-  else if(m==="VISITE TERRAIN PILOTÉE"){support="Brief / objectif validé";rest="R1 B2B"}
-  else if(m.includes("APRÈS INTEMPÉRIE")){support="Sécurité / électricité";rest="R0-C"}
-  else if(m.includes("VOIR")){support="Périmètre d’observation";rest="R1"}
-  else if(m.includes("CLÉ / BADGE") || S.need==="KEY"){rest="R0-B"}
-  else if(["ACCÈS B2B","PRÉSENCE LOGISTIQUE B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B"].includes(m)){support="Consigne logistique";rest="R0 B2B"}
+  if(m==="DÉCIDER"){support="Cahier des charges validé";rest="COMPTE RENDU DE MISSION"}
+  else if(m==="SUIVRE"){support="Cahier des charges commun aux 3 passages";rest="SUIVI MULTI-PASSAGES"}
+  else if(m==="PRÉSENCE PROJET"){support="Cahier des charges validé";rest="COMPTE RENDU DE MISSION"}
+  else if(m==="PRÉSENCE PROJET ÉTENDUE"){support="Objectif unique + brief validé";rest="COMPTE RENDU DE MISSION"}
+  else if(m==="CONTINUITÉ PROJET"){support="Cahier des charges commun aux 3 jalons";rest="SUIVI MULTI-PASSAGES"}
+  else if(m==="VISITE TERRAIN PILOTÉE"){support="Brief / objectif validé";rest="COMPTE RENDU D’OBSERVATION"}
+  else if(m.includes("APRÈS INTEMPÉRIE")){support="Sécurité / électricité";rest="RESTITUTION SIMPLE"}
+  else if(m.includes("VOIR")){support="Périmètre d’observation";rest="COMPTE RENDU D’OBSERVATION"}
+  else if(m.includes("CLÉ / BADGE") || S.need==="KEY"){rest="RESTITUTION SIMPLE"}
+  else if(["ACCÈS B2B","PRÉSENCE LOGISTIQUE B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B"].includes(m)){support="Consigne logistique";rest="RESTITUTION SIMPLE"}
 
   return {fiche,checklist,support,rest};
 }
