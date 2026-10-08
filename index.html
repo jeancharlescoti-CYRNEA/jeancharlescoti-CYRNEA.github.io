@@ -2503,7 +2503,9 @@ function terrainFactOptions(){
   if(m==="DÉCIDER")
     return ["Points prévus observés","Questions convenues posées","Réponses attribuées aux interlocuteurs","Aucune recommandation donnée à la place du client"];
   if(m==="SUIVRE")
-    return ["Même périmètre observé","Repères comparables utilisés","Écarts visibles documentés"];
+    return Number(S.passage||1)===1
+      ? ["Même périmètre / repères de référence identifiés","État initial documenté","Éléments non observables identifiés"]
+      : ["Même périmètre observé","Repères comparables utilisés","Écarts visibles documentés","Comparaison avec passage précédent possible"];
   if(m==="VISITE TERRAIN PILOTÉE")
     return ["Site observé","Éléments utiles documentés","Aucune décision technique prise"];
   if(m==="PRÉSENCE PROJET")
@@ -2511,7 +2513,9 @@ function terrainFactOptions(){
   if(m==="PRÉSENCE PROJET ÉTENDUE")
     return ["Zones prévues parcourues","Interlocuteurs prévus rencontrés","Objectif unique respecté","Éléments factuels documentés"];
   if(m==="CONTINUITÉ PROJET")
-    return ["Même périmètre / repères suivis","Évolution documentée","Comparaison avec passage précédent possible"];
+    return Number(S.passage||1)===1
+      ? ["Même périmètre / repères de référence identifiés","État initial documenté","Base de comparaison créée"]
+      : ["Même périmètre / repères suivis","Évolution documentée","Comparaison avec passage précédent possible"];
   return ["Objet prévu exécuté","Éléments utiles documentés","Aucun élargissement de mission"];
 }
 function toggleIncidentOther(){
