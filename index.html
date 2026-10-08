@@ -3288,7 +3288,7 @@ function closeMission(){
  if(unpaidOverrun)S.finalStatus="MISSION TERRAIN TERMINÉE — SUPPLÉMENT À ENCAISSER";
  save();
  draw(`<div class="card"><h1>Clôture</h1>
- <div class="todo"><b>À FAIRE</b>${unpaidOverrun?"Le terrain est terminé. Le dossier reste ouvert jusqu’au règlement du supplément.":"Choisir le statut réel avant archivage."}</div>
+ <div class="todo"><b>À FAIRE</b>${unpaidOverrun?"Le terrain est terminé. Le dossier reste ouvert jusqu’au règlement du supplément.":"Contrôler les éléments de clôture puis archiver le dossier."}</div>
  <div class="row"><b>Arrivée</b><span>${esc(S.arrivalAt)}</span></div>
  <div class="row"><b>Départ</b><span>${esc(S.departureAt)}</span></div>
  <div class="row"><b>Incident</b><span>${esc(S.incident||"Aucun")}</span></div>
@@ -3302,7 +3302,7 @@ function closeMission(){
        <option>MISSION PARTIELLEMENT RÉALISÉE ET CLÔTURÉE</option>
        <option>MISSION IMPOSSIBLE À RÉALISER - CLÔTURÉE AVEC MOTIF DOCUMENTÉ</option>
      </select></div>`}
- <div class="notice">${S.result.contract.startsWith("PRÉSENCE")?"H5 / restitution finale à envoyer.":"Restitution RELAIS à envoyer."}</div>
+ <div class="notice"><b>RESTITUTION CLIENT ENVOYÉE</b><br>${esc(S.clientSendChannel||"-")} — ${esc(S.clientSentAt||"-")}<br>Le dossier peut être archivé si aucun supplément de prolongation ne reste à régler.</div>
  ${unpaidOverrun
    ? `<button class="btn primary" onclick="goHome()">CONSERVER EN ATTENTE DE PAIEMENT → ACCUEIL</button><div class="muted">Cette mission reste dans MISSIONS ACTIVES. Elle pourra être rouverte dès réception du supplément.</div>`
    : `<button class="btn primary" onclick="finalizeArchive()">ARCHIVER LE DOSSIER</button>`}
