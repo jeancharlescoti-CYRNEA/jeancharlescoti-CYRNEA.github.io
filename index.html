@@ -2707,7 +2707,15 @@ function missionArchiveText(){
    "Adresse : "+(S.prep?.addr||S.city||"-"),
    "Arrivée : "+(S.arrivalAt||"-"),
    "Départ : "+(S.departureAt||"-"),
-   "Faits / actions : "+(S.facts||"-"),
+    "Faits / actions : "+(S.facts||"-"),
+   ...(S.result?.mission==="DÉCIDER"?[
+     "DOSSIER PRÉPARATOIRE À LA DÉCISION — R2",
+     "Informations recueillies : "+(S.deciderR2?.informations||"Non renseigné"),
+     "Documents et réponses disponibles : "+(S.deciderR2?.documents||"Non renseigné"),
+     "Points restant à éclaircir : "+(S.deciderR2?.questions||"Non renseigné"),
+     "Synthèse factuelle : "+(S.deciderR2?.synthese||"Non renseigné"),
+     "La décision appartient exclusivement au client."
+   ]:[]),
    "Incident / limite : "+(S.incident||"Aucun"),
    "",
    "Archive documentaire cible : iCloud Drive / CYRNEA / MISSIONS / "+(S.result?.contract==="RELAIS"?"RELAIS":"PRÉSENCE")+" / "+(S.missionId||"-"),
@@ -3128,6 +3136,20 @@ function terrain(){
  restoreTerrainDraft();
  setTimeout(refreshTerrainMediaStatus,0);
 }
+function saveDeciderR2(){
+ if(S.result?.mission!=="DÉCIDER")return;
+ const keys=["informations","documents","questions","synthese"];
+ const next={...(S.deciderR2||{})};
+ for(const k of keys){const e=document.getElementById("deciderR2_"+k);if(e)next[k]=e.value.trim()}
+ S.deciderR2=next;
+ save();
+}
+function validateDeciderR2(){
+ saveDeciderR2();
+ const d=S.deciderR2||{};
+ if(["informations","documents","questions","synthese"].some(k=>!d[k]))return alert("Complétez les quatre rubriques DÉCIDER. Indiquez « Aucun » ou « Non disponible » si nécessaire. N’inventez aucune information.");
+ closeMission();
+}
 function restitution(){
  setStage("RESTITUTION");
  const interim=S.result.multi&&S.passage<3;
@@ -3143,10 +3165,11 @@ function restitution(){
  <div class="row"><b>Accord client</b><span>${esc(S.overrun.agreementMethod==="SMS"?"SMS reçu":"Accord téléphonique")} — ${esc(S.overrun.agreementAt||"-")}</span></div>
  <div class="row"><b>Supplément</b><span>${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":S.overrun.paymentStatus==="PENDING"?"À ENCAISSER":"À VÉRIFIER")}</span></div>`:""}
  <div class="row"><b>Médias / preuves</b><span>${S.terrainMedia.length?esc(S.terrainMedia.join(" • ")):"AUCUN FICHIER AJOUTÉ"}</span></div>
+ ${S.result.mission==="DÉCIDER"?`<div class="neutral"><b>DOSSIER PRÉPARATOIRE À LA DÉCISION — R2</b><div class="muted">Faits vérifiés ou déclarations attribuées à leur source. Le client reste seul décisionnaire.</div>${[["informations","Informations recueillies"],["documents","Documents et réponses disponibles (avec sources)"],["questions","Points restant à éclaircir"],["synthese","Synthèse factuelle préparatoire à la décision"]].map(([k,label])=>`<div class="field"><label>${label}</label><textarea id="deciderR2_${k}" rows="3" onchange="saveDeciderR2()" onblur="saveDeciderR2()" placeholder="Faits uniquement ; « Aucun » ou « Non disponible » si nécessaire.">${esc(S.deciderR2?.[k]||"")}</textarea></div>`).join("")}</div>`:""}
  <div class="notice">La PWA rassemble les données nécessaires à la restitution R0/R1/R2/R3 et évite de ressaisir les informations déjà connues.</div>
  ${interim
    ? `<button class="btn primary" onclick="continueMultiAfterRestitution()">ENREGISTRER L’INTERMÉDIAIRE ET PRÉPARER LE PASSAGE ${S.passage+1}</button>`
-   : `<button class="btn primary" onclick="closeMission()">VALIDER LA RESTITUTION FINALE</button>${S.result.multi&&S.passage>=3?`<button class="btn ghost" onclick="extraMomentInfo()" style="margin-top:10px">UN 4e / 5e PASSAGE LIÉ EST ENVISAGÉ</button>`:""}`}
+   : `<button class="btn primary" onclick="${S.result.mission==="DÉCIDER"?"validateDeciderR2()":"closeMission()"}">VALIDER LA RESTITUTION FINALE</button>${S.result.multi&&S.passage>=3?`<button class="btn ghost" onclick="extraMomentInfo()" style="margin-top:10px">UN 4e / 5e PASSAGE LIÉ EST ENVISAGÉ</button>`:""}`}
  </div>`);
  save();
 }
