@@ -1007,7 +1007,7 @@ function showResult(){
  <div class="row"><b>Plafond</b><span>${esc(r.cap)}</span></div>
  <div class="row"><b>Contrat</b><span>${esc(r.contract)}</span></div><div class="row"><b>Lieu d’intervention</b><span>${esc(S.city)}</span></div>
  ${normal||quote ? objectSelector() : ""}
- ${needsCahier()?`<div class="warn"><b>Cadrage renforcé requis.</b><br>Avant réservation, cette mission doit disposer d'un brief/cahier des charges écrit : objectif, points, questions/interlocuteurs et restitution attendue.</div>`:""}
+ ${needsCahier()?`<div class="warn"><b>Cadrage renforcé requis.</b><br>Avant réservation, cette mission doit disposer d'un brief/cahier des charges écrit précisant l'objectif, les points à éclaircir, les documents et informations à recueillir, les éventuelles questions à poser à des interlocuteurs et la restitution attendue.</div>`:""}
  ${quote?`<div class="warn"><b>Secteur hors zone directe.</b><br>Le tarif standard ne vaut pas commande. Un devis doit être établi et accepté avant de poursuivre.</div>
  <div class="field"><label>Montant du devis accepté</label><input id="quotePrice" placeholder="${S.caller==="B2B"?"Ex. 500 € HT":"Ex. 149 € TTC"}"></div>
  <button class="btn primary" onclick="if(!saveObject())return;let q=document.getElementById('quotePrice').value.trim();if(!q)return alert('Montant du devis requis');if(S.caller==='B2B'&&!/HT/i.test(q))return alert('Pour le B2B, indiquez le montant du devis en HT.');if(S.caller!=='B2B'&&!/TTC/i.test(q))return alert('Pour un particulier, indiquez le montant du devis en TTC.');S.result.price=q;S.result.status='PROPOSER';S.result.isQuote=true;slot()">DEVIS ACCEPTÉ → CONTINUER</button>`
