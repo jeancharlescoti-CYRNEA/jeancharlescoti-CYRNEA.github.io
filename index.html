@@ -2193,6 +2193,21 @@ function completeSimplyBookBooking(){
  save();
  preparationMission();
 }
+function canReviewPaidVoirRelais(){
+ return S.result?.contract==="RELAIS" && ["VOIR RELAIS","VOIR PRIORITAIRE RELAIS"].includes(S.result?.mission) && ["PAID_PENDING_CONFIRMATION","PAID_CONFIRMED"].includes(S.paymentStatus);
+}
+function flagPaidVoirRelaisReview(){
+ if(!canReviewPaidVoirRelais())return alert("Option réservée à VOIR RELAIS après paiement enregistré.");
+ if(!confirm("Signaler un besoin dépassant VOIR RELAIS ?\nLe paiement existant et le contrat RELAIS resteront inchangés. Aucune conversion ni facturation automatique."))return;
+ S.requalificationReview={status:"À EXAMINER",sourceMission:S.result.mission,sourcePrice:S.result.price,sourceContract:"RELAIS",candidateMission:"DÉCIDER",candidatePrice:"480 € TTC",candidateContract:"PRÉSENCE PROPRIÉTAIRES",reportedAt:nowStamp()};
+ save();postPaymentDecision();
+}
+function resolvePaidVoirRelaisAsVoir(){
+ if(!canReviewPaidVoirRelais()||S.requalificationReview?.status!=="À EXAMINER")return;
+ if(!confirm("Vous confirmez que le client accepte finalement de maintenir VOIR RELAIS et son périmètre de simple constat documenté ?"))return;
+ S.requalificationReview.status="MAINTIEN VOIR RELAIS";S.requalificationReview.resolvedAt=nowStamp();
+ save();postPaymentDecision();
+}
 function postPaymentDecision(){
  setStage("RÉSERVATION");
  if(!GATEWAY_REF_RE.test(String(S.tallyReference||"")))ensureTallyReference();
@@ -2201,6 +2216,10 @@ function postPaymentDecision(){
    <div class="row"><b>Mission</b><span>${esc(S.result?.mission||"-")}</span></div>
    <div class="row"><b>Créneau demandé</b><span>${esc(scheduleText())}</span></div>
    <div class="row"><b>Référence</b><span>${esc(S.tallyReference||"-")}</span></div>
+   ${canReviewPaidVoirRelais()&&S.requalificationReview?.status==="À EXAMINER" ? `<div class="warn"><b>REQUALIFICATION VOIR RELAIS À EXAMINER</b>Le contrat et le paiement VOIR RELAIS restent inchangés. Si DÉCIDER est nécessaire, votre validation et l'accord du client sur le nouveau contrat et son règlement sont indispensables. Aucune conversion ni déduction automatique. Ne confirmez pas VOIR tant que ce point n'est pas réglé.</div>
+   <button class="btn ghost" onclick="resolvePaidVoirRelaisAsVoir()">LE CLIENT ACCEPTE DE MAINTENIR VOIR RELAIS</button>` : ""}
+   ${canReviewPaidVoirRelais()&&S.requalificationReview?.status!=="À EXAMINER" ? `<div class="operatorOnly">Si la demande dépasse réellement VOIR, vous pouvez signaler une requalification après paiement. Cela ne change ni la mission payée ni ses CGV.</div>
+   <button class="btn ghost" onclick="flagPaidVoirRelaisReview()">BESOIN PLUS LARGE ? EXAMINER UNE REQUALIFICATION</button>` : ""}
    <div class="toolbar"><button class="btn primary" onclick="openReservationActions()">OUVRIR CONFIRMER / ALTERNATIVE / REMBOURSER</button></div>
    <div class="checkZone"><div class="checkIntro">APRÈS AVOIR EFFECTUÉ L’ACTION</div>
      <button class="btn primary" onclick="decisionConfirmed()">J’AI CONFIRMÉ LA MISSION DANS CYRNEA</button>
@@ -2210,6 +2229,7 @@ function postPaymentDecision(){
  </div>`);
 }
 function decisionConfirmed(){
+ if(canReviewPaidVoirRelais() && S.requalificationReview?.status==="À EXAMINER")return alert("Requalification en attente. Ne confirmez pas VOIR sans accord du client pour maintenir VOIR ou traiter une nouvelle commande DÉCIDER séparément.");
  S.decisionStatus="CONFIRMED";
  S.paymentStatus="PAID_CONFIRMED";
  if(!S.missionId)S.missionId=missionId();
