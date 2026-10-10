@@ -790,6 +790,51 @@ function zone(){
  return x==="porto-vecchio"||x==="porto vecchio"||x==="lecci"||x==="sotta"||x.includes("sainte-lucie")||x.includes("sainte lucie")||x.includes("pinarello")||x==="tarco";
 }
 function voir(){return S.universe==="RELAIS"?{status:"PROPOSER",mission:"VOIR RELAIS",price:"260 € TTC",cap:"1 h 30",contract:"RELAIS",rest:"R1_RELAIS"}:{status:"PROPOSER",mission:"VOIR PRÉSENCE",price:"260 € TTC",cap:"1 h 30",contract:"PRÉSENCE PROPRIÉTAIRES",rest:"R1"}}
+
+function relaisRequalificationLocked(){
+ return !!(S.missionId||S.paymentStatus||S.paymentState||S.decisionStatus||S.acceptedSlot||S.arrivalAt||S.departureAt||S.prep?.addr);
+}
+function startRelaisDeciderRequalification(origin){
+ if(S.caller==="B2B"||S.universe!=="RELAIS")return alert("Requalification RELAIS non applicable.");
+ if(relaisRequalificationLocked())return alert("Mission déjà engagée : ne changez ni contrat ni tarif. Ouvrez une nouvelle demande distincte avec l'accord du client.");
+ S.requalificationSource=["VOIR RELAIS","VOIR PRIORITAIRE RELAIS"].includes(origin)?origin:"DEMANDE ISSUE DE RELAIS";
+ draw(`<div class="card"><h1>REQUALIFICATION À VALIDER — RELAIS VERS DÉCIDER</h1>
+ <div class="operatorOnly">POUR VOUS : aucune bascule automatique. Examinez une requalification seulement si le besoin dépasse réellement VOIR. La décision vous appartient.</div>
+ <div class="row"><b>Origine</b><span>${esc(S.requalificationSource)}</span></div>
+ <div class="row"><b>Prestation envisagée</b><span>DÉCIDER — 480 € TTC — 2 h maximum</span></div>
+ <div class="row"><b>Contrat proposé</b><span>PRÉSENCE PROPRIÉTAIRES — restitution R2</span></div>
+ <div class="warn"><b>DIFFÉRENCE ESSENTIELLE</b>VOIR = observation ciblée et constat documenté. DÉCIDER = préparation des points avec le client, présence sur place et synthèse organisée. La visio, la présence d'un tiers ou le seul souhait de décider ne suffisent pas à justifier le changement.</div>
+ <div class="checkZone">
+ <label class="check"><input type="checkbox" id="rqScope"><span>J'ai vérifié que le besoin dépasse le simple constat VOIR et nécessite une préparation et une synthèse.</span></label>
+ <label class="check"><input type="checkbox" id="rqClient"><span>J'ai expliqué le nouveau périmètre, le prix de 480 € TTC et le contrat PRÉSENCE PROPRIÉTAIRES. Le client a expressément accepté.</span></label>
+ </div>
+ <div class="field"><label>Mode d'accord exprès du client</label><select id="rqMethod">
+ <option value="">— Choisir —</option><option value="TÉLÉPHONE">Accord téléphonique</option><option value="SMS">SMS reçu</option><option value="E-MAIL">E-mail reçu</option>
+ </select></div>
+ <div class="toolbar">
+ <button class="btn primary" onclick="confirmRelaisDeciderRequalification()">VALIDER LA REQUALIFICATION → DÉCIDER</button>
+ <button class="btn ghost" onclick="cancelRelaisDeciderRequalification()">NE PAS REQUALIFIER — RETOUR</button>
+ </div></div>`);
+}
+function cancelRelaisDeciderRequalification(){
+ const origin=S.requalificationSource;S.requalificationSource="";
+ if(["VOIR RELAIS","VOIR PRIORITAIRE RELAIS"].includes(origin)&&S.result?.mission===origin)return showResult();
+ return needs();
+}
+function confirmRelaisDeciderRequalification(){
+ if(S.caller==="B2B"||S.universe!=="RELAIS")return alert("Requalification RELAIS non applicable.");
+ if(relaisRequalificationLocked())return alert("Dossier déjà engagé : ouvrir une demande distincte.");
+ if(!document.getElementById("rqScope")?.checked)return alert("Vérifiez d'abord que le besoin dépasse VOIR.");
+ if(!document.getElementById("rqClient")?.checked)return alert("L'accord exprès du client sur la nouvelle mission, le tarif et le contrat est nécessaire.");
+ const method=document.getElementById("rqMethod")?.value||"";
+ if(!["TÉLÉPHONE","SMS","E-MAIL"].includes(method))return alert("Indiquez le mode d'accord exprès.");
+ const origin=S.requalificationSource||"DEMANDE ISSUE DE RELAIS";
+ S.requalificationDecision={origin,sourceContract:"RELAIS",mission:"DÉCIDER",contract:"PRÉSENCE PROPRIÉTAIRES",price:"480 € TTC",confirmedAt:nowStamp(),agreementMethod:method,operatorValidated:true};
+ S.requalificationSource="";S.need="DECIDE";S.sub="DEC";S.obj="";
+ S.result={status:zone()?"PROPOSER":"DEVIS PRÉALABLE",mission:"DÉCIDER",price:"480 € TTC",cap:"2 h",contract:"PRÉSENCE PROPRIÉTAIRES",rest:"R2"};
+ save();showResult();
+}
+
 function classify(){
  let r={status:"À CLARIFIER",mission:"À CLARIFIER",price:"-",cap:"-",contract:"À DÉTERMINER",rest:""};
  if(S.caller==="B2B"){
@@ -825,6 +870,8 @@ function classify(){
  if(S.need==="FOLLOW"&&S.sub==="THREE")r={status:"PROPOSER",mission:"SUIVRE",price:"980 € TTC",cap:"3 x 1 h 30",contract:"PRÉSENCE PROPRIÉTAIRES",rest:"R3",multi:true};
  if(S.need==="FOLLOW"&&S.sub==="RECUR")r={status:"HORS PÉRIMÈTRE",mission:"SURVEILLANCE RÉCURRENTE",price:"-",cap:"-",contract:"-",rest:""};
  }
+ if(S.caller!=="B2B"&&S.universe==="RELAIS"&&r.mission==="DÉCIDER")return startRelaisDeciderRequalification("DEMANDE ISSUE DE RELAIS");
+ if(r.mission!=="DÉCIDER")S.requalificationDecision=null;
  if(r.status==="PROPOSER"&&!zone())r.status="DEVIS PRÉALABLE";S.result=r;showResult()
 }
 
@@ -1006,6 +1053,9 @@ function showResult(){
  ${quote?`<div class="row"><b>Prix</b><span>À CHIFFRER PAR DEVIS</span></div>`:priceRows()}
  <div class="row"><b>Plafond</b><span>${esc(r.cap)}</span></div>
  <div class="row"><b>Contrat</b><span>${esc(r.contract)}</span></div><div class="row"><b>Lieu d’intervention</b><span>${esc(S.city)}</span></div>
+ ${r.mission==="DÉCIDER"&&S.requalificationDecision?.mission==="DÉCIDER"?`<div class="notice"><b>REQUALIFICATION EXPLICITE VALIDÉE</b>Origine : ${esc(S.requalificationDecision.origin)}. Accord indiqué : ${esc(S.requalificationDecision.agreementMethod)} — ${esc(S.requalificationDecision.confirmedAt)}. Contrat PRÉSENCE PROPRIÉTAIRES, 480 € TTC.</div>`:""}
+ ${S.caller!=="B2B"&&S.universe==="RELAIS"&&["VOIR RELAIS","VOIR PRIORITAIRE RELAIS"].includes(r.mission)?`<div class="operatorOnly">VOIR RELAIS reste un constat ciblé. Une requalification est possible seulement si le besoin est réellement différent, avec votre validation et l'accord du client. Jamais automatique.</div>
+ ${relaisRequalificationLocked()?`<div class="warn">Dossier engagé : ne remplacez ni la mission ni son contrat ou son paiement. Créez une nouvelle demande distincte si nécessaire.</div>`:`<button class="btn ghost" onclick="startRelaisDeciderRequalification('${esc(r.mission)}')">BESOIN HORS VOIR ? EXAMINER UNE REQUALIFICATION</button>`}`:""}
  ${normal||quote ? objectSelector() : ""}
  ${needsCahier()?`<div class="warn"><b>Cadrage renforcé requis.</b><br>Avant réservation, cette mission doit disposer d'un brief/cahier des charges écrit précisant l'objectif, les points à éclaircir, les documents et informations à recueillir, les éventuelles questions à poser à des interlocuteurs et la restitution attendue.</div>`:""}
  ${quote?`<div class="warn"><b>Secteur hors zone directe.</b><br>Le tarif standard ne vaut pas commande. Un devis doit être établi et accepté avant de poursuivre.</div>
