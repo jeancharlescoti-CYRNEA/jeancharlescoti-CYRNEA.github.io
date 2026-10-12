@@ -726,6 +726,17 @@ const ownerNeeds=[
  ["OTHER","Autre","Besoin ne correspondant pas aux choix ci-dessus","STANDARD"]
 ];
 
+// Catalogue RELAIS validé au 12/10/2026. PRÉSENCE et B2B inchangés.
+const relaisNeeds=[
+ ["ART","Un artisan ou un professionnel doit intervenir","Accueil, présence courte et fermeture","STANDARD"],
+ ["DEL","Un livreur, installateur ou dépanneur doit intervenir","Accueil, présence courte et fermeture","STANDARD"],
+ ["KEY_GET","Récupérer vos clés, badges ou télécommandes","Une récupération ponctuelle auprès d’une personne désignée","STANDARD"],
+ ["KEY_GIVE","Remettre vos clés, badges ou télécommandes","Une remise ponctuelle à la personne désignée","STANDARD"],
+ ["OPEN","Ouvrir avant votre arrivée","Ouverture et actions simples convenues","STANDARD"],
+ ["WEATHER","Avant / après une intempérie","Action simple ou vérification courte","STANDARD"],
+ ["SEE","VOIR RELAIS","Observation factuelle et compte rendu","VIEW"],
+ ["OTHER","Autre demande","Besoin à qualifier séparément","STANDARD"]
+];
 const b2bNeeds=[
  ["BVISIT","VISITE TERRAIN PILOTÉE","Voir et documenter un site en Corse avant d’y déplacer une équipe ou un technicien.","PRESENCE"],
  ["BPROJECT","PRÉSENCE PROJET","Être présent sur site en Corse lorsque votre équipe est à distance, pour observer, échanger et documenter un moment important du projet.","PRESENCE"],
@@ -741,13 +752,13 @@ function needButton(v,name,goal,tag){
  return `<button class="${cls}" onclick="S.need='${v}';sub()"><span class="missionName">${esc(name)}</span><span class="missionGoal">${esc(goal)}</span></button>`;
 }
 function needs(){
- const list=S.caller==="B2B"?b2bNeeds:ownerNeeds;
+ const list=S.caller==="B2B"?b2bNeeds:(S.universe==="RELAIS"?relaisNeeds:ownerNeeds);
  draw(`<div class="card"><h1>Étape 2 — Pourquoi appelle-t-il ?</h1><div class="operatorOnly">Cliquez sur la phrase qui ressemble le plus à ce que dit le client. Vous pourrez revenir en arrière.</div><div class="choices">${list.map(x=>needButton(...x)).join("")}</div></div>`)
 }
 
 const subs={
- ART:[["ACCESS","Donner accès puis repartir"],["STAY","Rester pendant l’intervention"],["OBS","Observer / documenter après"],["DEC","Poser des questions pour une décision"],["COMPLEX","La demande est plus complexe / je ne sais pas"]],
- DEL:[["ACCESS","Donner accès puis repartir"],["STAY","Rester présent pendant le créneau"],["COMPLEX","La demande est plus complexe / je ne sais pas"]],
+ ART:[["ACCESS","Très court (~30 min) : accueillir, rester, refermer — 109 € TTC"],["STAY","Jusqu’à 1 h : accueillir, rester, refermer — 169 € TTC"],["OBS","Observer / documenter après"],["DEC","Poser des questions pour une décision"],["COMPLEX","Durée ou heure incertaine : à requalifier"]],
+ DEL:[["ACCESS","Très court (~30 min) : accueillir, rester, refermer — 109 € TTC"],["STAY","Jusqu’à 1 h : accueillir, rester, refermer — 169 € TTC"],["COMPLEX","Durée ou heure incertaine : à requalifier"]],
  THIRD:[["SIMPLE","Tiers identifié, accès simple"],["COMPLEX","Situation plus complexe"]],
  KEY:[["GIVE","Remettre"],["GET","Récupérer"]],
  OPEN:[["SIMPLE","Actions simples avant arrivée"],["EXC","Ménage/linge/courses/jardin/piscine/bricolage"]],
@@ -761,6 +772,10 @@ const subs={
 };
 
 function sub(){
+ if(S.universe==="RELAIS" && (S.need==="KEY_GET" || S.need==="KEY_GIVE")){
+   const action=S.need==="KEY_GET"?"GET":"GIVE";
+   S.need="KEY";S.sub=action;return classify();
+ }
  // Owner Presence missions are already explicit: no redundant second menu.
  if(S.caller!=="B2B" && S.need==="SEE"){S.sub="VISIBLE";return classify()}
  if(S.caller!=="B2B" && S.need==="DECIDE"){S.sub="DEC";return classify()}
@@ -803,12 +818,12 @@ function classify(){
  }
 }
  else{
- if(S.need==="ART"&&S.sub==="ACCESS")r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"cadre court, non horaire",contract:"RELAIS",rest:"R0"};
- if(S.need==="ART"&&S.sub==="STAY")r={status:"PROPOSER",mission:"RELAIS",price:"169 € TTC",cap:"1 h",contract:"RELAIS",rest:"R0"};
+ if(S.need==="ART"&&S.sub==="ACCESS")r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"opération très courte (~30 min), accès, présence et fermeture inclus",contract:"RELAIS",rest:"R0"};
+ if(S.need==="ART"&&S.sub==="STAY")r={status:"PROPOSER",mission:"RELAIS",price:"169 € TTC",cap:"1 h, accès, présence et fermeture inclus",contract:"RELAIS",rest:"R0"};
  if(S.need==="ART"&&S.sub==="COMPLEX")r={status:"À CLARIFIER",mission:"DEMANDE À REQUALIFIER",price:"-",cap:"-",contract:"À DÉTERMINER",rest:""};
  if(S.need==="ART"&&S.sub==="OBS")r=voir(); if(S.need==="ART"&&S.sub==="DEC")r={status:"PROPOSER",mission:"DÉCIDER",price:"480 € TTC",cap:"2 h",contract:"PRÉSENCE PROPRIÉTAIRES",rest:"R2"};
- if(S.need==="DEL"&&S.sub==="ACCESS")r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"cadre court, non horaire",contract:"RELAIS",rest:"R0"};
- if(S.need==="DEL"&&S.sub==="STAY")r={status:"PROPOSER",mission:"RELAIS",price:"169 € TTC",cap:"1 h",contract:"RELAIS",rest:"R0"};
+ if(S.need==="DEL"&&S.sub==="ACCESS")r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"opération très courte (~30 min), accès, présence et fermeture inclus",contract:"RELAIS",rest:"R0"};
+ if(S.need==="DEL"&&S.sub==="STAY")r={status:"PROPOSER",mission:"RELAIS",price:"169 € TTC",cap:"1 h, accès, présence et fermeture inclus",contract:"RELAIS",rest:"R0"};
  if(S.need==="DEL"&&S.sub==="COMPLEX")r={status:"À CLARIFIER",mission:"DEMANDE À REQUALIFIER",price:"-",cap:"-",contract:"À DÉTERMINER",rest:""};
  if(S.need==="THIRD"&&S.sub==="SIMPLE")r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"cadre court, non horaire",contract:"RELAIS",rest:"R0"};
  if(S.need==="THIRD"&&S.sub==="COMPLEX")r={status:"À CLARIFIER",mission:"DEMANDE À REQUALIFIER",price:"-",cap:"-",contract:"À DÉTERMINER",rest:""};
@@ -831,27 +846,25 @@ function classify(){
 function objectOptions(){
   let m=S.result?.mission||"", out=[];
   if(m==="RELAIS SIMPLE" && S.need==="ART" && S.sub==="ACCESS") out=[
-    "Donner accès au professionnel désigné puis repartir",
-    "Donner accès au professionnel désigné et lui transmettre la consigne prévue"
+    "Accueillir le professionnel, rester pendant l’opération très courte et refermer les lieux"
   ];
   else if(m==="RELAIS" && S.need==="ART" && S.sub==="STAY") out=[
-    "Être présent pendant l’intervention courte du professionnel désigné",
-    "Donner accès puis rester présent pendant le créneau convenu"
+    "Accueillir le professionnel, rester pendant l’intervention et refermer les lieux dans l’heure"
   ];
   else if(m==="RELAIS SIMPLE" && S.need==="DEL" && S.sub==="ACCESS") out=[
-    "Donner accès pour la livraison / installation / dépannage puis repartir"
+    "Accueillir le livreur ou technicien, rester pendant l’opération très courte et refermer"
   ];
   else if(m==="RELAIS" && S.need==="DEL" && S.sub==="STAY") out=[
-    "Rester présent pendant le créneau court de livraison / installation / dépannage"
+    "Accueillir le livreur ou technicien, rester pendant le créneau court et refermer dans l’heure"
   ];
   else if(m==="RELAIS SIMPLE" && S.need==="THIRD") out=[
     "Donner accès au tiers autorisé désigné"
   ];
   else if(m==="RELAIS SIMPLE" && S.need==="KEY" && S.sub==="GIVE") out=[
-    "Remettre la clé / le badge à la personne désignée"
+    "Remettre les clés, badges ou télécommandes à la personne désignée — une remise"
   ];
   else if(m==="RELAIS SIMPLE" && S.need==="KEY" && S.sub==="GET") out=[
-    "Récupérer la clé / le badge auprès de la personne désignée"
+    "Récupérer les clés, badges ou télécommandes auprès de la personne désignée — une récupération"
   ];
   else if(m==="RELAIS" && S.need==="OPEN") out=[
     "Ouvrir le bien avant l’arrivée et réaliser les actions simples convenues"
@@ -2321,7 +2334,7 @@ function preparationMission(){
  </div>
  <div class="guideTitle">ÉTAPE 2</div><div class="bigQuestion">Comment entre-t-on ?</div>
  <div class="field"><label>Mode d'accès</label>
-   <select id="mode"><option>Clés déjà détenues par CYRNEA</option><option>Clés à récupérer</option><option>Code / digicode</option><option>Accès donné par un tiers</option><option>Accès libre / accueil</option><option>Autre</option></select>
+   <select id="mode"><option>Clés reçues / disponibles avant la mission</option><option>Clés à récupérer</option><option>Code / digicode</option><option>Accès donné par un tiers</option><option>Accès libre / accueil</option><option>Autre</option></select>
  </div>
  ${b2b?`
  <div class="guideTitle">ÉTAPE 3</div><div class="bigQuestion">Y a-t-il quelqu’un à contacter sur place ?</div>
@@ -2479,13 +2492,13 @@ function showMissionDoc(kind){
 function terrainFactOptions(){
   const m=S.result?.mission||"";
   if(m==="RELAIS SIMPLE" && S.need==="ART" && S.sub==="ACCESS")
-    return ["Professionnel désigné présent","Identité / société vérifiée","Accès donné","CYRNEA a quitté les lieux après l’accès"];
+    return ["Professionnel désigné présent","Identité / société vérifiée","Accès donné","Présence pendant l’opération très courte","Lieux refermés avant le départ"];
   if(m==="RELAIS" && S.need==="ART" && S.sub==="STAY")
-    return ["Professionnel désigné présent","Identité / société vérifiée","Accès donné","CYRNEA est resté pendant le créneau convenu","CYRNEA a quitté les lieux à la fin du créneau"];
+    return ["Professionnel désigné présent","Identité / société vérifiée","Accès donné","Présence pendant l’opération (1 h maximum, fermeture comprise)","Lieux refermés avant le départ"];
   if(m==="RELAIS SIMPLE" && S.need==="DEL" && S.sub==="ACCESS")
-    return ["Livreur / intervenant présent","Accès donné","CYRNEA a quitté les lieux après l’accès"];
+    return ["Livreur / intervenant présent","Accès donné","Présence pendant l’opération très courte","Lieux refermés avant le départ"];
   if(m==="RELAIS" && S.need==="DEL" && S.sub==="STAY")
-    return ["Livreur / intervenant présent","Accès donné","CYRNEA est resté pendant le créneau convenu"];
+    return ["Livreur / intervenant présent","Accès donné","Présence pendant l’opération (1 h maximum, fermeture comprise)","Lieux refermés avant le départ"];
   if(m==="RELAIS SIMPLE" && S.need==="THIRD")
     return ["Tiers autorisé présent","Identité vérifiée","Accès donné"];
   if(m==="RELAIS SIMPLE" && S.need==="KEY" && S.sub==="GIVE")
