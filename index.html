@@ -548,6 +548,16 @@ async function deleteActiveMission(id){
  const map=loadActiveMissionMap();
  const st=map[id];
  if(!st)return alert("Cette mission active n’existe plus.");
+ if(st.keyCustody?.receivedAt){
+   const k=st.keyCustody,p=st.accessPlan||{};
+   const returnDone=!!k.returnAt&&!!k.proof&&(
+     ((k.status==="PERSON"||k.status==="BOX")&&k.status===p.returnMode)||
+     (k.status==="POST_DELIVERED"&&p.returnMode==="POST"&&!!k.tracking&&!!k.deposit)
+   );
+   if(!returnDone)return alert("Suppression interdite : des clés reçues sont encore à restituer ou leur livraison postale n’est pas confirmée. Conservez la mission active.");
+ }
+ if(st.overrun?.accepted&&st.overrun.paymentStatus!=="PAID")
+   return alert("Suppression interdite : supplément de prolongation encore à encaisser. Conservez la mission active.");
  const label=(st.result?.mission||"Mission")+" — "+(st.name||"Client");
  if(!confirm("SUPPRIMER CE DOSSIER ACTIF ?\n\n"+label+"\n\nCette suppression sera synchronisée sur les autres appareils."))return;
 
@@ -2115,9 +2125,14 @@ function saveAccessIntake(){
  const p={approved:true,mode,keyOrigin:isKeyMission()&&S.sub==="GIVE"?document.getElementById("keyOrigin")?.value||"":"",contact:(document.getElementById("accContact")?.value||"").trim(),exact:!!document.getElementById("accExact")?.checked,duration:document.getElementById("accDuration")?.value||"",
  returnMode:(document.getElementById("accReturn")?.value||""),returnDetail:(document.getElementById("accReturnDetail")?.value||"").trim()};
  if(!isKeyMission()&&!["LOCAL","POST"].includes(mode)){p.returnMode="";p.returnDetail="";}
+ const changedAccess=(old.mode!==p.mode||old.keyOrigin!==p.keyOrigin||old.returnMode!==p.returnMode||old.returnDetail!==p.returnDetail);
+ if(S.keyCustody?.receivedAt && changedAccess){
+   alert("Clés déjà reçues : impossible de remplacer le mode d’accès ou leur destination et d’effacer la traçabilité. Conservez le dossier ouvert et faites acter toute nouvelle modalité de restitution avant correction.");
+   return accessIntake();
+ }
  S.accessPlan=p;
  if(!accessAllowed()){p.approved=false;save();alert("Accès non qualifié ou impossible pour ce créneau. Vérifiez la durée, l’heure exacte, les clés et leur restitution. Aucun paiement lancé.");return accessIntake();}
- if(!hasKeyCustody()||old.mode!==p.mode||old.returnMode!==p.returnMode||old.returnDetail!==p.returnDetail)S.keyCustody={};
+ if(!hasKeyCustody()||changedAccess)S.keyCustody={};
  save();bookingHandoff();
 }
 
