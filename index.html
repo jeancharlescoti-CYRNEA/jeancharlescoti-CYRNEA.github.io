@@ -2316,6 +2316,7 @@ function confirmAcceptedAlternative(){
  const check=validateMissionTimeRules(d,t,"le créneau alternatif");
  if(!check.ok)return alert(check.msg);
  S.date=d;S.slot=t;S.multiSlots=[];S.availability=autoConstraints(d,t);
+ if(!accessAllowed()){alert("Nouveau créneau : accès à requalifier avant confirmation (notamment si moins de 24 h).");return accessIntake();}
  S.decisionStatus="CONFIRMED_AFTER_ALTERNATIVE";
  S.paymentStatus="PAID_CONFIRMED";
  if(!S.missionId)S.missionId=missionId();
@@ -2524,6 +2525,7 @@ function ready(){
  draw(`<div class="card"><h1>Avant de partir</h1>
  <div class="operatorOnly">Cochez les contrôles un par un. Si vous ne pouvez pas cocher une ligne, revenez à la préparation.</div>
  <div class="guideTitle">CONTRÔLE DÉPART</div>
+ ${isOwnerAccessMission()?`<div class="notice"><b>ORGANISATION DE L’ACCÈS</b> — ${esc(S.accessPlan?.mode||"Non renseigné")}<br><button class="btn ghost" onclick="accessIntake()">REVOIR L’ACCÈS ET LA RESTITUTION</button></div>`:""}
  ${hasKeyCustody()?`<div class="${keysReadyForTerrain()?"notice":"stop"}"><b>CLÉS CONFIÉES</b> — ${S.keyCustody?.receivedAt?"Réception enregistrée":"Réception en attente"}<br><button class="btn ghost" onclick="keysTracker()">ENREGISTRER LA RÉCEPTION / LE SUIVI</button></div>`:""}
  <label class="check"><input type="checkbox" name="readyCheck"><span>J’ai l’adresse exacte et je sais où arriver.</span></label>
  <label class="check"><input type="checkbox" name="readyCheck"><span>La réservation / le créneau est confirmé.</span></label>
@@ -2536,6 +2538,7 @@ function ready(){
  <div class="row"><b>Objet</b><span>${esc(S.obj)}</span></div>
  <div class="row"><b>Adresse</b><span>${esc(S.prep.addr||"-")}</span></div>
  <div class="row"><b>Accès</b><span>${esc(S.prep.access||"-")} — ${esc(S.prep.mode||"-")}</span></div>
+ ${isOwnerAccessMission()?`<div class="row"><b>Accès convenu</b><span>${esc(S.accessPlan?.mode||"-")}${S.accessPlan?.returnMode?" — restitution : "+esc(S.accessPlan.returnMode)+" — "+esc(S.accessPlan.returnDetail||""):""}</span></div>`:""}
  <div class="row"><b>Contact</b><span>${esc(S.prep.contact||"AUCUN")}</span></div>
  <div class="row"><b>Restitution</b><span>${esc(p.rest)}</span></div>
  </div>
@@ -2543,7 +2546,7 @@ function ready(){
  </div>`)
 }
 function startTerrainFromReady(){
- if(!accessAllowed())return alert('Accès non sécurisé : mission non prête.');
+ if(!accessAllowed()){alert('Accès non sécurisé : qualifier la solution avant de partir.');return accessIntake();}
  if(!keysReadyForTerrain())return alert('Clés non reçues : enregistrez la réception avant de partir.');
  if(!allChecked("input[name='readyCheck']")) return alert("Cochez tous les contrôles avant de partir.");
  missionDesk();
