@@ -2028,6 +2028,8 @@ async function registerTallyIntent(){
  return out.data;
 }
 async function openTallySecure(){
+ if(!accessAllowed())return accessIntake();
+
  const popup=window.open("about:blank","_blank");
  if(!popup)return alert("Le navigateur a bloqué l’ouverture de Tally. Autorisez les fenêtres surgissantes pour cette PWA.");
 
@@ -2061,7 +2063,108 @@ function openSimplyBook(){
  if(!url) return alert("Le lien de ce portail SimplyBook n’est pas encore enregistré. Ouvrez RÉGLAGES SIMPLYBOOK.");
  window.open(url,"_blank","noopener");
 }
+function isOwnerAccessMission(){return S.result && ["RELAIS","PRÉSENCE PROPRIÉTAIRES"].includes(S.result.contract)}
+
+function isKeyMission(){return S.result?.contract==="RELAIS"&&S.need==="KEY"}
+
+function hasKeyCustody(){return isOwnerAccessMission()&&(isKeyMission()||["LOCAL","POST"].includes(S.accessPlan?.mode))}
+
+function accessAllowed(){
+ if(!isOwnerAccessMission())return true;
+ const p=S.accessPlan||{};
+ if(!p.approved)return false;
+ if(p.mode==="NONE")return false;
+ if(p.mode==="POST"&&autoConstraints(S.date,S.slot).priority)return false;
+ if(["ART","DEL","OPEN"].includes(S.need)&&p.mode==="OUTSIDE")return false;
+ if(["ART","DEL"].includes(S.need)&&S.result.contract==="RELAIS"&&(!p.exact||(S.sub==="ACCESS"&&p.duration!=="SHORT")||(S.sub==="STAY"&&!["SHORT","HOUR"].includes(p.duration))))return false;
+ if(["LOCAL","PERSON","KEY"].includes(p.mode)&&!p.contact)return false;
+ if(hasKeyCustody()&&(!p.returnMode||!p.returnDetail))return false;
+ return true;
+}
+
+function accessIntake(){
+ setStage("RÉSERVATION");
+ const p=S.accessPlan||{},key=isKeyMission(),name=S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE";
+ const opt=(v,label,selected)=>`<option value="${v}" ${selected===v?"selected":""}>${label}</option>`;
+ draw(`<div class="card"><h1>Organiser l’accès — ${name}</h1>
+ <div class="operatorOnly">Cette vérification concerne la faisabilité matérielle. Le client certifie personnellement son droit d’accès dans Tally. Ne saisir aucun code secret ici.</div>
+ ${key?`<div class="notice">Une seule remise OU récupération de clés / badges / télécommandes : pas d’accès au bien dans cette mission.</div>`:`<div class="field"><label>Comment ${name} accédera-t-il au bien ?</label><select id="accMode">
+ ${opt("BOX","Accès disponible : code / boîte à clés",p.mode||"BOX")}
+ ${opt("PERSON","Une personne ouvrira sur place",p.mode||"BOX")}
+ ${opt("LOCAL","Clés à récupérer chez une personne en Corse",p.mode||"BOX")}
+ ${opt("POST","Clés uniquement sur le continent, envoi postal nécessaire",p.mode||"BOX")}
+ ${opt("OUTSIDE","Mission extérieure sans entrée nécessaire",p.mode||"BOX")}
+ ${opt("NONE","Aucune solution d’accès",p.mode||"BOX")}</select></div>`}
+ <div class="field"><label>Contact local / personne qui remettra ou récupérera les clés (si applicable)</label><input id="accContact" placeholder="Nom — téléphone — rendez-vous précis" value="${esc(p.contact||"")}"></div>
+ ${S.result.contract==="RELAIS"&&["ART","DEL"].includes(S.need)?`<label class="check"><input type="checkbox" id="accExact" ${p.exact?"checked":""}><span>Rendez-vous à heure précise (pas de plage d’arrivée de plusieurs heures)</span></label><div class="field"><label>Durée totale, fermeture comprise</label><select id="accDuration">${opt("","À qualifier",p.duration||"")}${opt("SHORT","Très courte, environ 30 minutes",p.duration||"")}${opt("HOUR","Jusqu’à 1 heure",p.duration||"")}${opt("LONG","Plus longue ou indéterminée",p.duration||"")}</select></div>`:""}
+ <div class="field"><label>Destination finale des clés, si des clés sont confiées</label><select id="accReturn">
+ ${opt("","Aucune clé confiée / à sélectionner",p.returnMode||"")}
+ ${opt("PERSON","Rendre à la personne désignée",p.returnMode||"")}
+ ${opt("POST","Retour postal standard en France inclus",p.returnMode||"")}
+ ${opt("BOX","Dépôt dans le dispositif convenu",p.returnMode||"")}</select></div>
+ <div class="field"><label>Nom / adresse du destinataire ou emplacement convenu</label><input id="accReturnDetail" value="${esc(p.returnDetail||"")}" placeholder="À renseigner lorsque des clés sont confiées"></div>
+ <div class="warn"><b>STOP -24 H</b>Si les clés doivent encore venir du continent et qu’aucun autre accès n’est possible : ne pas ouvrir Tally ni encaisser. Reporter ou obtenir un accès local effectif.</div>
+ <div class="notice">Le retour postal standard des clés en France est inclus dans le tarif, sans étiquette prépayée à demander au propriétaire.</div>
+ <button class="btn primary" onclick="saveAccessIntake()">VALIDER L’ACCÈS ET CONTINUER</button><button class="btn ghost" onclick="slot()">MODIFIER LE CRÉNEAU</button></div>`);
+}
+
+function saveAccessIntake(){
+ const old=S.accessPlan||{};
+ const mode=isKeyMission()?"KEY":document.getElementById("accMode")?.value||"BOX";
+ const p={approved:true,mode,contact:(document.getElementById("accContact")?.value||"").trim(),exact:!!document.getElementById("accExact")?.checked,duration:document.getElementById("accDuration")?.value||"",
+ returnMode:(document.getElementById("accReturn")?.value||""),returnDetail:(document.getElementById("accReturnDetail")?.value||"").trim()};
+ if(!isKeyMission()&&!["LOCAL","POST"].includes(mode)){p.returnMode="";p.returnDetail="";}
+ S.accessPlan=p;
+ if(!accessAllowed()){p.approved=false;save();alert("Accès non qualifié ou impossible pour ce créneau. Vérifiez la durée, l’heure exacte, les clés et leur restitution. Aucun paiement lancé.");return accessIntake();}
+ if(!hasKeyCustody()||old.mode!==p.mode||old.returnMode!==p.returnMode||old.returnDetail!==p.returnDetail)S.keyCustody={};
+ save();bookingHandoff();
+}
+
+function keysReadyForTerrain(){return !hasKeyCustody()||(isKeyMission()&&S.sub==="GET")||!!S.keyCustody?.receivedAt}
+
+function keysFullyReturned(){
+ if(!hasKeyCustody())return true;
+ const k=S.keyCustody||{};
+ if(!k.receivedAt||!k.returnAt||!k.proof)return false;
+ if(k.status==="PERSON"||k.status==="BOX")return k.status===S.accessPlan?.returnMode;
+ return k.status==="POST_DELIVERED"&&S.accessPlan?.returnMode==="POST"&&!!k.tracking&&!!k.deposit;
+}
+
+function keysTracker(){
+ if(!hasKeyCustody())return ready();
+ setStage(S.departureAt?"CLÔTURE":"PRÊTE");
+ const k=S.keyCustody||{};
+ const opt=(v,label,current)=>`<option value="${v}" ${current===v?"selected":""}>${label}</option>`;
+ draw(`<div class="card"><h1>Suivi des clés confiées</h1>
+ <div class="row"><b>Retour prévu</b><span>${esc(S.accessPlan?.returnMode)} — ${esc(S.accessPlan?.returnDetail)}</span></div>
+ <div class="field"><label>Réception physique constatée ?</label><select id="keyReceived">${opt("NO","Non",k.receivedAt?"YES":"NO")}${opt("YES","Oui",k.receivedAt?"YES":"NO")}</select></div>
+ <div class="field"><label>Provenance / personne ayant remis les clés</label><input id="keySource" value="${esc(k.source||"")}"></div>
+ <div class="field"><label>Restitution</label><select id="keyStatus">${opt("PENDING","En attente",k.status||"PENDING")}${opt("PERSON","Remises à la personne convenue",k.status||"")}${opt("BOX","Déposées dans le dispositif convenu",k.status||"")}${opt("POST_SENT","Courrier expédié, livraison en attente",k.status||"")}${opt("POST_DELIVERED","Courrier livré et remise confirmée",k.status||"")}</select></div>
+ <div class="field"><label>Preuve de restitution ou nom du destinataire</label><input id="keyProof" value="${esc(k.proof||"")}"></div>
+ <div class="field"><label>Numéro de suivi postal</label><input id="keyTracking" value="${esc(k.tracking||"")}"></div>
+ <div class="field"><label>Référence du justificatif de dépôt</label><input id="keyDeposit" value="${esc(k.deposit||"")}"></div>
+ <div class="warn">Ne pas archiver tant que les clés ne sont pas restituées, ou tant que le retour postal n’est pas distribué.</div>
+ <button class="btn primary" onclick="saveKeysTracker()">ENREGISTRER</button></div>`);
+}
+
+function saveKeysTracker(){
+ const old=S.keyCustody||{},received=document.getElementById("keyReceived")?.value==="YES",status=document.getElementById("keyStatus")?.value||"PENDING";
+ const source=(document.getElementById("keySource")?.value||"").trim(),proof=(document.getElementById("keyProof")?.value||"").trim(),tracking=(document.getElementById("keyTracking")?.value||"").trim(),deposit=(document.getElementById("keyDeposit")?.value||"").trim();
+ if(status!=="PENDING"&&!received)return alert("Enregistrer d’abord la réception effective des clés.");
+ if(["PERSON","BOX"].includes(status)&&status!==S.accessPlan?.returnMode)return alert("Restitution différente de ce qui était convenu : obtenir un nouvel accord.");
+ if(["POST_SENT","POST_DELIVERED"].includes(status)&&S.accessPlan?.returnMode!=="POST")return alert("Retour postal non convenu.");
+ if(status!=="PENDING"&&!proof)return alert("Préciser la preuve ou le destinataire de la restitution.");
+ if(["POST_SENT","POST_DELIVERED"].includes(status)&&(!tracking||!deposit))return alert("Suivi et justificatif de dépôt indispensables.");
+ const now=new Date().toISOString();
+ S.keyCustody={source,receivedAt:received?(old.receivedAt||now):"",status,proof,tracking,deposit,
+ returnAt:["PERSON","BOX","POST_DELIVERED"].includes(status)?(old.status===status&&old.returnAt?old.returnAt:now):"",
+ sentAt:["POST_SENT","POST_DELIVERED"].includes(status)?(old.sentAt||now):""};
+ save();if(S.departureAt)closeMission();else ready();
+}
+
 function bookingHandoff(){
+ if(isOwnerAccessMission()&&!accessAllowed())return accessIntake();
+
  if(!assertVoirContractInvariant())return;
  setStage("RÉSERVATION");
  const multi=!!S.result?.multi;
@@ -2173,6 +2276,8 @@ function postPaymentDecision(){
  </div>`);
 }
 function decisionConfirmed(){
+ if(!accessAllowed())return accessIntake();
+
  S.decisionStatus="CONFIRMED";
  S.paymentStatus="PAID_CONFIRMED";
  if(!S.missionId)S.missionId=missionId();
@@ -2419,6 +2524,7 @@ function ready(){
  draw(`<div class="card"><h1>Avant de partir</h1>
  <div class="operatorOnly">Cochez les contrôles un par un. Si vous ne pouvez pas cocher une ligne, revenez à la préparation.</div>
  <div class="guideTitle">CONTRÔLE DÉPART</div>
+ ${hasKeyCustody()?`<div class="${keysReadyForTerrain()?"notice":"stop"}"><b>CLÉS CONFIÉES</b> — ${S.keyCustody?.receivedAt?"Réception enregistrée":"Réception en attente"}<br><button class="btn ghost" onclick="keysTracker()">ENREGISTRER LA RÉCEPTION / LE SUIVI</button></div>`:""}
  <label class="check"><input type="checkbox" name="readyCheck"><span>J’ai l’adresse exacte et je sais où arriver.</span></label>
  <label class="check"><input type="checkbox" name="readyCheck"><span>La réservation / le créneau est confirmé.</span></label>
  <label class="check"><input type="checkbox" name="readyCheck"><span>Je sais exactement ce que je dois faire / observer.</span></label>
@@ -2437,6 +2543,8 @@ function ready(){
  </div>`)
 }
 function startTerrainFromReady(){
+ if(!accessAllowed())return alert('Accès non sécurisé : mission non prête.');
+ if(!keysReadyForTerrain())return alert('Clés non reçues : enregistrez la réception avant de partir.');
  if(!allChecked("input[name='readyCheck']")) return alert("Cochez tous les contrôles avant de partir.");
  missionDesk();
 }
@@ -3206,6 +3314,7 @@ function closeMission(){
  <div class="row"><b>Arrivée</b><span>${esc(S.arrivalAt)}</span></div>
  <div class="row"><b>Départ</b><span>${esc(S.departureAt)}</span></div>
  <div class="row"><b>Incident</b><span>${esc(S.incident||"Aucun")}</span></div>
+ ${hasKeyCustody()?`<div class="${keysFullyReturned()?"notice":"stop"}"><b>CLÉS</b> — ${keysFullyReturned()?"Restitution confirmée":"Restitution en attente : archivage bloqué"}<br><button class="btn ghost" onclick="keysTracker()">RÉCEPTION / RESTITUTION / SUIVI POSTAL</button></div>`:""}
  ${paymentBlock}
  ${unpaidOverrun
    ? `<div class="row"><b>Statut du dossier</b><span>MISSION TERRAIN TERMINÉE — SUPPLÉMENT À ENCAISSER</span></div>`
@@ -3221,13 +3330,14 @@ function closeMission(){
  </div>`);
 }
 function finalizeArchive(){
+ if(!keysFullyReturned())return alert('Archive bloquée : clés non restituées ou retour postal non distribué.');
  if(S.overrun?.accepted && S.overrun.paymentStatus!=="PAID"){
    return alert("Supplément de prolongation non réglé. La mission ne peut pas être archivée définitivement tant que le paiement n’est pas confirmé.");
  }
  S.finalStatus=document.getElementById("fs")?.value||S.finalStatus||"MISSION CLÔTURÉE";
  save();archive();
 }
-function archive(){setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button id="archiveExportBtn" class="btn primary" onclick="exportMissionArchive()">EXPORTER LE DOSSIER → FICHIERS / iCLOUD</button><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
+function archive(){if(!keysFullyReturned()&&S.paymentStatus!=="REFUNDED")return closeMission();setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button id="archiveExportBtn" class="btn primary" onclick="exportMissionArchive()">EXPORTER LE DOSSIER → FICHIERS / iCLOUD</button><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
 function exportJSON(){let b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(S.missionId||"CYRNEA-DEMO")+".json";a.click();URL.revokeObjectURL(a.href)}
 function recoverNewerStageViewState(){
  const baseId=activeMissionKey(S);
