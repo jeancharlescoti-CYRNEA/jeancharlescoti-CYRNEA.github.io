@@ -22,11 +22,11 @@ jobs:
           npm install --no-save playwright@1.58.2
           npx playwright install --with-deps chromium
       - name: Tests en lecture seule — zéro soumission, zéro paiement
-        run: node tests/relais-audit/probe.cjs
+        run: node tests/relais-audit/conditional.cjs
       - name: Conserver les observations et preuves
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: relais-standard-audit-preuves
-          path: relais-audit-results/
+          name: relais-conditionnels-preuves
+          path: conditional-audit-results/
           retention-days: 7
