@@ -15,7 +15,7 @@ const I={
   rights:'f1dc6226-2cc8-4bc7-85af-4c8593711fbe',
   alone:'355a5d55-3bf9-4e50-93e2-5cbbfba0ce1a',
   material:'a8032422-b3a0-49a8-b004-d430b08de1ae',
-  keysCorsica:'fc91338a-2de6-4fcf-9c85-944c47bcd42d',
+  keysCorsica:'2f16adb9-ec87-4b45-aee2-b7c09bd4f138',
   under24:'265977a9-c01e-4482-bc4c-d34e705d915b',
   restitution:'6a42d8bd-7ab8-42f6-800d-7b1889a49710'
 };
@@ -82,8 +82,8 @@ async function caseRun(browser,name,mission,run){
  try{
   await open(page,mission);
   const actual=await run(page);
-  results.push({name,status:'PASS',...(actual||{})});
-  console.log('CASE_PASS '+JSON.stringify({name,...actual}));
+  results.push({name,status:'EXECUTED',...(actual||{})});
+  console.log('CASE_EXECUTED '+JSON.stringify({name,...actual}));
  }catch(e){const err=String(e?.message||e).slice(0,800);results.push({name,status:'INCOMPLETE',error:err});console.log('CASE_INCOMPLETE '+JSON.stringify({name,error:err}));await page.screenshot({path:OUT+'/'+name+'-issue.png',fullPage:true}).catch(()=>{});}
  finally{await page.close()}
 }
@@ -149,5 +149,5 @@ async function caseRun(browser,name,mission,run){
   });
  }finally{await browser.close()}
  fs.writeFileSync(OUT+'/REPORT.json',JSON.stringify(results,null,2));
- console.log('RESULT_SUMMARY '+JSON.stringify({total:results.length,pass:results.filter(x=>x.status==='PASS').length,fail:results.filter(x=>x.status==='FAIL').length,incomplete:results.filter(x=>x.status==='INCOMPLETE').length}));
+ const sum={total:results.length,pass:results.filter(x=>x.status==='PASS').length,fail:results.filter(x=>x.status==='FAIL').length,incomplete:results.filter(x=>x.status==='INCOMPLETE').length,executed:results.filter(x=>x.status==='EXECUTED').length};console.log('RESULT_SUMMARY '+JSON.stringify(sum));if(sum.fail||sum.incomplete)process.exitCode=1;
 })().catch(e=>{console.error('FATAL',e);process.exitCode=1});
