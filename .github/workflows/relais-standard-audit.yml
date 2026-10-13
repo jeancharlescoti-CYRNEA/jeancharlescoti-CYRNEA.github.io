@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - audit/relais-standard-20261013
+    paths:
+      - 'tests/relais-audit/probe.cjs'
+      - 'tests/relais-audit/conditional.cjs'
   workflow_dispatch:
 
 permissions:
