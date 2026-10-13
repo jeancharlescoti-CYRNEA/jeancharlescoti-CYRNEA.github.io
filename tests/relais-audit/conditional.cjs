@@ -34,7 +34,7 @@ async function state(page,label){
   let restitution=text.includes('Que devra faire RELAIS des clés, badges ou télécommandes à l’issue de la mission ?')||text.includes("Que devra faire RELAIS des clés, badges ou télécommandes à l'issue de la mission ?");
   let laPoste=text.includes('Vous pourrez expédier vos clés depuis le continent');
   let legal=text.includes('ACCÈS AUTONOME IMPOSSIBLE');
-  let material=text.includes('La disponibilité des clés ne permet pas')||text.includes("Aucun moyen d'accès n'est actuellement disponible")||text.includes("L'accès nécessaire à votre mission ne peut pas");
+  let material=text.includes('La disponibilité des clés ne permet pas de confirmer')||text.includes("Aucun moyen d'accès n'est actuellement disponible pour réaliser votre mission")||text.includes("L'accès nécessaire à votre mission ne peut pas être organisé");
   return {deadlineTitle,deadlineVisible:vis(dead),deadlineLabel:dead?.getAttribute('aria-label')||'',restitution,laPoste,legal,material,payment:!!btn&&vis(btn),total:text.match(/Total à régler[^\n]*/)?.[0]||'', phoneHint:text.includes('Si l’indicatif +33')||text.includes("Si l'indicatif +33")};
  },I.deadline);
  observations.push({label,...x});console.log('STATE '+JSON.stringify({label,...x}));return x;
@@ -108,6 +108,7 @@ async function test(browser,name,fn){
     let s=await state(p,'recuperer-keys-direct');
     // Business doctrine: holding recovered keys temporarily must trigger restitution options.
     assert('RECUPERER_RESTITUTION_PRESENT',s.restitution,s.restitution,true);
+    assert('RECUPERER_DIRECT_NO_LAPOSTE',!s.laPoste,s.laPoste,false);
   });
   await test(browser,'ACCESS_AUTH_MISSING',async p=>{
     await pick(p,'op',0);await pick(p,'private',0);
