@@ -27,7 +27,7 @@ async function one(browser,mission,amount,viewportName,vp) {
   let body=document.body.innerText||'';
   let inp=[...document.querySelectorAll('input')].filter(vis).map(e=>({id:e.id,type:e.type,required:e.required,aria:e.getAttribute('aria-label'),placeholder:e.placeholder,value:e.value,outer:e.outerHTML.slice(0,540)}));
   let tel=[...document.querySelectorAll('input[type=tel]')].map(e=>({id:e.id,name:e.name,required:e.required,placeholder:e.placeholder,pattern:e.pattern,autocomplete:e.autocomplete,disabled:e.disabled,readOnly:e.readOnly,value:e.value,aria:e.getAttribute('aria-label'),parent:e.parentElement?.parentElement?.outerHTML.slice(0,1850)}));
-  let labels=[...document.querySelectorAll('label')].map(e=>read=e.innerText.trim()).filter(Boolean);
+  let labels=[...document.querySelectorAll('label')].map(e=>e.innerText.trim()).filter(Boolean);
   let links=[...document.querySelectorAll('a')].map(e=>({text:e.innerText.trim(),href:e.href,visible:vis(e)})).filter(x=>x.visible);
   let formCount=document.querySelectorAll('form').length;
   let phoneText=document.body.innerText.match(/Téléphone.{0,120}/)?.[0]||'';
@@ -42,7 +42,7 @@ async function one(browser,mission,amount,viewportName,vp) {
  report(base+'_PRICE',d.total.includes(amount+' € TTC'),{expected:amount,got:d.total});
  report(base+'_MOBILE_WIDTH',d.scrollWidth<=d.innerWidth+2,{scrollWidth:d.scrollWidth,innerWidth:d.innerWidth});
  report(base+'_PREFILL',d.body.includes(mission)&&d.body.includes('2026-10-15 10:00'),{missionVisible:d.body.includes(mission),dateVisible:d.body.includes('2026-10-15 10:00')});
- report(base+'_PHONE_LABEL',d.body.includes('Téléphone')&&d.phoneText.includes('Exemple : 06 12 34 56 78'),{phoneText:d.phoneText});
+ report(base+'_PHONE_LABEL',d.body.includes('Téléphone')&&d.body.includes('Exemple : 06 12 34 56 78'),{phoneText:d.phoneText});
  report(base+'_PHONE_REQUIRED',d.tel.length===1&&d.tel[0].required,{telCount:d.tel.length,required:d.tel.map(x=>x.required)});
  report(base+'_PHONE_HINT_COUNTRY',d.body.includes('+33')&&d.body.includes('ne le saisissez pas une seconde fois'),{hint:d.phoneText});
  report(base+'_CGV_V16',d.links.some(l=>l.href.includes('cyrnea-contrats-tally.pages.dev/relais-cgv-v16-2026-10-05.pdf')),{cgvs:d.links.filter(l=>l.href.includes('cgv'))});
