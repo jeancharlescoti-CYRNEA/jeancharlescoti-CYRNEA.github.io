@@ -113,9 +113,19 @@ async function runMatrix(browser){
         await caseRun(browser,name,mission,async page=>{
           if(mission==='RELAIS SIMPLE')await pick(page,I.operation,0);
           await pick(page,I.privateAccess,0);
-          await pick(page,I.rights,rights);
-          await pick(page,I.alone,access);
-          if(access===1)await pick(page,I.material,0); // locally usable code, isolate legal STOP
+          // On an accompanied access, select the access mode BEFORE rights.
+          // This avoids Tally's re-render during the rights=OUI transition
+          // intercepting an otherwise valid radio selection.
+          if(access===0){
+            await pick(page,I.alone,access);
+            await pick(page,I.rights,rights);
+          }else{
+            await pick(page,I.rights,rights);
+            await pick(page,I.alone,access);
+            await pick(page,I.material,0);
+          }
+          const accessActuallySelected=await page.locator('input[type="radio"][name="multiple_choice_'+I.alone+'"]').nth(access).isChecked();
+          if(!accessActuallySelected)throw new Error('ACCESS_CHOICE_LOST_AFTER_RIGHTS_CHANGE_'+rights+'_'+access); // locally usable code, isolate legal STOP
           const shouldBlock=rights!==0&&access===1;
           await assertCase(page,name,shouldBlock,{legal:shouldBlock});
         });
