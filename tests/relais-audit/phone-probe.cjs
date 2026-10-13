@@ -5,6 +5,7 @@ const variants=[
  {label:'no_phone',value:null},
  {label:'national_06',value:'0612345678'},
  {label:'international_plus33',value:'+33612345678'},
+ {label:'actual_pwa_formatted',value:'+33 6 12 34 56 78'},
  {label:'international_0033',value:'0033612345678'},
  {label:'national_without_zero',value:'612345678'}
 ];
