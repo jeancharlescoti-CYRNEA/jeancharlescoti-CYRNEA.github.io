@@ -8,6 +8,7 @@ on:
       - 'tests/relais-audit/conditional.cjs'
       - 'tests/relais-audit/full-qa.cjs'
       - 'tests/relais-audit/survey.cjs'
+      - 'tests/relais-audit/phone-probe.cjs'
   workflow_dispatch:
 
 permissions:
@@ -27,11 +28,11 @@ jobs:
           npm install --no-save playwright@1.58.2
           npx playwright install --with-deps chromium
       - name: Tests en lecture seule — zéro soumission, zéro paiement
-        run: node tests/relais-audit/survey.cjs
+        run: node tests/relais-audit/phone-probe.cjs
       - name: Conserver les observations et preuves
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: relais-survey-preuves
-          path: survey-results/
+          name: relais-phone-diagnostic
+          path: tests/relais-audit/phone-probe.cjs
           retention-days: 7
