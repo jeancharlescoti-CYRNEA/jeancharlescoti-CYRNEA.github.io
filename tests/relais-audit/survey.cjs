@@ -35,3 +35,5 @@ async function sel(page,id,n){const l=page.locator('input[type=radio][name="mult
   fs.mkdirSync('survey-results',{recursive:true});fs.writeFileSync('survey-results/relais-questions.json',JSON.stringify(f,null,2));
  }finally{await browser.close()}
 })().catch(e=>{console.error('ERROR',String(e));process.exitCode=1});
+
+// Read-only survey of the production form; no submissions.
