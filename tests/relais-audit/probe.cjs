@@ -87,6 +87,103 @@ async function caseRun(browser,name,mission,run){
  }catch(e){const err=String(e?.message||e).slice(0,800);results.push({name,status:'INCOMPLETE',error:err});console.log('CASE_INCOMPLETE '+JSON.stringify({name,error:err}));await page.screenshot({path:OUT+'/'+name+'-issue.png',fullPage:true}).catch(()=>{});}
  finally{await page.close()}
 }
+
+/**
+ * Finite matrix of meaningful STOP states (rather than the full Cartesian
+ * product, which would include logically inaccessible form branches).
+ * Every test loads a fresh PUBLIC form. No submit is EVER clicked.
+ */
+async function runMatrix(browser){
+  const missions=Object.keys(tariffs);
+  const payVisible=d=>d.summary.button.some(x=>x.visible&&!x.disabled);
+  async function assertCase(page,name,blocked,{legal=false,material=false}={}){
+    const d=await diagnostic(page,'matrix-'+String(results.length).padStart(3,'0'));
+    const pay=payVisible(d);
+    const blockingMessage=legal?d.summary.stopLegal:material?d.summary.stopMaterial:true;
+    const ok=(pay!==blocked)&&blockingMessage;
+    const item={name,status:ok?'PASS':'FAIL',expectedBlocked:blocked,actualPaymentVisible:pay,expectedStopKind:legal?'legal':material?'material':'none',legalMessage:d.summary.stopLegal,materialMessage:d.summary.stopMaterial,total:d.total};
+    results.push(item);
+    console.log('MATRIX '+JSON.stringify(item));
+  }
+  for(let [mi,mission] of missions.entries()){
+    // 3 legal-rights answers x 2 ways to get into a private space.
+    for(const rights of [0,1,2]){
+      for(const access of [0,1]){
+        const name='LEGAL_'+mi+'_RIGHTS_'+rights+'_ACCESS_'+access;
+        await caseRun(browser,name,mission,async page=>{
+          if(mission==='RELAIS SIMPLE')await pick(page,I.operation,0);
+          await pick(page,I.privateAccess,0);
+          await pick(page,I.rights,rights);
+          await pick(page,I.alone,access);
+          if(access===1)await pick(page,I.material,0); // locally usable code, isolate legal STOP
+          const shouldBlock=rights!==0&&access===1;
+          await assertCase(page,name,shouldBlock,{legal:shouldBlock});
+        });
+      }
+    }
+    // Rights are clear, access is autonomous: every access means.
+    for (const means of [0,1,2,4]) {
+      const name='MEANS_'+mi+'_CHOICE_'+means;
+      await caseRun(browser,name,mission,async page=>{
+        if(mission==='RELAIS SIMPLE')await pick(page,I.operation,0);
+        await pick(page,I.privateAccess,0);
+        await pick(page,I.rights,0);
+        await pick(page,I.alone,1);
+        await pick(page,I.material,means);
+        await assertCase(page,name,means===4,{material:means===4});
+      });
+    }
+    // Shipping from mainland: delay answers all three, all five missions.
+    for (const delay of ['OUI','NON','JE NE SAIS PAS']){
+      const name='SHIP_'+mi+'_DELAY_'+delay.replace(/\s+/g,'_');
+      await caseRun(browser,name,mission,async page=>{
+        if(mission==='RELAIS SIMPLE')await pick(page,I.operation,0);
+        await pick(page,I.privateAccess,0);
+        await pick(page,I.rights,0);
+        await pick(page,I.alone,1);
+        await pick(page,I.material,3);
+        await dropdown(page,delay);
+        await assertCase(page,name,delay!=='NON',{material:delay!=='NON'});
+      });
+    }
+  }
+  // REMETTRE without private access: available locally versus shipping / unknown.
+  for(const availability of [0,1,2]){
+    const delays=availability===0?[null]:['OUI','NON','JE NE SAIS PAS'];
+    for(const delay of delays){
+      const name='REMETTRE_NO_PRIVATE_AVAIL_'+availability+'_DELAY_'+String(delay);
+      await caseRun(browser,name,'RELAIS SIMPLE',async page=>{
+        await pick(page,I.operation,1);
+        await pick(page,I.privateAccess,1);
+        await pick(page,I.keysCorsica,availability);
+        if(delay!==null)await dropdown(page,delay);
+        const shouldBlock=availability!==0&&delay!=='NON';
+        await assertCase(page,name,shouldBlock,{material:shouldBlock});
+        // Plain key handover should never ask where to return same keys.
+        const d=await page.evaluate(()=>document.body.innerText||'');
+        const restitutionVisible=d.includes('Que devra faire RELAIS des clés, badges ou télécommandes à l’issue de la mission ?')||d.includes("Que devra faire RELAIS des clés, badges ou télécommandes à l'issue de la mission ?");
+        results.push({name:name+'_NO_RESTITUTION',status:restitutionVisible?'FAIL':'PASS'});
+      });
+    }
+  }
+  // Changing access rights and access mode should immediately lift obsolete STOP.
+  await caseRun(browser,'BACKTRACK_LEGAL','RELAIS SIMPLE',async page=>{
+    await pick(page,I.operation,0);
+    await pick(page,I.privateAccess,0);
+    await pick(page,I.rights,2);
+    await pick(page,I.alone,1);
+    await pick(page,I.material,0);
+    await assertCase(page,'BACKTRACK_UNKNOWN_ALONE',true,{legal:true});
+    await pick(page,I.rights,0);
+    await assertCase(page,'BACKTRACK_RIGHTS_NON',false);
+    await pick(page,I.rights,1);
+    await assertCase(page,'BACKTRACK_RIGHTS_OUI',true,{legal:true});
+    await pick(page,I.alone,0);
+    await assertCase(page,'BACKTRACK_ACCOMPANIED',false);
+  });
+  console.log('MATRIX_DONE scenarios='+results.filter(x=>x.name.startsWith('LEGAL_')||x.name.startsWith('MEANS_')||x.name.startsWith('SHIP_')||x.name.startsWith('REMETTRE_NO_PRIVATE_')||x.name.startsWith('BACKTRACK_')).length);
+}
+
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  try{
@@ -147,6 +244,7 @@ async function caseRun(browser,name,mission,run){
     results.push({name:'NO ACCESS MATERIAL STOP',status:blocked?'PASS':'FAIL',stop:d.summary.stopMaterial,pay:d.summary.button});
     return {blocked};
   });
+  await runMatrix(browser);
  }finally{await browser.close()}
  fs.writeFileSync(OUT+'/REPORT.json',JSON.stringify(results,null,2));
  const sum={total:results.length,pass:results.filter(x=>x.status==='PASS').length,fail:results.filter(x=>x.status==='FAIL').length,incomplete:results.filter(x=>x.status==='INCOMPLETE').length,executed:results.filter(x=>x.status==='EXECUTED').length};console.log('RESULT_SUMMARY '+JSON.stringify(sum));if(sum.fail||sum.incomplete)process.exitCode=1;
