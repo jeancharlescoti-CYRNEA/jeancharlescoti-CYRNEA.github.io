@@ -85,3 +85,5 @@ async function one(browser,mission,amount,viewportName,vp) {
  console.log('FULL_QA_SUMMARY '+JSON.stringify(summary));
  if(summary.fail)process.exitCode=1;
 })().catch(e=>{console.error('FATAL',e);process.exitCode=1});
+
+// Dedicated post-publication QA: full form UI/telephone/country code checks.
