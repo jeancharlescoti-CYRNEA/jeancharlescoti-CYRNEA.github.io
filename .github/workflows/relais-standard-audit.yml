@@ -1,0 +1,32 @@
+name: RELAIS STANDARD — audit sécurité (branche isolée)
+on:
+  push:
+    branches:
+      - audit/relais-standard-20261013
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Installer Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Tests en lecture seule — zéro soumission, zéro paiement
+        run: node tests/relais-audit/probe.cjs
+      - name: Conserver les observations et preuves
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relais-standard-audit-preuves
+          path: relais-audit-results/
+          retention-days: 7
