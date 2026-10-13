@@ -110,6 +110,24 @@ async function test(browser,name,fn){
     assert('RECUPERER_RESTITUTION_PRESENT',s.restitution,s.restitution,true);
     assert('RECUPERER_DIRECT_NO_LAPOSTE',!s.laPoste,s.laPoste,false);
   });
+  for(const means of [0,1,2,3,4]){
+    await test(browser,'POSTE_MEANS_'+means,async p=>{
+      await pick(p,'op',0);
+      await pick(p,'private',0);
+      await pick(p,'rights',0);
+      await pick(p,'alone',1);
+      await pick(p,'material',means);
+      const d=await state(p,'poste-means-'+means);
+      const expected=means===3;
+      assert('POSTE_ONLY_CONTINENT_MEANS_'+means,d.laPoste===expected,d.laPoste,expected);
+      if(means===3){
+        await delay(p,'NON');
+        await pick(p,'material',1);
+        const after=await state(p,'poste-shipping-back-to-direct');
+        assert('POSTE_DISAPPEARS_AFTER_CHANGE_TO_DIRECT',!after.laPoste,after.laPoste,false);
+      }
+    });
+  }
   await test(browser,'ACCESS_AUTH_MISSING',async p=>{
     await pick(p,'op',0);await pick(p,'private',0);
     const dat=await p.evaluate((id)=>{
