@@ -63,7 +63,7 @@ async function pick(page,uuid,pattern){
  console.log('PICK '+JSON.stringify({uuid,pattern,index,chosen:entries[index].label}));
 }
 async function dropdown(page,choice){
- const inp=page.locator('input[role="combobox"]#'+I.under24);
+ const inp=page.locator('input[role="combobox"][id="'+I.under24+'"]');
  if(!(await inp.count()))throw new Error('24H_DROPDOWN_NOT_FOUND');
  await inp.click({force:true,timeout:4000});
  await page.waitForTimeout(150);
