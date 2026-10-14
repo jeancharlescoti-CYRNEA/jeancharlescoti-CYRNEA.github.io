@@ -1,0 +1,39 @@
+name: CYRNEA Tally - expanded client browser QA (no submission)
+on:
+  push:
+    branches:
+      - audit/tally-6forms-readonly-20261014
+    paths:
+      - 'tests/tally-sixforms/matrix-expanded.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  six-forms:
+    name: Expanded client paths - form ${{ matrix.form_index }}
+    strategy:
+      fail-fast: false
+      matrix:
+        form_index: [0,1,2,3,4,5]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Exercise all mission choices, no submit/no payment
+        env:
+          FORM_INDEX: ${{ matrix.form_index }}
+        run: node tests/tally-sixforms/matrix-expanded.cjs
+      - name: Keep evidence for failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tally-expanded-form-${{ matrix.form_index }}
+          path: tally-matrix-results/
+          retention-days: 10
