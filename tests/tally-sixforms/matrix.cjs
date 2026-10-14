@@ -34,9 +34,12 @@ async function selectAvail(page,txt){
  const q=f.available;
  if(q.type!=='DROPDOWN_OPTION')return pickRadio(page,q,idx(q,txt));
  // Dropdown from RELAIS STANDARD
- const el=page.locator('input[role=combobox][id="'+q.qid+'"]');
- if(!await el.count())throw Error('DROPDOWN_MISSING '+q.qid);
- await el.click({force:true});
+ const el=page.locator('[role=combobox]:visible, [aria-haspopup=listbox]:visible');
+ if(!await el.count()){
+   const debug=await page.evaluate(()=>[...document.querySelectorAll('input,button,[role=combobox]')].map(z=>({tag:z.tagName,role:z.getAttribute('role'),aria:z.getAttribute('aria-label'),id:z.id,placeholder:z.getAttribute('placeholder')})).slice(-30));
+   throw Error('DROPDOWN_MISSING '+q.qid+' '+JSON.stringify(debug));
+ }
+ await el.last().click({force:true});
  const desired=page.getByRole('option',{name:txt,exact:true});
  if(await desired.count())await desired.first().click({force:true});
  else await page.getByText(txt,{exact:true}).last().click({force:true});
