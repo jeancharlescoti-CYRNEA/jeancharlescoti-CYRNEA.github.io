@@ -1,3 +1,4 @@
+// No form submission, no financial action.
 const urls={
 relais:'https://cyrnea-contrats-tally.pages.dev/relais-cgv-v16-2026-10-05.pdf',
 presence:'https://cyrnea-contrats-tally.pages.dev/presence-proprietaires-cgv-v8-2026-10-02.pdf',
