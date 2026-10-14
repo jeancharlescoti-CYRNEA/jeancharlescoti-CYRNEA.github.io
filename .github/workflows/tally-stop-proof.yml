@@ -1,0 +1,29 @@
+name: CYRNEA Tally - preuve STOP et retractation sans commande
+on:
+  push:
+    branches:
+      - audit/tally-6forms-readonly-20261014
+    paths:
+      - 'tests/tally-sixforms/stop-target-proof.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - run: node tests/tally-sixforms/stop-target-proof.cjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tally-stop-proof
+          path: tally-stop-proof/
+          retention-days: 7
