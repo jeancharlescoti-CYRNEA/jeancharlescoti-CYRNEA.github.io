@@ -10,7 +10,7 @@ async function inspect(browser,f,device){
   const checks=[];let phase='opening';
   function add(name,ok,detail){checks.push({name,status:ok?'PASS':'FAIL',detail});}
   const report=async()=>({id:f.id,device,phase,checks});
-  async function pick(x,n){let loc=page.locator('input[type="radio"][name="multiple_choice_'+x+'"]');let count=await loc.count();if(count<=n||n<0)throw Error('CHOICE_MISSING '+x+': '+n+'/'+count);await loc.nth(n).check({force:true,timeout:5000});await sleep(220);}
+  async function pick(x,n){let loc=page.locator('input[type="radio"][name="multiple_choice_'+x+'"]');let count=await loc.count();if(count<=n||n<0)throw Error('CHOICE_MISSING '+x+': '+n+'/'+count);let last='';for(let attempt=0;attempt<3;attempt++){try{await loc.nth(n).check({force:true,timeout:4000});await sleep(300);if(await loc.nth(n).isChecked())return;}catch(e){last=String(e).slice(0,160);}await sleep(350);}throw Error('RADIO_NOT_SELECTED '+x+': '+n+' attempts=3 '+last);}
   try{
     const url=new URL('https://tally.so/r/'+f.id);
     Object.entries({mission:f.mission,objet:'AUDIT SANS COMMANDE',tarif:f.tarif,creneau:'2026-10-31 10:00',availability_mode:'normal',disponibilite:'normal',nom_client:'Audit Technique',email_client:'audit@example.invalid',telephone_client:'0612345678'}).forEach(([k,v])=>url.searchParams.set(k,v));
