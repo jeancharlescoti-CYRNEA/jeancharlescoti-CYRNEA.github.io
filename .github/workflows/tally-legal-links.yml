@@ -1,10 +1,5 @@
 name: CYRNEA - liens CGV CGS et La Poste (diagnostic sans commande)
 on:
-  push:
-    branches:
-      - audit/tally-6forms-readonly-20261014
-    paths:
-      - 'tests/tally-sixforms/legal-link-readonly.cjs'
   workflow_dispatch:
 permissions:
   contents: read
