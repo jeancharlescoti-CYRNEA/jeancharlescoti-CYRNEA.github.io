@@ -1,5 +1,8 @@
 name: CYRNEA Tally - preuve STOP RELAIS apres publication
 on:
+  push:
+    branches: [audit/tally-6forms-readonly-20261014]
+    paths: ['tests/tally-sixforms/relais-stop-after-fix.cjs']
   workflow_dispatch:
 permissions:
   contents: read
