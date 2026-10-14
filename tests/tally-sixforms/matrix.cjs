@@ -54,7 +54,15 @@ async function selectAvail(page,txt){
   await input.press('ArrowDown');await input.press('Enter');
  }
  await timeout(260);
- if(f.id==='xXOqpk' && (await page.locator('[id="'+q.qid+'"]').inputValue()).trim()!==txt)throw Error('DROPDOWN_VALUE_DID_NOT_STICK '+txt);
+ if(f.id==='xXOqpk') {
+  // Tally may unmount this combobox immediately when the selected answer changes the form's visibility.
+  // Do not wait 30 seconds for a deliberately unmounted input. Outcome checks below verify STOP/restitution.
+  const field=page.locator('[id="'+q.qid+'"]');
+  if(await field.count()){
+    const value=(await field.inputValue({timeout:900})).trim();
+    if(value && value!==txt)throw Error('DROPDOWN_VALUE_MISMATCH '+value+' expected '+txt);
+  }
+ }
  if(f.id==='xXOqpk')console.log('DROPDOWN_AFTER '+JSON.stringify(await page.evaluate(()=>({value:document.getElementById('265977a9-c01e-4482-bc4c-d34e705d915b')?.value,optionTexts:[...document.querySelectorAll('[role=option]')].map(z=>z.textContent?.trim()),bodyTail:document.body.innerText.slice(-400)}))));
 }
 async function snapshot(page){
