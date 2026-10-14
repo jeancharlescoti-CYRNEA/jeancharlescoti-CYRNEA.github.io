@@ -1,0 +1,28 @@
+name: CYRNEA Tally - origines sites PWA et retraction (lecture seule)
+on:
+  push:
+    branches: [audit/tally-6forms-readonly-20261014]
+    paths: ['tests/tally-sixforms/site-and-retract-origin.cjs']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Read origin URLs and legal conditional display without submission
+        run: node tests/tally-sixforms/site-and-retract-origin.cjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tally-site-origin-retraction
+          path: tally-origin-diagnostic/
+          retention-days: 7
