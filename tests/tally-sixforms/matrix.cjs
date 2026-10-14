@@ -43,12 +43,18 @@ async function selectAvail(page,txt){
  if(f.id==='xXOqpk')console.log('DROPDOWN_STATE '+JSON.stringify(await page.evaluate(()=>({
   combos:[...document.querySelectorAll('[role=combobox]')].map(e=>({tag:e.tagName,id:e.id,value:e.value,txt:e.textContent?.slice(0,140),open:e.getAttribute('aria-expanded')})),
   options:[...document.querySelectorAll('[role=option]')].map(e=>({text:e.textContent?.trim().slice(0,80),visible:e.getBoundingClientRect().height>0})),
-  lists:[...document.querySelectorAll('[role=listbox]')].map(e=>e.textContent?.slice(0,300))
+  lists:[...document.querySelectorAll('[role=listbox]')].map(e=>e.textContent?.slice(0,300)),html:document.getElementById('265977a9-c01e-4482-bc4c-d34e705d915b')?.parentElement?.parentElement?.outerHTML.slice(0,4500)
  }))));
  const desired=page.getByRole('option',{name:txt,exact:true});
  if(await desired.count())await desired.first().click({force:true});
- else await page.getByText(txt,{exact:true}).last().click({force:true});
+ else {
+  const input=el.last();
+  await input.fill(txt,{force:true,timeout:3600});
+  await timeout(120);
+  await input.press('ArrowDown');await input.press('Enter');
+ }
  await timeout(260);
+ if(f.id==='xXOqpk')console.log('DROPDOWN_AFTER '+JSON.stringify(await page.evaluate(()=>({value:document.getElementById('265977a9-c01e-4482-bc4c-d34e705d915b')?.value,optionTexts:[...document.querySelectorAll('[role=option]')].map(z=>z.textContent?.trim()),bodyTail:document.body.innerText.slice(-400)}))));
 }
 async function snapshot(page){
  return page.evaluate(()=>{
