@@ -947,7 +947,11 @@ function daysUntilMission(){
   return Math.ceil((d-today)/86400000);
 }
 function earlyExecutionNeeded(){
-  return S.caller==="OWNER" && daysUntilMission()>=0 && daysUntilMission()<14;
+  // En cas de date absente ou indéterminée, demander le consentement par précaution.
+  // Pour un écart strictement supérieur à 14 jours, la demande anticipée n'est pas nécessaire.
+  if(S.caller!=="OWNER")return false;
+  const days=daysUntilMission();
+  return !Number.isFinite(days)||days<0||days<=14;
 }
 
 const VAT_RATE=0.20; // Taux de travail du prototype ; à confirmer comptablement avant production.
@@ -1986,6 +1990,9 @@ function buildTallyUrl(){
  q.set("telephone_client",S.phone||"");
  q.set("cadre_client",S.caller==="B2B"?"ENTREPRISE / DONNEUR D’ORDRE PROFESSIONNEL":"PROPRIÉTAIRE PARTICULIER");
  q.set("availability_mode",tallyAvailabilityMode());
+ // Calculé à partir de la date de mission réservée, jamais à partir du créneau horaire seul.
+ // Une valeur absente dans un lien direct laisse le champ légal visible (précaution).
+ if(S.caller==="OWNER")q.set("execution_anticipee_14j",earlyExecutionNeeded()?"oui":"non");
  return tallyBaseUrl()+"?"+q.toString();
 }
 async function registerTallyIntent(){
