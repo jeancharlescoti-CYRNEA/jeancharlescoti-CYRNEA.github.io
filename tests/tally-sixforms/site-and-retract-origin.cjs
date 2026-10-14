@@ -1,3 +1,4 @@
+// One-time read-only diagnosis of public website routes and Tally retraction.
 const {chromium}=require('playwright');const fs=require('fs');
 (async()=>{const browser=await chromium.launch({headless:true,args:['--no-sandbox']});const sites=[
 {name:'RELAIS accueil',url:'https://www.relaisproprietaire.fr/'},
