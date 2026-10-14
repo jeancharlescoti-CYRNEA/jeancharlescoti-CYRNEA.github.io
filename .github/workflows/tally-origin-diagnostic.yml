@@ -1,8 +1,5 @@
 name: CYRNEA Tally - origines sites PWA et retraction (lecture seule)
 on:
-  push:
-    branches: [audit/tally-6forms-readonly-20261014]
-    paths: ['tests/tally-sixforms/site-and-retract-origin.cjs']
   workflow_dispatch:
 permissions:
   contents: read
