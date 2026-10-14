@@ -8,6 +8,7 @@ const CFG=[{"id":"xXOqpk","privateQ":{"qid":"d0718f8b-5491-4f9c-a3f3-3b8ffe72381
 const INDEX=Number(process.env.FORM_INDEX);
 if(!Number.isInteger(INDEX)||INDEX<0||INDEX>=CFG.length)throw Error('Invalid FORM_INDEX');
 const f=CFG[INDEX],out='tally-matrix-results/'+f.id;
+console.log('TARGETED_QA_START '+JSON.stringify({id:f.id,index:INDEX,mode:'browser-no-submission-no-payment'}));
 fs.mkdirSync(out,{recursive:true});
 const observations=[];
 const timeout=ms=>new Promise(r=>setTimeout(r,ms));
