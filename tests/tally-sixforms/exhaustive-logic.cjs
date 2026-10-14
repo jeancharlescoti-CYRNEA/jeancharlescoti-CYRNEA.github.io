@@ -64,7 +64,8 @@ function* reachable(f,p){
   for(let k=0;k<(usesMeans?5:1);k++){
     let shipping=usesMeans&&k===3;
     for(let a=0;a<(shipping?3:1);a++){
-      let useReturn=usesMeans&&(k===1||k===2||(k===3&&a===0));
+      let availabilityYes=shipping&&normalize(p.av?.options[a]?.text).startsWith('OUI');
+      let useReturn=usesMeans&&(k===1||k===2||(k===3&&availabilityYes));
       for(let t=0;t<(useReturn?4:1);t++){
        for(let rw=0;rw<(p.retract?2:1);rw++){
         let s={},hidden=hby(f,'mission'),mh=hby(f,'availability_mode')||hby(f,'disponibilite');
@@ -76,7 +77,7 @@ function* reachable(f,p){
         setting(s,p.retract,rw);
         // B2B timing answers are independently varied in a separate local submatrix
         yield {s,labels:{mission:label,mode,pri,role,rights,access,means:usesMeans?k:null,shipping:shipping?a:null,return:useReturn?t:null,retract:rw},expected:{
-          stop:(usesMeans&&(k===4||(shipping&&a!==0)))||(usesMeans&&rights!==0)
+          stop:(usesMeans&&(k===4||(shipping&&!availabilityYes)))||(usesMeans&&rights!==0)
         }};
        }
       }
