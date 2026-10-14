@@ -1,0 +1,28 @@
+name: CYRNEA Tally - exhaustive static branch audit (NO PAYMENTS)
+on:
+  push:
+    branches:
+      - audit/tally-6forms-readonly-20261014
+    paths:
+      - 'tests/tally-sixforms/exhaustive-logic.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  logic-matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: All reachable Tally logical combinations with zero requests to Tally
+        run: node tests/tally-sixforms/exhaustive-logic.cjs
+      - name: Save full report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tally-full-logic-state-report
+          path: tally-exhaustive-results/
+          retention-days: 10
