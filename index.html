@@ -1986,6 +1986,7 @@ function buildTallyUrl(){
  q.set("telephone_client",S.phone||"");
  q.set("cadre_client",S.caller==="B2B"?"ENTREPRISE / DONNEUR D’ORDRE PROFESSIONNEL":"PROPRIÉTAIRE PARTICULIER");
  q.set("availability_mode",tallyAvailabilityMode());
+ if(S.caller==="OWNER")q.set("execution_anticipee_14j",earlyExecutionNeeded()?"oui":"non");
  return tallyBaseUrl()+"?"+q.toString();
 }
 async function registerTallyIntent(){
