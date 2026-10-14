@@ -1,5 +1,10 @@
 name: CYRNEA Tally - exhaustive static branch audit (NO PAYMENTS)
 on:
+  push:
+    branches:
+      - audit/tally-6forms-readonly-20261014
+    paths:
+      - 'tests/tally-sixforms/exhaustive-logic.cjs'
   workflow_dispatch:
 permissions:
   contents: read
