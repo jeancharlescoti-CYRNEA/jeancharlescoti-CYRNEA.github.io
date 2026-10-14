@@ -1,0 +1,21 @@
+name: CYRNEA - liens CGV CGS et La Poste (diagnostic sans commande)
+on:
+  push:
+    branches:
+      - audit/tally-6forms-readonly-20261014
+    paths:
+      - 'tests/tally-sixforms/legal-link-readonly.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  legal-links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check linked PDFs and La Poste without any submission
+        run: node tests/tally-sixforms/legal-link-readonly.cjs
