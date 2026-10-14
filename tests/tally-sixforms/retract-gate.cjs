@@ -1,5 +1,23 @@
 const {chromium}=require('playwright');
 const fs=require('fs');
+
+const src=fs.readFileSync('index.html','utf8');
+if(!src.includes('q.set("execution_anticipee_14j",earlyExecutionNeeded()?"oui":"non")'))
+ throw Error('PWA_GATE_PARAM_MISSING');
+if(!src.includes('const [y,m,d]=S.date.split("-").map(Number)'))
+ throw Error('PWA_CALENDAR_DATE_NOT_DST_SAFE');
+const vm=require('vm');
+const first=src.indexOf('function daysUntilMission(){');
+const last=src.indexOf('const VAT_RATE',first);
+if(first<0||last<first)throw Error('PWA_FUNCTION_NOT_FOUND');
+const sourceFunctions=src.slice(first,last);
+class FixedDate extends Date{constructor(...a){super(...(a.length?a:['2026-10-14T12:00:00+02:00']))}}
+for(const [target,expected] of [['2026-10-24',true],['2026-10-28',true],['2026-10-29',false],['2026-10-31',false]]){
+ const script='const S={date:'+JSON.stringify(target)+',caller:"OWNER"};'+sourceFunctions+'; ({days:daysUntilMission(),needed:earlyExecutionNeeded()})';
+ const out=vm.runInNewContext(script,{Date:FixedDate});
+ if(out.needed!==expected)throw Error('PWA_DATE_RULE_FAILED '+target+' '+JSON.stringify(out));
+ console.log('PWA_DATE_ASSERT '+JSON.stringify({target,days:out.days,flag:expected?'oui':'non',pass:true}));
+}
 const formIds=['xXOqpk','b5oz46','7R6AZa','GxZbE2'];
 const states=[
  {label:'date-31-oct-2026',flag:'non',expectedVisible:false},
