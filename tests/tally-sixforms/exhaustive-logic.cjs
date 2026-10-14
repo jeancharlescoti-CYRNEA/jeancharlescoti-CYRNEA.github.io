@@ -16,8 +16,8 @@ function findStructures(f){
  const who=locate(gs,(v)=>v.length===2&&v[0].startsWith('POUR MON PROPRE COMPTE'));
  const access=locate(gs,(v)=>v.length===2&&v[0].includes('UNE PERSONNE AUTORISÉE'));
  const means=locate(gs,(v)=>v.length===5&&v[0].toLowerCase().includes('code')||v.length===5&&v[0].includes("UN MOYEN D'ACCÈS"));
- const av=locate(gs,(v)=>v.length===3&&v.some(x=>x.startsWith('JE NE SAIS PAS'))&&v.some(x=>x.startsWith('OUI'))&&v.some(x=>x.startsWith('NON'))&&v[0]!=='NON')
- ||gs.find(g=>g.options.length===3&&g!==right&&g.options.some(z=>normalize(z.text).includes('JE NE SAIS PAS'))&&g.options.some(z=>normalize(z.text).startsWith('OUI')));
+ const meansIndex=gs.findIndex(g=>g.id===means?.id);
+ const av=gs.slice(meansIndex+1).find(g=>g.options.length===3&&g.options.some(z=>normalize(z.text).startsWith('JE NE SAIS PAS'))&&g.options.some(z=>normalize(z.text).startsWith('OUI'))&&g.options.some(z=>normalize(z.text).startsWith('NON')));
  const ret=locate(gs,(v)=>v.length===4&&v.some(z=>z.includes('POSTAL')));
  const retract=locate(gs,(v)=>v.length===2&&v[0].startsWith('OUI — « JE DEMANDE'));
  const op=locate(gs,(v)=>v.length===3&&v.some(z=>z.includes('RÉCUPÉRER'))&&v.some(z=>z.includes('REMETTRE')));
