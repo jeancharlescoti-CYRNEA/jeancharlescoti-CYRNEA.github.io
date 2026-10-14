@@ -1,3 +1,4 @@
+// Strict smoke test 4 owner forms, never submits.
 const {chromium}=require('playwright');
 const fs=require('fs');
 
