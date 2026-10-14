@@ -1,0 +1,28 @@
+name: CYRNEA Tally - verification affichage STOP B2B
+on:
+  push:
+    branches: [audit/tally-6forms-readonly-20261014]
+    paths: ['tests/tally-sixforms/stop-layout-after-fix.cjs']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  stop-layout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Vérifier STOP B2B sur formulaires publiés sans commande ni paiement
+        run: node tests/tally-sixforms/stop-layout-after-fix.cjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tally-stop-layout-qa
+          path: tally-stop-layout-results/
+          retention-days: 7
