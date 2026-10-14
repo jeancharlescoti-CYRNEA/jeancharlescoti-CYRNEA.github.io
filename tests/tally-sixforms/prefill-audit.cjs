@@ -9,7 +9,9 @@ const CASES=[
 {id:'xXOqpk',mission:'RELAIS SIMPLE - APRÈS INTEMPÉRIE',mode:'standard',expected:109,note:'PWA STANDARD APRÈS'},
 {id:'2EQWLD',mission:'CONTINUITÉ PROJET - 1190 € HT',mode:'standard',expected:1428,note:'PWA B2B STANDARD CONTINUITÉ'},
 {id:'RGp0PQ',mission:'CONTINUITÉ PROJET - 1 190 € HT',mode:'priority',expected:1572,note:'PWA B2B HORS CONTINUITÉ'},
-{id:'GxZbE2',mission:'VOIR PRIORITAIRE',mode:'priority',expected:350,note:'PWA PRÉSENCE PRIORITÉ'}
+{id:'GxZbE2',mission:'VOIR PRIORITAIRE',mode:'priority',expected:350,note:'PWA PRÉSENCE PRIORITÉ'},
+{id:'GxZbE2',mission:'SUIVRE',mode:'priority',expected:1160,note:'PWA SUIVRE 2 passages sous 24h attend 980+90+90 TTC'},
+{id:'RGp0PQ',mission:'CONTINUITÉ PROJET - 1 190 € HT',mode:'priority',expected:1716,note:'PWA CONTINUITÉ 2 jalons prioritaires attend (1190+120+120)*1.2 TTC'}
 ];
 const out=[];
 (async()=>{
