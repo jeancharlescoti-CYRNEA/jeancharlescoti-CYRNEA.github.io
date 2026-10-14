@@ -1,10 +1,5 @@
 name: CYRNEA Tally - validation ciblee RELAIS standard (sans commande)
 on:
-  push:
-    branches:
-      - audit/tally-6forms-readonly-20261014
-    paths:
-      - 'tests/tally-sixforms/matrix.cjs'
   workflow_dispatch:
 permissions:
   contents: read
