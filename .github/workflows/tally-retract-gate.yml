@@ -1,0 +1,32 @@
+name: CYRNEA – validation rétractation réelle (sans commande)
+on:
+  push:
+    branches:
+      - fix/tally-date-retractation-20261014
+    paths:
+      - 'tests/tally-sixforms/retract-gate.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  retract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Check PWA date rule and four public Tally forms, no submission
+        run: node tests/tally-sixforms/retract-gate.cjs
+      - name: Store report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tally-retract-boundary-24-31-oct
+          path: tally-retract-gate-results/
+          retention-days: 10
