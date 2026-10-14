@@ -1,11 +1,5 @@
 name: CYRNEA Tally — six-form browser QA (no submission)
 on:
-  push:
-    branches:
-      - audit/tally-6forms-readonly-20261014
-    paths:
-      - 'tests/tally-sixforms/**'
-      - '.github/workflows/tally-sixforms-smoke.yml'
   workflow_dispatch:
 permissions:
   contents: read
