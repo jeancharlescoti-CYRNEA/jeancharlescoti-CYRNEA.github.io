@@ -1,0 +1,31 @@
+name: CYRNEA Tally - diagnostic pre-remplissage PWA
+on:
+  push:
+    branches:
+      - audit/tally-6forms-readonly-20261014
+    paths:
+      - 'tests/tally-sixforms/prefill-audit.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check-prefill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Compare genuine PWA aliases with Tally public form (NO SUBMIT)
+        run: node tests/tally-sixforms/prefill-audit.cjs
+      - name: Save diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tally-prefill-urls-readonly
+          path: tally-prefill-audit/
+          retention-days: 7
