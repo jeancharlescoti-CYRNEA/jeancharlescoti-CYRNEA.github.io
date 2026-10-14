@@ -1,10 +1,5 @@
 name: CYRNEA Tally - expanded client browser QA (no submission)
 on:
-  push:
-    branches:
-      - audit/tally-6forms-readonly-20261014
-    paths:
-      - 'tests/tally-sixforms/matrix-expanded.cjs'
   workflow_dispatch:
 permissions:
   contents: read
