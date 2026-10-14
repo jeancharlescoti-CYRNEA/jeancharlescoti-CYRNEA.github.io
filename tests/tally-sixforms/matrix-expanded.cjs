@@ -1,3 +1,4 @@
+// Audit toutes les missions. Aucune soumission ni action de paiement.
 /*
 CYRNEA TALLY: observational matrix QA only.
 Absolutely no form submission, no fake order, no interaction with payment gateway.
