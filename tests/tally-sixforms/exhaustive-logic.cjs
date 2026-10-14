@@ -22,8 +22,9 @@ function findStructures(f){
  const ret=locate(gs,(v)=>v.length===4&&v.some(z=>z.includes('POSTAL')));
  const retract=locate(gs,(v)=>v.length===2&&v[0].startsWith('OUI — « JE DEMANDE'));
  const op=locate(gs,(v)=>v.length===3&&v.some(z=>z.includes('RÉCUPÉRER'))&&v.some(z=>z.includes('REMETTRE')));
+ const keyInit=gs.find(g=>g.options.length===3&&g.options.some(z=>normalize(z.text).includes('CORSE'))&&g.id!==av?.id);
  const other=gs.filter(g=>g.options.length===2&&g.options[0].text==='OUI'&&g.options[1].text==='NON'&&g.id!==pr?.id);
- return {mi,pr,right,who,access,means,av,ret,retract,op,other};
+ return {mi,pr,right,who,access,means,av,ret,retract,op,keyInit,other};
 }
 const hby=(f,n)=>f.hidden.find(x=>x.name===n)?.id;
 function setting(state,g,i){if(g)state[g.id]=g.options[i]?.id;}
@@ -76,10 +77,22 @@ function* reachable(f,p){
         setting(s,p.mi,m);setting(s,p.pr,pri);if(privateYes){setting(s,p.who,role);setting(s,p.right,rights);setting(s,p.access,access);}
         if(usesMeans){setting(s,p.means,k);if(shipping)setting(s,p.av,a);if(useReturn)setting(s,p.ret,t);}
         setting(s,p.retract,rw);
-        // B2B timing answers are independently varied in a separate local submatrix
-        yield {s,labels:{mission:label,mode,pri,role,rights,access,means:usesMeans?k:null,shipping:shipping?a:null,return:useReturn?t:null,retract:rw},expected:{
-          stop:(usesMeans&&(k===4||(shipping&&!availabilityYes)))||(usesMeans&&rights!==0)
-        }};
+        // Enumerate all special-operation and time-window option combinations too.
+        const isSimple=/RELAIS SIMPLE/.test(label);
+        for(let opi=0;opi<(isSimple&&p.op?3:1);opi++)
+        for(let keyi=0;keyi<(isSimple&&p.keyInit?3:1);keyi++)
+        for(let bits=0;bits<(1<<p.other.length);bits++){
+          let state={...s};
+          if(isSimple){setting(state,p.op,opi);setting(state,p.keyInit,keyi);}
+          p.other.forEach((g,i)=>setting(state,g,(bits>>i)&1));
+          const opIsRemise=isSimple&&opi===1;
+          const keyUnknown=normalize(p.keyInit?.options[keyi]?.text).startsWith('JE NE SAIS PAS');
+          const keyNotAvailable=normalize(p.keyInit?.options[keyi]?.text).startsWith('NON');
+          let legalStop=(usesMeans&&(k===4||(shipping&&!availabilityYes)))||(usesMeans&&rights!==0);
+          // In the non-private direct-key handoff RELAIS SIMPLE pathway, unknown means cannot be accepted.
+          if(opIsRemise&&!privateYes&&(keyUnknown||keyNotAvailable))legalStop=true;
+          yield {s:state,labels:{mission:label,mode,pri,role,rights,access,means:usesMeans?k:null,shipping:shipping?a:null,return:useReturn?t:null,retract:rw,op:opi,keyInit:keyi,timeBits:bits},expected:{stop:legalStop}};
+        }
        }
       }
     }
