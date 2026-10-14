@@ -1,10 +1,5 @@
 name: CYRNEA Tally - diagnostic pre-remplissage PWA
 on:
-  push:
-    branches:
-      - audit/tally-6forms-readonly-20261014
-    paths:
-      - 'tests/tally-sixforms/prefill-audit.cjs'
   workflow_dispatch:
 permissions:
   contents: read
