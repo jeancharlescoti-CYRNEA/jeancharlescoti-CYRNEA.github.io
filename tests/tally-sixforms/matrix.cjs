@@ -40,6 +40,11 @@ async function selectAvail(page,txt){
    throw Error('DROPDOWN_MISSING '+q.qid+' '+JSON.stringify(debug));
  }
  await el.last().click({force:true});
+ if(f.id==='xXOqpk')console.log('DROPDOWN_STATE '+JSON.stringify(await page.evaluate(()=>({
+  combos:[...document.querySelectorAll('[role=combobox]')].map(e=>({tag:e.tagName,id:e.id,value:e.value,txt:e.textContent?.slice(0,140),open:e.getAttribute('aria-expanded')})),
+  options:[...document.querySelectorAll('[role=option]')].map(e=>({text:e.textContent?.trim().slice(0,80),visible:e.getBoundingClientRect().height>0})),
+  lists:[...document.querySelectorAll('[role=listbox]')].map(e=>e.textContent?.slice(0,300))
+ }))));
  const desired=page.getByRole('option',{name:txt,exact:true});
  if(await desired.count())await desired.first().click({force:true});
  else await page.getByText(txt,{exact:true}).last().click({force:true});
@@ -73,7 +78,7 @@ async function one(browser,label,device,run){
  let rec={id:f.id,scenario:label,device,tests:[],failed:0};let phase='navigation';
  try{
   const url=new URL('https://tally.so/r/'+f.id);
-  const mission=f.missions[0]||'RELAIS SIMPLE';
+  const mission=(['xXOqpk','b5oz46'].includes(f.id)?f.missions[1]:f.missions[0])||'RELAIS SIMPLE';
   const sampleTarif=/(\d[\d ]* € HT)/.exec(mission)?.[1]||'169 € TTC';
   for(const [key,value] of Object.entries({mission,objet:'AUDIT AUTOMATIQUE SANS COMMANDE',tarif:sampleTarif,creneau:'2026-10-31 10:00',availability_mode:'normal',disponibilite:'normal',nom_client:'Audit Technique',email_client:'audit@example.invalid',telephone_client:'0612345678'}))url.searchParams.set(key,value);
   const response=await page.goto(url.toString(),{waitUntil:'domcontentloaded',timeout:33000}); await timeout(450);
