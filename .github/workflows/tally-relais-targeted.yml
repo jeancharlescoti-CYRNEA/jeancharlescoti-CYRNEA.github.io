@@ -1,0 +1,35 @@
+name: CYRNEA Tally - validation ciblee RELAIS standard (sans commande)
+on:
+  push:
+    branches:
+      - audit/tally-6forms-readonly-20261014
+    paths:
+      - 'tests/tally-sixforms/matrix.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  relais-standard:
+    name: RELAIS STANDARD - STOP et restitution desktop/mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Browser QA without submission or payment
+        env:
+          FORM_INDEX: '0'
+        run: node tests/tally-sixforms/matrix.cjs
+      - name: Preserve test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tally-relais-standard-targeted
+          path: tally-matrix-results/
+          retention-days: 7
