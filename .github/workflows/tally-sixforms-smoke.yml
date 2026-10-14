@@ -31,3 +31,33 @@ jobs:
           name: tally-sixforms-no-submit
           path: tally-audit-results/
           retention-days: 5
+
+
+  matrix-readonly:
+    name: Matrix test (no submission) form ${{ matrix.form_index }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      matrix:
+        form_index: [0,1,2,3,4,5]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Check legal blocks keys stops and recovery without payment
+        env:
+          FORM_INDEX: ${{ matrix.form_index }}
+        run: node tests/tally-sixforms/matrix.cjs
+      - name: Save evidence per form
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tally-matrix-form-${{ matrix.form_index }}
+          path: tally-matrix-results/
+          retention-days: 7
