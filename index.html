@@ -941,13 +941,15 @@ function saveObject(){
   return true;
 }
 function daysUntilMission(){
-  if(!S.date)return 9999;
-  const today=new Date(); today.setHours(0,0,0,0);
-  const d=new Date(S.date+"T00:00:00");
-  return Math.ceil((d-today)/86400000);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(S.date||"")))return 9999;
+  const [y,m,d]=S.date.split("-").map(Number);
+  const today=new Date();
+  // Compare calendar dates in UTC to avoid summer/winter clock-change drift.
+  return Math.round((Date.UTC(y,m-1,d)-Date.UTC(today.getFullYear(),today.getMonth(),today.getDate()))/86400000);
 }
 function earlyExecutionNeeded(){
-  return S.caller==="OWNER" && daysUntilMission()>=0 && daysUntilMission()<14;
+  const days=daysUntilMission();
+  return S.caller==="OWNER" && days>=0 && days<=14;
 }
 
 const VAT_RATE=0.20; // Taux de travail du prototype ; à confirmer comptablement avant production.
@@ -1986,6 +1988,11 @@ function buildTallyUrl(){
  q.set("telephone_client",S.phone||"");
  q.set("cadre_client",S.caller==="B2B"?"ENTREPRISE / DONNEUR D’ORDRE PROFESSIONNEL":"PROPRIÉTAIRE PARTICULIER");
  q.set("availability_mode",tallyAvailabilityMode());
+ // Owner service date is the trigger for the 14-day early-execution question.
+ // No valid date: omit flag, so Tally asks instead of silently waiving consent.
+ if(S.caller==="OWNER" && /^\d{4}-\d{2}-\d{2}$/.test(String(S.date||"")) && daysUntilMission()>=0){
+   q.set("execution_anticipee_14j",earlyExecutionNeeded()?"oui":"non");
+ }
  return tallyBaseUrl()+"?"+q.toString();
 }
 async function registerTallyIntent(){
