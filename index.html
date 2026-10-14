@@ -1986,6 +1986,14 @@ function buildTallyUrl(){
  q.set("telephone_client",S.phone||"");
  q.set("cadre_client",S.caller==="B2B"?"ENTREPRISE / DONNEUR D’ORDRE PROFESSIONNEL":"PROPRIÉTAIRE PARTICULIER");
  q.set("availability_mode",tallyAvailabilityMode());
+ // Only hide the early-execution consent when the booked mission is at least 14 days away.
+ // Missing/invalid date must never silently suppress consumer consent.
+ if(S.caller==="OWNER"){
+   const remaining=daysUntilMission();
+   if(Number.isFinite(remaining)&&remaining>=14&&remaining!==9999)
+     q.set("execution_anticipee_14j","non");
+   else q.set("execution_anticipee_14j","oui");
+ }
  return tallyBaseUrl()+"?"+q.toString();
 }
 async function registerTallyIntent(){
