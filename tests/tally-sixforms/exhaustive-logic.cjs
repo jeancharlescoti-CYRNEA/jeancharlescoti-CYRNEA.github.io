@@ -1,3 +1,4 @@
+// Script execution: deterministic, static, zero API calls.
 'use strict';
 /** CYRNEA static Tally logic audit. All reachable discrete combinations.
  * Does NOT access the network, touch Tally, submit orders or process payments.
