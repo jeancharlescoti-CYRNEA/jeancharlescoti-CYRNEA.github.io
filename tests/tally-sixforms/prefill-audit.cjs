@@ -1,3 +1,4 @@
+// Exact PWA mission aliases; diagnostic never submits or pays.
 const {chromium}=require('playwright');
 const fs=require('fs');
 const CASES=[
