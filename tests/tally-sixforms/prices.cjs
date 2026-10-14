@@ -24,10 +24,10 @@ function target(m,base,mode){
  return null;
 }
 function parseTotal(x){
- let lines=x.split('\n').map(z=>z.trim()).filter(Boolean),i=lines.findIndex(z=>/Total à régler|Total TTC/i.test(z));
+ let lines=x.split('\n').map(z=>z.trim()).filter(Boolean),i=lines.findIndex(z=>/Total à régler|Total TTC|Tarif TTC/i.test(z));
  if(i<0)return {num:null,raw:''};
  let raw=lines[i]+' '+(lines[i+1]||''); 
- let after=raw.replace(/.*?(?:Total à régler|Total TTC)\s*:?/i,'').replace(/€|TTC/gi,' ').trim();
+ let after=raw.replace(/.*?(?:Total à régler|Total TTC|Tarif TTC)\s*:?/i,'').replace(/€|TTC/gi,' ').trim();
  let nums=after.match(/\d[\d\u00a0\u202f\s]*([.,]\d{1,2})?/g)||[];
  return {num:nums.length?Number(nums[0].replace(/[\s\u00a0\u202f]/g,'').replace(',','.')):null,raw:lines[i]};
 }
