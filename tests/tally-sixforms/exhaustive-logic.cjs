@@ -58,9 +58,10 @@ function* reachable(f,p){
  for(const mode of (f.id==='xXOqpk'||f.id==='7R6AZa'||f.id==='2EQWLD'?['normal']:['normal','priority','evening','sunday',...(f.id==='RGp0PQ'?['night']:[])]))
  for(let pri=0;pri<2;pri++)
  for(let role=0;role<2;role++)
- for(let rights=0;rights<(pri===1?3:1);rights++)
- for(let access=0;access<(pri===1?2:1);access++){
-  let usesMeans=pri===1&&access===1;
+ for(let rights=0;rights<(normalize(p.pr?.options[pri]?.text)==='OUI'?3:1);rights++)
+ for(let access=0;access<(normalize(p.pr?.options[pri]?.text)==='OUI'?2:1);access++){
+  let privateYes=normalize(p.pr?.options[pri]?.text)==='OUI';
+  let usesMeans=privateYes&&access===1;
   for(let k=0;k<(usesMeans?5:1);k++){
     let shipping=usesMeans&&k===3;
     for(let a=0;a<(shipping?3:1);a++){
@@ -72,7 +73,7 @@ function* reachable(f,p){
         let label=p.mi?.options[m]?.text||'';
         if(hidden)s[hidden]=label;
         if(mh)s[mh]=mode;
-        setting(s,p.mi,m);setting(s,p.pr,pri);if(pri){setting(s,p.who,role);setting(s,p.right,rights);setting(s,p.access,access);}
+        setting(s,p.mi,m);setting(s,p.pr,pri);if(privateYes){setting(s,p.who,role);setting(s,p.right,rights);setting(s,p.access,access);}
         if(usesMeans){setting(s,p.means,k);if(shipping)setting(s,p.av,a);if(useReturn)setting(s,p.ret,t);}
         setting(s,p.retract,rw);
         // B2B timing answers are independently varied in a separate local submatrix
