@@ -1,10 +1,5 @@
 name: CYRNEA – validation rétractation réelle (sans commande)
 on:
-  push:
-    branches:
-      - fix/tally-date-retractation-20261014
-    paths:
-      - 'tests/tally-sixforms/retract-gate.cjs'
   workflow_dispatch:
 permissions:
   contents: read
