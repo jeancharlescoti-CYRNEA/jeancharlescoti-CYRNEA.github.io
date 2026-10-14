@@ -18,7 +18,7 @@ function target(m,base,mode){
  }
  if(f.priceMode==='hors-b2b'){
   let core=/VISITE TERRAIN|PRÉSENCE PROJET|CONTINUITÉ PROJET/.test(m);
-  if((mode==='evening'||mode==='night')&&!core)return {price:base,blocked:true};
+  if((mode==='evening'||mode==='night')&&(!core||/VISITE TERRAIN/.test(m)))return {price:base,blocked:true};
   return {price:base+(core?(mode==='night'?180:mode==='sunday'?180:120):(mode==='sunday'?60:40)),blocked:false};
  }
  return null;
