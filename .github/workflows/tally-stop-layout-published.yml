@@ -1,8 +1,5 @@
 name: CYRNEA Tally - verification affichage STOP B2B
 on:
-  push:
-    branches: [audit/tally-6forms-readonly-20261014]
-    paths: ['tests/tally-sixforms/stop-layout-after-fix.cjs']
   workflow_dispatch:
 permissions:
   contents: read
