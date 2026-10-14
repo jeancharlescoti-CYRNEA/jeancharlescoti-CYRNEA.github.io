@@ -1,3 +1,4 @@
+// Extra key return and B2B scheduling combinations added.
 // Script execution: deterministic, static, zero API calls.
 'use strict';
 /** CYRNEA static Tally logic audit. All reachable discrete combinations.
