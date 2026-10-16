@@ -2077,9 +2077,16 @@ function isOwnerAccessMission(){return S.result && ["RELAIS","PRÉSENCE PROPRIÉ
 
 function isKeyMission(){return S.result?.contract==="RELAIS"&&S.need==="KEY"}
 
-function hasKeyCustody(){return isOwnerAccessMission()&&(isKeyMission()||["LOCAL","POST"].includes(S.accessPlan?.mode))}
+function isB2BKeyMission(){return S.result?.contract==="PRÉSENCE ENTREPRISES"&&S.need==="BLOG"&&["KEY_GET","KEY_GIVE"].includes(S.sub)}
+function isB2BKeyCustody(){return S.result?.contract==="PRÉSENCE ENTREPRISES"&&(isB2BKeyMission()||["Clés reçues / disponibles avant la mission","Clés à récupérer"].includes(String(S.prep?.mode||""))||!!S.keyCustody?.receivedAt||!!S.accessPlan?.keysAvailableConfirmed)}
+function hasKeyCustody(){return (isOwnerAccessMission()&&(isKeyMission()||["LOCAL","POST"].includes(S.accessPlan?.mode)))||isB2BKeyCustody()}
 
 function accessAllowed(){
+ if(isB2BKeyCustody()){
+  if(!S.prep?.addr)return true; // Les déclarations client sont vérifiées dans Tally avant paiement.
+  const p=S.accessPlan||{};
+  return !!(p.approved&&p.keysAvailableConfirmed&&p.contact&&p.returnMode&&p.returnDetail);
+ }
  if(!isOwnerAccessMission())return true;
  const p=S.accessPlan||{};
  if(!p.approved)return false;
@@ -2136,7 +2143,12 @@ function saveAccessIntake(){
  save();bookingHandoff();
 }
 
-function keysReadyForTerrain(){return !hasKeyCustody()||(isKeyMission()&&S.sub==="GET")||!!S.keyCustody?.receivedAt}
+function keysReadyForTerrain(){
+ if(!hasKeyCustody())return true;
+ if(isKeyMission()&&S.sub==="GET")return true;
+ if(isB2BKeyCustody()&&((isB2BKeyMission()&&S.sub==="KEY_GET")||S.prep?.mode==="Clés à récupérer"))return true;
+ return !!S.keyCustody?.receivedAt;
+}
 
 function keysFullyReturned(){
  if(!hasKeyCustody())return true;
@@ -2148,7 +2160,7 @@ function keysFullyReturned(){
 
 function keysTracker(){
  if(!hasKeyCustody())return ready();
- setStage(S.departureAt?"CLÔTURE":"PRÊTE");
+ setStage(S.departureAt?"CLÔTURE":isB2BKeyCustody()&&S.arrivalAt?"TERRAIN":"PRÊTE");
  const k=S.keyCustody||{};
  const opt=(v,label,current)=>`<option value="${v}" ${current===v?"selected":""}>${label}</option>`;
  draw(`<div class="card"><h1>Suivi des clés confiées</h1>
@@ -2176,7 +2188,7 @@ function saveKeysTracker(){
  S.keyCustody={source,receivedAt:received?(old.receivedAt||now):"",status,proof,tracking,deposit,
  returnAt:["PERSON","BOX","POST_DELIVERED"].includes(status)?(old.status===status&&old.returnAt?old.returnAt:now):"",
  sentAt:["POST_SENT","POST_DELIVERED"].includes(status)?(old.sentAt||now):""};
- save();if(S.departureAt)closeMission();else ready();
+ save();if(S.departureAt)closeMission();else if(isB2BKeyCustody()&&S.arrivalAt)terrain();else ready();
 }
 
 function bookingHandoff(){
@@ -2458,7 +2470,7 @@ function preparationMission(){
  </div>
  <div class="guideTitle">ÉTAPE 2</div><div class="bigQuestion">Comment entre-t-on ?</div>
  <div class="field"><label>Mode d'accès</label>
-   <select id="mode"><option>Clés reçues / disponibles avant la mission</option><option>Clés à récupérer</option><option>Code / digicode</option><option>Accès donné par un tiers</option><option>Accès libre / accueil</option><option>Autre</option></select>
+   <select id="mode">${b2b?'<option value="">— Choisir le moyen d’accès —</option>':""}<option>Clés reçues / disponibles avant la mission</option><option>Clés à récupérer</option><option>Code / digicode</option><option>Accès donné par un tiers</option><option>Accès libre / accueil</option><option>Autre</option></select>
  </div>
  ${b2b?`
  <div class="guideTitle">ÉTAPE 3</div><div class="bigQuestion">Y a-t-il quelqu’un à contacter sur place ?</div>
@@ -2508,13 +2520,51 @@ function collectPreparation(){
    note:(document.getElementById('note')?.value||"").trim()
  };
  if(!h.addr)return alert("Adresse exacte obligatoire.");
-
+ if(b2b&&!h.mode)return alert("Choisissez le mode d'accès réellement prévu.");
  S.prep=h;
  save();
  if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{});
+ if(isB2BKeyCustody())return b2bKeysIntake();
  ready();
 }
 
+function b2bKeysIntake(){
+ if(!isB2BKeyCustody())return ready();
+ setStage("PRÊTE");
+ const p=S.accessPlan||{};
+ const select=function(id,options,selected){
+  return '<select id="'+id+'">'+options.map(function(o){return '<option value="'+esc(o[0])+'"'+(o[0]===selected?' selected':'')+'>'+esc(o[1])+'</option>'}).join('')+'</select>';
+ };
+ draw([
+ '<div class="card"><h1>Clés / badges — préparation B2B</h1>',
+ '<div class="operatorOnly">Les déclarations du client restent dans Tally. Confirmer ici la faisabilité opérationnelle, sans enregistrer de code secret.</div>',
+ '<div class="row"><b>Mission</b><span>'+esc(S.result?.mission||"-")+'</span></div>',
+ '<div class="field"><label>Les clés sont-elles réellement disponibles pour la mission ?</label>',
+ select("b2bKeyAvailable",[["","— Vérifier —"],["YES","OUI — disponibilité confirmée"],["NO","NON — clés indisponibles"],["UNKNOWN","JE NE SAIS PAS — non confirmé"]],p.keysAvailableConfirmed?"YES":""),
+ '</div><div class="field"><label>Provenance / personne désignée (nom, contact)</label><input id="b2bKeyContact" value="'+esc(p.contact||"")+'"></div>',
+ '<div class="field"><label>Destination convenue des clés après la mission</label>',
+ select("b2bKeyReturn",[["","— Choisir —"],["PERSON","Remise à une personne désignée"],["BOX","Dépôt dans un dispositif autorisé"],["POST","Retour postal standard en France, inclus dans le tarif"]],p.returnMode||""),
+ '</div><div class="field"><label>Destinataire ou emplacement précis de restitution</label><input id="b2bKeyReturnDetail" value="'+esc(p.returnDetail||"")+'"></div>',
+ '<div class="warn"><b>STOP</b> NON ou JE NE SAIS PAS : ne pas déclarer la mission prête. Sous 24 h, des clés encore sur le continent ne garantissent pas l’accès.</div>',
+ '<div class="notice">Tracer la réception et la restitution. Un courrier expédié ne vaut pas livraison confirmée.</div>',
+ '<button class="btn primary" onclick="saveB2BKeysIntake()">VALIDER LES MODALITÉS DES CLÉS</button></div>'
+ ].join(""));
+}
+function saveB2BKeysIntake(){
+ if(!isB2BKeyCustody())return ready();
+ const available=document.getElementById("b2bKeyAvailable")?.value||"";
+ if(available!=="YES")return alert("STOP : clés indisponibles ou non confirmées. Ne pas préparer le départ.");
+ const p=S.accessPlan||{};
+ const contact=String(document.getElementById("b2bKeyContact")?.value||"").trim();
+ const returnMode=document.getElementById("b2bKeyReturn")?.value||"";
+ const returnDetail=String(document.getElementById("b2bKeyReturnDetail")?.value||"").trim();
+ if(!contact||!returnMode||!returnDetail)return alert("Personne désignée, restitution et destination obligatoires.");
+ if(S.keyCustody?.receivedAt&&(contact!==p.contact||returnMode!==p.returnMode||returnDetail!==p.returnDetail))
+  return alert("Clés déjà reçues : ne pas changer leur destination sans accord. Les preuves sont conservées.");
+ S.accessPlan={...p,approved:true,keysAvailableConfirmed:true,contact,returnMode,returnDetail,mode:"KEY"};
+ save();
+ ready();
+}
 function docPack(){
   const m=S.result?.mission||"";
   let fiche="Fiche mission";
@@ -2544,7 +2594,7 @@ function ready(){
  <div class="operatorOnly">Cochez les contrôles un par un. Si vous ne pouvez pas cocher une ligne, revenez à la préparation.</div>
  <div class="guideTitle">CONTRÔLE DÉPART</div>
  ${isOwnerAccessMission()?`<div class="notice"><b>ORGANISATION DE L’ACCÈS</b> — ${esc(S.accessPlan?.mode||"Non renseigné")}<br><button class="btn ghost" onclick="accessIntake()">REVOIR L’ACCÈS ET LA RESTITUTION</button></div>`:""}
- ${hasKeyCustody()?`<div class="${keysReadyForTerrain()?"notice":"stop"}"><b>CLÉS CONFIÉES</b> — ${S.keyCustody?.receivedAt?"Réception enregistrée":"Réception en attente"}<br><button class="btn ghost" onclick="keysTracker()">ENREGISTRER LA RÉCEPTION / LE SUIVI</button></div>`:""}
+ ${hasKeyCustody()?`<div class="${keysReadyForTerrain()?"notice":"stop"}"><b>CLÉS CONFIÉES</b> — ${S.keyCustody?.receivedAt?"Réception enregistrée":"Réception en attente"}<br>${isB2BKeyCustody()?`<button class="btn ghost" onclick="b2bKeysIntake()">REVOIR LES MODALITÉS</button>`:""}<button class="btn ghost" onclick="keysTracker()">ENREGISTRER LA RÉCEPTION / LE SUIVI</button></div>`:""}
  <label class="check"><input type="checkbox" name="readyCheck"><span>J’ai l’adresse exacte et je sais où arriver.</span></label>
  <label class="check"><input type="checkbox" name="readyCheck"><span>La réservation / le créneau est confirmé.</span></label>
  <label class="check"><input type="checkbox" name="readyCheck"><span>Je sais exactement ce que je dois faire / observer.</span></label>
@@ -2565,7 +2615,7 @@ function ready(){
 }
 function startTerrainFromReady(){
  if(S.paymentStatus==='REFUNDED')return alert('Mission remboursée : aucun départ terrain.');
- if(!accessAllowed()){alert('Accès non sécurisé : qualifier la solution avant de partir.');return accessIntake();}
+ if(!accessAllowed()){alert('Accès non sécurisé : qualifier la solution avant de partir.');return isB2BKeyCustody()?b2bKeysIntake():accessIntake();}
  if(!keysReadyForTerrain())return alert('Clés non reçues : enregistrez la réception avant de partir.');
  if(!allChecked("input[name='readyCheck']")) return alert("Cochez tous les contrôles avant de partir.");
  missionDesk();
@@ -2850,7 +2900,7 @@ function missionArchiveText(){
    "Adresse : "+(S.prep?.addr||S.city||"-"),
    "Arrivée : "+(S.arrivalAt||"-"),
    "Départ : "+(S.departureAt||"-"),
-   ...(isOwnerAccessMission()?[
+   ...((isOwnerAccessMission()||isB2BKeyCustody())?[
      "Accès prévu : "+(S.accessPlan?.mode||"Non qualifié"),
      "Contact accès : "+(S.accessPlan?.contact||"-"),
      "Destination clés convenue : "+(S.accessPlan?.returnMode||"-")+" — "+(S.accessPlan?.returnDetail||"-"),
@@ -3235,7 +3285,7 @@ function terrain(){
  <div class="advice"><b>CONSEIL</b>Les cases ci-dessous sont vos contrôles internes. Le client n’a rien à cocher ici.</div>
 
  <div class="row"><b>${esc(S.missionId)}</b><span>${esc(S.result.mission)}</span></div>
- <div class="toolbar"><button class="btn ghost" onclick="missionDesk()">DOSSIER MISSION</button></div>
+ <div class="toolbar"><button class="btn ghost" onclick="missionDesk()">DOSSIER MISSION</button>${isB2BKeyCustody()?`<button class="btn ghost" onclick="keysTracker()">CLÉS — RÉCEPTION / RESTITUTION</button>`:""}</div>
 
  <div class="checkZone">
    <div class="checkIntro">GARDE-FOUS À COCHER</div>
