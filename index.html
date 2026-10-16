@@ -946,7 +946,17 @@ function daysUntilMission(){
   return Math.ceil((d-today)/86400000);
 }
 function earlyExecutionNeeded(){
-  return S.caller==="OWNER" && daysUntilMission()>=0 && daysUntilMission()<14;
+  if(S.caller!=="OWNER" || !S.date)return false;
+  const today=new Date();today.setHours(0,0,0,0);
+  const mission=new Date(S.date+"T00:00:00");
+  if(!Number.isFinite(mission.getTime())||mission<today)return false;
+  // Le jour de conclusion ne se compte pas : délai de 14 jours dès le lendemain.
+  // Si le dernier jour est non ouvrable, son échéance est reportée.
+  const expiry=new Date(today);expiry.setDate(expiry.getDate()+14);
+  while(expiry.getDay()===0||expiry.getDay()===6||isFrenchPublicHoliday(isoOfDate(expiry))){
+    expiry.setDate(expiry.getDate()+1);
+  }
+  return mission<=expiry;
 }
 
 const VAT_RATE=0.20; // Taux de travail du prototype ; à confirmer comptablement avant production.
