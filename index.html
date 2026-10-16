@@ -1169,8 +1169,8 @@ function multiTimeDropdownHtml(baseId){
     startHour=0;endHour=23;
     note="Heures ouvertes : H24. Avant 08 h et à partir de 19 h, le créneau bascule en HORS STANDARD.";
   }else if(isOwnerPresence){
-    startHour=8;endHour=20;
-    note="Heures ouvertes : départ de 08 h 00 à 20 h 45. De 19 h 00 à 20 h 59 : SOIR / HORS STANDARD.";
+    startHour=8;endHour=18;
+    note="Heures ouvertes : départ de 08 h 00 à 18 h 45. Aucun nouveau départ à partir de 19 h.";
   }
 
   const values=[];
@@ -1183,7 +1183,7 @@ function multiTimeDropdownHtml(baseId){
       <option value="">Choisir l’heure</option>
       ${values.map(v=>`<option value="${v}">${v}</option>`).join("")}
     </select>
-    <div class="muted">${note} En STANDARD, seules 00 et 30 sont acceptées ; 15 et 45 restent disponibles en HORS STANDARD.</div>
+    <div class="muted">${note} En STANDARD, 00 et 30 sont acceptées, ainsi que 18 h 45 pour le dernier départ ; les autres quarts d’heure 15 et 45 relèvent du HORS STANDARD.</div>
   </div>`;
 }
 
