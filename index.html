@@ -554,10 +554,10 @@ async function deleteActiveMission(id){
      ((k.status==="PERSON"||k.status==="BOX")&&k.status===p.returnMode)||
      (k.status==="POST_DELIVERED"&&p.returnMode==="POST"&&!!k.tracking&&!!k.deposit)
    );
-   if(!returnDone)return alert("Suppression interdite : des clés reçues sont encore à restituer ou leur livraison postale n’est pas confirmée. Conservez la mission active.");
+   if(!returnDone)return alert("⛔ Suppression interdite : des clés reçues sont encore à restituer ou leur livraison postale n’est pas confirmée. Conservez la mission active.");
  }
  if(st.overrun?.accepted&&st.overrun.paymentStatus!=="PAID")
-   return alert("Suppression interdite : supplément de prolongation encore à encaisser. Conservez la mission active.");
+   return alert("⛔ Suppression interdite : supplément de prolongation encore à encaisser. Conservez la mission active.");
  const label=(st.result?.mission||"Mission")+" — "+(st.name||"Client");
  if(!confirm("SUPPRIMER CE DOSSIER ACTIF ?\n\n"+label+"\n\nCette suppression sera synchronisée sur les autres appareils."))return;
 
@@ -1044,7 +1044,7 @@ function showResult(){
  <div class="field"><label>Montant du devis accepté</label><input id="quotePrice" placeholder="${S.caller==="B2B"?"Ex. 500 € HT":"Ex. 149 € TTC"}"></div>
  <button class="btn primary" onclick="if(!saveObject())return;let q=document.getElementById('quotePrice').value.trim();if(!q)return alert('Montant du devis requis');if(S.caller==='B2B'&&!/HT/i.test(q))return alert('Pour le B2B, indiquez le montant du devis en HT.');if(S.caller!=='B2B'&&!/TTC/i.test(q))return alert('Pour un particulier, indiquez le montant du devis en TTC.');S.result.price=q;S.result.status='PROPOSER';S.result.isQuote=true;slot()">DEVIS ACCEPTÉ → CONTINUER</button>`
  : normal?`<button class="btn primary" onclick="if(!saveObject())return;slot()">CONTINUER VERS LE CRÉNEAU</button>`
- : `<div class="stop">Le parcours commercial s'arrête ici. Aucun paiement ni mission terrain.</div><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button>`}
+ : `<div class="stop"><b>⛔ MISSION NON RÉSERVABLE</b><br>Le parcours commercial s'arrête ici. Aucun paiement ni mission terrain.</div><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button>`}
  </div>`)
 }
 function needsCahier(){return ["DÉCIDER","SUIVRE","PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","CONTINUITÉ PROJET"].includes(S.result.mission)}
@@ -1063,7 +1063,7 @@ function voirContractInvariant(){
 }
 function assertVoirContractInvariant(){
   if(voirContractInvariant()) return true;
-  alert("Incohérence VOIR détectée : contrat et univers ne correspondent pas. La mission est bloquée sans conversion automatique.");
+  alert("⛔ Incohérence VOIR détectée : contrat et univers ne correspondent pas. La mission est bloquée sans conversion automatique.");
   return false;
 }
 
@@ -2070,7 +2070,7 @@ async function prepareClientTallyLink(){
    +(email?'<a class="btn ghost" style="display:inline-flex;align-items:center;text-decoration:none" href="'+esc(mailto)+'">E-MAIL AU CLIENT</a>':"")
    +'</div><div class="muted">SMS et e-mail ouvrent un brouillon : vérifiez puis envoyez vous-même au client.</div></div>';
  }catch(err){
-  box.innerHTML='<div class="stop"><b>LIEN NON TRANSMISSIBLE</b>'+esc(String(err?.message||err||"Erreur de sécurisation"))+'. Aucun lien client ne doit être envoyé tant que la référence n’est pas enregistrée.</div>';
+  box.innerHTML='<div class="stop"><b>⛔ LIEN NON TRANSMISSIBLE</b><br>'+esc(String(err?.message||err||"Erreur de sécurisation"))+'. Aucun lien client ne doit être envoyé tant que la référence n’est pas enregistrée.</div>';
  }finally{
   if(btn && btn.isConnected){btn.disabled=false;btn.textContent="ENVOYER LE LIEN TALLY AU CLIENT";}
  }
@@ -2115,7 +2115,7 @@ async function openTallySecure(){
  }catch(err){
    const message=String(err?.message||err||"Erreur inconnue");
    renderPopup(`<b>Impossible d’ouvrir Tally.</b><p>${esc(message)}</p><p>Aucun paiement n’a été lancé. Fermez cette fenêtre puis relancez depuis la PWA.</p>`);
-   alert("Tally bloqué : "+message+". Aucun paiement n’a été lancé.");
+   alert("⛔ Tally bloqué : "+message+". Aucun paiement n’a été lancé.");
  }
 }
 function openSimplyBook(){
@@ -2175,7 +2175,7 @@ function accessIntake(){
  ${opt("POST","Retour postal standard en France inclus",p.returnMode||"")}
  ${opt("BOX","Dépôt dans le dispositif convenu",p.returnMode||"")}</select></div>
  <div class="field"><label>Nom / adresse du destinataire ou emplacement convenu</label><input id="accReturnDetail" value="${esc(p.returnDetail||"")}" placeholder="À renseigner lorsque des clés sont confiées"></div>
- <div class="warn"><b>STOP -24 H</b>Si les clés doivent encore venir du continent et qu’aucun autre accès n’est possible : ne pas ouvrir Tally ni encaisser. Reporter ou obtenir un accès local effectif.</div>
+ <div class="warn"><b>⚠️ VIGILANCE — DÉLAI INFÉRIEUR À 24 H</b><br>Si les clés doivent encore venir du continent et qu’aucun autre accès n’est possible : ne pas ouvrir Tally ni encaisser. Reporter ou obtenir un accès local effectif.</div>
  <div class="notice">Le retour postal standard des clés en France est inclus dans le tarif, sans étiquette prépayée à demander au propriétaire.</div>
  <button class="btn primary" onclick="saveAccessIntake()">VALIDER L’ACCÈS ET CONTINUER</button><button class="btn ghost" onclick="slot()">MODIFIER LE CRÉNEAU</button></div>`);
 }
@@ -2225,7 +2225,7 @@ function keysTracker(){
  <div class="field"><label>Preuve de restitution ou nom du destinataire</label><input id="keyProof" value="${esc(k.proof||"")}"></div>
  <div class="field"><label>Numéro de suivi postal</label><input id="keyTracking" value="${esc(k.tracking||"")}"></div>
  <div class="field"><label>Référence du justificatif de dépôt</label><input id="keyDeposit" value="${esc(k.deposit||"")}"></div>
- <div class="warn">Ne pas archiver tant que les clés ne sont pas restituées, ou tant que le retour postal n’est pas distribué.</div>
+ <div class="warn">⚠️ Ne pas archiver tant que les clés ne sont pas restituées, ou tant que le retour postal n’est pas distribué.</div>
  <button class="btn primary" onclick="saveKeysTracker()">ENREGISTRER</button></div>`);
 }
 
@@ -2271,7 +2271,7 @@ function bookingHandoff(){
    :'<div class="neutral"><b>RÉTRACTATION — Exécution anticipée non nécessaire.</b> Aucune question d’exécution anticipée ne sera présentée dans Tally pour ce parcours.</div>'):""}
  ${multi?multiPassageRows():""}
  ${multi?`<div class="neutral"><b>MISSION EN PLUSIEURS PASSAGES / JALONS</b>La mission est transmise à Tally avec les passages connus. Les jalons suivants restent rattachés au même dossier et toute majoration éventuelle est traitée selon le créneau concerné.</div>`:""}
- <div class="warn"><b>PAIEMENT — CONFIRMATION HUMAINE</b>Le paiement ne confirme jamais automatiquement la mission, y compris en STANDARD. Après paiement : vérifier la disponibilité puis CONFIRMER, PROPOSER UNE ALTERNATIVE ou REMBOURSER.</div>
+ <div class="warn"><b>⚠️ PAIEMENT — CONFIRMATION HUMAINE</b><br>Le paiement ne confirme jamais automatiquement la mission, y compris en STANDARD. Après paiement : vérifier la disponibilité puis CONFIRMER, PROPOSER UNE ALTERNATIVE ou REMBOURSER.</div>
  <div class="phoneScript"><b>PHRASE À DIRE AU CLIENT</b>
  « La mission adaptée est <b>${esc(S.result.mission)}</b>, au tarif de <b>${esc(priceText())}</b>. Le créneau choisi est pris en compte et vous sera confirmé. Vous pourrez indiquer une autre possibilité avant le paiement. »
  </div>
@@ -2351,7 +2351,7 @@ function postPaymentDecision(){
  setStage("RÉSERVATION");
  if(!GATEWAY_REF_RE.test(String(S.tallyReference||"")))ensureTallyReference();
  draw(`<div class="card"><h1>Paiement reçu — décision humaine</h1>
-   <div class="stop"><b>NE PAS PARTIR EN MISSION</b>Un paiement, STANDARD ou HORS STANDARD, n’est jamais une confirmation de disponibilité.</div>
+   <div class="stop"><b>⛔ NE PAS PARTIR EN MISSION</b><br>Un paiement, STANDARD ou HORS STANDARD, n’est jamais une confirmation de disponibilité.</div>
    <div class="row"><b>Mission</b><span>${esc(S.result?.mission||"-")}</span></div>
    <div class="row"><b>Créneau demandé</b><span>${esc(scheduleText())}</span></div>
    <div class="row"><b>Référence</b><span>${esc(S.tallyReference||"-")}</span></div>
@@ -2377,7 +2377,7 @@ function decisionAlternative(){
  S.decisionStatus="ALTERNATIVE_PROPOSED";
  save();
  draw(`<div class="card"><h1>Alternative proposée</h1>
-   <div class="warn"><b>DOSSIER EN ATTENTE</b>Ne préparez pas la mission tant que le client n’a pas accepté le nouveau créneau.</div>
+   <div class="warn"><b>⚠️ DOSSIER EN ATTENTE</b><br>Ne préparez pas la mission tant que le client n’a pas accepté le nouveau créneau.</div>
    <div class="toolbar"><button class="btn primary" onclick="alternativeAcceptedForm()">LE CLIENT A ACCEPTÉ → SAISIR LE CRÉNEAU</button><button class="btn ghost" onclick="postPaymentDecision()">RETOUR À LA DÉCISION</button></div>
  </div>`);
 }
@@ -2604,7 +2604,7 @@ function b2bKeysIntake(){
  '<div class="field"><label>Destination convenue des clés après la mission</label>',
  select("b2bKeyReturn",[["","— Choisir —"],["PERSON","Remise à une personne désignée"],["BOX","Dépôt dans un dispositif autorisé"],["POST","Retour postal standard en France, inclus dans le tarif"]],p.returnMode||""),
  '</div><div class="field"><label>Destinataire ou emplacement précis de restitution</label><input id="b2bKeyReturnDetail" value="'+esc(p.returnDetail||"")+'"></div>',
- '<div class="warn"><b>STOP</b> NON ou JE NE SAIS PAS : ne pas déclarer la mission prête. Sous 24 h, des clés encore sur le continent ne garantissent pas l’accès.</div>',
+ '<div class="warn"><b>⚠️ VIGILANCE — DISPONIBILITÉ DES CLÉS</b><br>NON ou JE NE SAIS PAS : ne pas déclarer la mission prête. Sous 24 h, des clés encore sur le continent ne garantissent pas l’accès.</div>',
  '<div class="notice">Tracer la réception et la restitution. Un courrier expédié ne vaut pas livraison confirmée.</div>',
  '<button class="btn primary" onclick="saveB2BKeysIntake()">VALIDER LES MODALITÉS DES CLÉS</button></div>'
  ].join(""));
@@ -2616,7 +2616,7 @@ function saveB2BKeysIntake(){
   // Un choix NON ou JE NE SAIS PAS invalide aussi une ancienne confirmation.
   S.accessPlan={...(S.accessPlan||{}),approved:false,keysAvailableConfirmed:false};
   save();
-  return alert("STOP : clés indisponibles ou non confirmées. Ne pas préparer le départ.");
+  return alert("⛔ CLÉS INDISPONIBLES OU NON CONFIRMÉES : Ne pas préparer le départ.");
  }
  const p=S.accessPlan||{};
  const contact=String(document.getElementById("b2bKeyContact")?.value||"").trim();
@@ -3103,7 +3103,7 @@ function continueMultiAfterRestitution(){
   const p=(S.multiSlots||[]).find(x=>x.index===next);
   if(!p){
     return draw(`<div class="card"><h1>Passage / jalon ${next} à programmer</h1>
-      <div class="warn"><b>ARRÊT NORMAL</b>Le prochain créneau n’est pas fixé. Aucun passage suivant ne peut être lancé sans date, heure, contrôle d’agenda et éventuelle majoration.</div>
+      <div class="warn"><b>⚠️ ARRÊT NORMAL</b><br>Le prochain créneau n’est pas fixé. Aucun passage suivant ne peut être lancé sans date, heure, contrôle d’agenda et éventuelle majoration.</div>
       <div class="notice">En pratique : créneau → Tally / paiement → confirmation humaine CYRNEA → préparation interne → mission prête.</div>
       <button class="btn ghost" onclick="archivePartialMulti()">CONSERVER LA MISSION EN COURS</button>
     </div>`);
@@ -3226,7 +3226,7 @@ function overrunGuide(){
  if(!r.allowed){
    const msg=overrunMissionSummary()+"\n\nLa mission prévue arrive à sa limite de temps et je ne peux pas poursuivre automatiquement au-delà du cadre convenu. La situation nécessite une nouvelle validation avant toute action supplémentaire. Souhaitez-vous que je vous contacte pour requalifier la suite de la mission ?";
    return draw(`<div class="card"><h1>Temps / cadre dépassé</h1>
-     <div class="stop"><b>NE PAS CONTINUER AUTOMATIQUEMENT</b><br>${esc(r.text)}</div>
+     <div class="stop"><b>⛔ NE PAS CONTINUER AUTOMATIQUEMENT</b><br>${esc(r.text)}</div>
      <div class="readAloud" style="white-space:pre-line">${esc(msg)}</div>
      <div class="row"><b>Client</b><span>${esc(S.name||"-")}</span></div>
      <div class="row"><b>Téléphone</b><span>${esc(phone||"NON RENSEIGNÉ")}</span></div>
@@ -3278,7 +3278,7 @@ function toggleOverrunAvailability(){
 }
 function saveOverrun(unit,base,max){
  const availability=document.getElementById("overrunAvailability")?.value||"";
- if(availability==="BUSY")return alert("Une mission est prévue derrière : la prolongation est interdite. Arrêtez à l’heure convenue et proposez si nécessaire une nouvelle mission ultérieure.");
+ if(availability==="BUSY")return alert("⛔ Une mission est prévue derrière : la prolongation est interdite. Arrêtez à l’heure convenue et proposez si nécessaire une nouvelle mission ultérieure.");
  if(availability!=="FREE")return alert("Vérifiez d’abord qu’aucune mission n’occupe la période de prolongation demandée.");
  const n=Math.max(1,Number(document.getElementById("overrunN")?.value||1));
  const agreement=document.getElementById("overrunAgreement")?.value||"";
@@ -3321,12 +3321,12 @@ function extraMomentInfo(){
  if(!r)return;
  const next=S.passage+1;
  if(next>5){
-   return draw(`<div class="card"><h1>Passage supplémentaire</h1><div class="stop"><b>À PARTIR DU 6e</b><br>Devis, requalification ou refus si la demande devient récurrente. Ne pas lancer un nouveau passage automatiquement.</div><button class="btn ghost" onclick="restitution()">RETOUR</button></div>`);
+   return draw(`<div class="card"><h1>Passage supplémentaire</h1><div class="stop"><b>⛔ À PARTIR DU 6e</b><br>Devis, requalification ou refus si la demande devient récurrente. Ne pas lancer un nouveau passage automatiquement.</div><button class="btn ghost" onclick="restitution()">RETOUR</button></div>`);
  }
  draw(`<div class="card"><h1>${next}e ${esc(r.name)} lié</h1>
    <div class="notice"><b>SUPPLÉMENT</b>+${r.unit} € ${r.base} pour ce ${r.name}, même dossier et même objet.</div>
    <div class="readAloud">Un ${next}e ${r.name} est possible dans le même dossier et pour le même objet, avec un supplément de ${r.unit} € ${r.base}. Il devra être validé avant ce nouveau passage.</div>
-   <div class="warn">Ne pas partir sur ce nouveau passage tant que le créneau, le supplément et la réservation / validation correspondante ne sont pas confirmés.</div>
+   <div class="warn">⚠️ Ne pas partir sur ce nouveau passage tant que le créneau, le supplément et la réservation / validation correspondante ne sont pas confirmés.</div>
    <button class="btn ghost" onclick="restitution()">RETOUR</button>
  </div>`);
 }
@@ -3391,8 +3391,8 @@ function terrain(){
    <textarea id="incidentOther" placeholder="Décrire uniquement le fait constaté, sans interprétation."></textarea>
  </div>
 
- <div class="stop"><b>LA SITUATION EST DIFFÉRENTE / J'AI UN DOUTE</b><br>Ne pas improviser · constater · ne pas aggraver · documenter · requalifier avant élargissement.<br><br><button class="btn danger" onclick="triggerDoubt()">J’AI UN DOUTE / SITUATION DIFFÉRENTE</button></div>
- <div class="warn"><b>LE TEMPS PRÉVU EST DÉPASSÉ ?</b><br>Ne prolongez jamais de vous-même. L’assistant applique la règle de la mission.<br><br>${S.arrivalAt?`<button class="btn ghost" onclick="overrunGuide()">TEMPS / CADRE DÉPASSÉ</button>`:`<div class="muted">La prolongation devient disponible après « J’ARRIVE SUR PLACE — HORODATER ».</div>`}${S.overrun?.accepted?`<div class="notice" style="margin-top:10px"><b>PROLONGATION ACCEPTÉE</b>+${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(String(S.overrun.tranches))} tranche(s).</div>`:""}</div>
+ <div class="stop"><b>⛔ LA SITUATION EST DIFFÉRENTE / J'AI UN DOUTE</b><br>Ne pas improviser · constater · ne pas aggraver · documenter · requalifier avant élargissement.<br><br><button class="btn danger" onclick="triggerDoubt()">J’AI UN DOUTE / SITUATION DIFFÉRENTE</button></div>
+ <div class="warn"><b>⚠️ LE TEMPS PRÉVU EST DÉPASSÉ ?</b><br>Ne prolongez jamais de vous-même. L’assistant applique la règle de la mission.<br><br>${S.arrivalAt?`<button class="btn ghost" onclick="overrunGuide()">TEMPS / CADRE DÉPASSÉ</button>`:`<div class="muted">La prolongation devient disponible après « J’ARRIVE SUR PLACE — HORODATER ».</div>`}${S.overrun?.accepted?`<div class="notice" style="margin-top:10px"><b>PROLONGATION ACCEPTÉE</b>+${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(String(S.overrun.tranches))} tranche(s).</div>`:""}</div>
 
  <div class="checkZone">
    <div class="checkIntro">AVANT DE QUITTER LES LIEUX — CONTRÔLES CRITIQUES</div>
@@ -3445,7 +3445,7 @@ function restitution(){
  save();
 }
 function closeMission(){
- if(!S.departureAt)return alert("Impossible de clôturer sans contrôle terrain terminé et heure de départ.");
+ if(!S.departureAt)return alert("⛔ Impossible de clôturer sans contrôle terrain terminé et heure de départ.");
  setStage("CLÔTURE");
  const ov=S.overrun?.accepted?S.overrun:null;
  const unpaidOverrun=!!(ov&&ov.paymentStatus!=="PAID");
@@ -3455,7 +3455,7 @@ function closeMission(){
    Accord : ${esc(ov.agreementMethod==="SMS"?"SMS reçu":"Accord téléphonique")} — ${esc(ov.agreementAt||"-")}<br>
    Statut : <b>${esc(ov.paymentStatus==="PAID"?"RÉGLÉ":ov.paymentStatus==="PENDING"?"À ENCAISSER":"À VÉRIFIER")}</b></div>
    ${ov.paymentStatus==="PENDING"&&ov.paymentLink?`<div class="toolbar"><button class="btn primary" onclick="openOverrunPayment()">OUVRIR LE PAIEMENT STRIPE — ${esc(String(ov.total))} € TTC</button><button class="btn ghost" onclick="markOverrunPaid()">PAIEMENT REÇU → MARQUER RÉGLÉ</button></div>`:""}
-   ${ov.paymentStatus==="PENDING"&&!ov.paymentLink?`<div class="warn"><b>SUPPLÉMENT À ENCAISSER</b><br>${esc(String(ov.total))} € ${esc(ov.base)}. Ne clôturez pas le dossier tant que le règlement n’est pas réellement reçu.</div><div class="toolbar"><button class="btn ghost" onclick="markOverrunPaid()">PAIEMENT RÉELLEMENT REÇU → MARQUER RÉGLÉ</button></div>`:""}
+   ${ov.paymentStatus==="PENDING"&&!ov.paymentLink?`<div class="warn"><b>⚠️ SUPPLÉMENT À ENCAISSER</b><br>${esc(String(ov.total))} € ${esc(ov.base)}. Ne clôturez pas le dossier tant que le règlement n’est pas réellement reçu.</div><div class="toolbar"><button class="btn ghost" onclick="markOverrunPaid()">PAIEMENT RÉELLEMENT REÇU → MARQUER RÉGLÉ</button></div>`:""}
    `:"";
  // Une dette de prolongation ne constitue pas une clôture définitive.
  if(S.finalStatus==="MISSION TERRAIN TERMINÉE — SUPPLÉMENT À ENCAISSER")S.finalStatus="";
@@ -3482,14 +3482,14 @@ function closeMission(){
 }
 function finalizeArchive(){
  const status=document.getElementById("fs")?.value||"";
- if(!keysFullyReturned()&&!(status.startsWith("MISSION IMPOSSIBLE")&&!S.keyCustody?.receivedAt))return alert("Archive bloquée : clés non restituées ou retour postal non distribué.");
+ if(!keysFullyReturned()&&!(status.startsWith("MISSION IMPOSSIBLE")&&!S.keyCustody?.receivedAt))return alert("⛔ Archive bloquée : clés non restituées ou retour postal non distribué.");
  if(S.overrun?.accepted && S.overrun.paymentStatus!=="PAID"){
    return alert("Supplément de prolongation non réglé. La mission ne peut pas être archivée définitivement tant que le paiement n’est pas confirmé.");
  }
  S.finalStatus=document.getElementById("fs")?.value||S.finalStatus||"MISSION CLÔTURÉE";
  save();archive();
 }
-function archive(){if(S.overrun?.accepted&&S.overrun.paymentStatus!=="PAID")return alert("Archivage bloqué : supplément de prolongation non réglé.");if(!keysFullyReturned() && !(!S.keyCustody?.receivedAt && (S.paymentStatus==="REFUNDED" || String(S.finalStatus||"").startsWith("MISSION IMPOSSIBLE"))))return alert("Archive bloquée : clés reçues non restituées.");setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button id="archiveExportBtn" class="btn primary" onclick="exportMissionArchive()">EXPORTER LE DOSSIER → FICHIERS / iCLOUD</button><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
+function archive(){if(S.overrun?.accepted&&S.overrun.paymentStatus!=="PAID")return alert("⛔ Archivage bloqué : supplément de prolongation non réglé.");if(!keysFullyReturned() && !(!S.keyCustody?.receivedAt && (S.paymentStatus==="REFUNDED" || String(S.finalStatus||"").startsWith("MISSION IMPOSSIBLE"))))return alert("⛔ Archive bloquée : clés reçues non restituées.");setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button id="archiveExportBtn" class="btn primary" onclick="exportMissionArchive()">EXPORTER LE DOSSIER → FICHIERS / iCLOUD</button><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
 function exportJSON(){let b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(S.missionId||"CYRNEA-DEMO")+".json";a.click();URL.revokeObjectURL(a.href)}
 function recoverNewerStageViewState(){
  const baseId=activeMissionKey(S);
