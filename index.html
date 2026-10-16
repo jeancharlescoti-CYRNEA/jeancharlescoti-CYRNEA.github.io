@@ -2042,6 +2042,55 @@ async function registerTallyIntent(){
  save();
  return out.data;
 }
+
+/* Transmission Tally : référence de paiement sécurisée AVANT tout partage client. */
+async function prepareClientTallyLink(){
+ const box=document.getElementById("tallyClientShare");
+ const btn=document.getElementById("tallyClientSend");
+ if(!box)return alert("Écran de réservation non disponible. Revenez à RÉSERVER ET PAYER.");
+ if(!accessAllowed())return accessIntake();
+ if(btn){btn.disabled=true;btn.textContent="PRÉPARATION DU LIEN…";}
+ box.innerHTML='<div class="notice">Vérification de la référence de réservation sécurisée…</div>';
+ try{
+  await registerTallyIntent();
+  const url=buildTallyUrl();
+  if(!/^https:\/\/tally\.so\/r\//.test(url))throw new Error("Adresse Tally invalide.");
+  const phone=String(S.phone||"").replace(/[^+\d]/g,"");
+  const email=String(S.email||"").trim();
+  const message="Bonjour, voici le lien CYRNEA pour vérifier votre demande, compléter personnellement les déclarations et procéder au paiement sécurisé après validation :\n"+url+"\nLa mission reste soumise à confirmation de disponibilité.";
+  const apple=/Macintosh|Mac OS X|iPhone|iPad|iPod/i.test(navigator.userAgent||"");
+  const sms=apple
+   ?"sms://open?addresses="+encodeURIComponent(phone)+"&body="+encodeURIComponent(message)
+   :"sms:"+phone+"?body="+encodeURIComponent(message);
+  const mailto="mailto:"+encodeURIComponent(email)+"?subject="+encodeURIComponent("CYRNEA — votre lien de demande")+"&body="+encodeURIComponent(message);
+  box.innerHTML='<div class="notice"><b>LIEN PRÊT À TRANSMETTRE AU CLIENT</b><p>Vous transmettez le lien ; le client complète et valide lui-même Tally. Aucune déclaration ni aucun paiement n’est réalisé ici.</p>'
+   +'<div class="field"><label>Lien Tally prérempli</label><input id="clientTallyUrl" readonly value="'+esc(url)+'" onclick="this.select()"></div>'
+   +'<div class="toolbar"><button class="btn ghost" onclick="copyClientTallyLink()">COPIER LE LIEN</button>'
+   +(phone?'<a class="btn ghost" style="display:inline-flex;align-items:center;text-decoration:none" href="'+esc(sms)+'">SMS AU CLIENT</a>':"")
+   +(email?'<a class="btn ghost" style="display:inline-flex;align-items:center;text-decoration:none" href="'+esc(mailto)+'">E-MAIL AU CLIENT</a>':"")
+   +'</div><div class="muted">SMS et e-mail ouvrent un brouillon : vérifiez puis envoyez vous-même au client.</div></div>';
+ }catch(err){
+  box.innerHTML='<div class="stop"><b>LIEN NON TRANSMISSIBLE</b>'+esc(String(err?.message||err||"Erreur de sécurisation"))+'. Aucun lien client ne doit être envoyé tant que la référence n’est pas enregistrée.</div>';
+ }finally{
+  if(btn && btn.isConnected){btn.disabled=false;btn.textContent="ENVOYER LE LIEN TALLY AU CLIENT";}
+ }
+}
+async function copyClientTallyLink(){
+ const input=document.getElementById("clientTallyUrl");
+ if(!input?.value)return alert("Préparez d’abord le lien sécurisé.");
+ try{
+  if(!navigator.clipboard?.writeText)throw new Error("Copie système indisponible");
+  await navigator.clipboard.writeText(input.value);
+  alert("Lien Tally copié. Collez-le dans le message destiné au client.");
+ }catch(_){
+  try{
+   input.focus();input.select();
+   if(document.execCommand("copy"))return alert("Lien Tally copié. Collez-le dans le message destiné au client.");
+  }catch(_){}
+  prompt("Copiez ce lien Tally pour le transmettre au client :",input.value);
+ }
+}
+
 async function openTallySecure(){
  if(!accessAllowed())return accessIntake();
 
@@ -2226,7 +2275,8 @@ function bookingHandoff(){
  <div class="phoneScript"><b>PHRASE À DIRE AU CLIENT</b>
  « La mission adaptée est <b>${esc(S.result.mission)}</b>, au tarif de <b>${esc(priceText())}</b>. Le créneau choisi est pris en compte et vous sera confirmé. Vous pourrez indiquer une autre possibilité avant le paiement. »
  </div>
- <div class="toolbar">${route==="TALLY"?`<button class="btn primary" onclick="openTallySecure()">OUVRIR TALLY — RÉSERVER / PAYER</button>`:`<button class="btn primary" onclick="openSimplyBook()">OUVRIR SIMPLYBOOK — RÉSERVER / PAYER</button><button class="btn ghost" onclick="settings()">RÉGLAGES DU LIEN</button>`}</div>
+ <div class="toolbar">${route==="TALLY"?`<button id="tallyClientSend" class="btn primary" onclick="prepareClientTallyLink()">ENVOYER LE LIEN TALLY AU CLIENT</button><button class="btn" onclick="openTallySecure()" style="background:#f59e0b;color:#422006;border:2px solid #b45309">OUVRIR TALLY — TEST</button>`:`<button class="btn primary" onclick="openSimplyBook()">OUVRIR SIMPLYBOOK — RÉSERVER / PAYER</button><button class="btn ghost" onclick="settings()">RÉGLAGES DU LIEN</button>`}</div>
+ ${route==="TALLY"?'<div id="tallyClientShare"></div><div class="muted">TEST : ce bouton orange ouvre le véritable formulaire Tally. Les simulations ne doivent pas déclencher de paiement réel.</div>':""}
  <div class="checkZone"><div class="checkIntro">APRÈS LE PAIEMENT ${route==="TALLY"?"TALLY":"SIMPLYBOOK"}</div>
  <button class="btn primary" onclick="markBooked()">${route==="TALLY"?"PAIEMENT REÇU → DÉCIDER":"RÉSERVATION SIMPLYBOOK CONFIRMÉE → ENREGISTRER LE CRÉNEAU RÉEL"}</button>
  </div>
