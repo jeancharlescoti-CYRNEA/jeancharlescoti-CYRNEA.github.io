@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-20261016-alertes-clients-operateur-v14';
+const CACHE='cyrnea-assistant-20261016-confirmation-sans-picto-v15';
 const ASSETS=['./index.html','./terrain-clock.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
