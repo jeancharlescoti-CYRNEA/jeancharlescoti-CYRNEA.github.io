@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-20261003-multijalon-debug-v11';
+const CACHE='cyrnea-assistant-20261016-quarts-heure-v12';
 const ASSETS=['./index.html','./terrain-clock.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
