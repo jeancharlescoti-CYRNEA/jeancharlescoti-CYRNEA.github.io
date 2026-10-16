@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-20261016-partage-tally-test-orange-v13';
+const CACHE='cyrnea-assistant-20261016-alertes-clients-operateur-v14';
 const ASSETS=['./index.html','./terrain-clock.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
