@@ -2553,7 +2553,12 @@ function b2bKeysIntake(){
 function saveB2BKeysIntake(){
  if(!isB2BKeyCustody())return ready();
  const available=document.getElementById("b2bKeyAvailable")?.value||"";
- if(available!=="YES")return alert("STOP : clés indisponibles ou non confirmées. Ne pas préparer le départ.");
+ if(available!=="YES"){
+  // Un choix NON ou JE NE SAIS PAS invalide aussi une ancienne confirmation.
+  S.accessPlan={...(S.accessPlan||{}),approved:false,keysAvailableConfirmed:false};
+  save();
+  return alert("STOP : clés indisponibles ou non confirmées. Ne pas préparer le départ.");
+ }
  const p=S.accessPlan||{};
  const contact=String(document.getElementById("b2bKeyContact")?.value||"").trim();
  const returnMode=document.getElementById("b2bKeyReturn")?.value||"";
