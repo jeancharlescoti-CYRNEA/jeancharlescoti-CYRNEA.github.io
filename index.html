@@ -2217,6 +2217,9 @@ function bookingHandoff(){
  <div class="row"><b>Portail</b><span>${esc(portal)}</span></div>
  ${S.result?.contract==="PRÉSENCE ENTREPRISES"?`<div class="neutral"><b>PAIEMENT B2B — ARCHITECTURE PRÉVUE</b>Carte bancaire et PayPal restent les moyens actifs via le portail. Le virement SEPA est prévu dans la PWA mais n’est pas encore activé. Lorsqu’il sera activé, une mission réglée par virement ne pourra jamais passer en PRÊTE / TERRAIN tant que la réception effective des fonds n’aura pas été confirmée.</div>`:""}
  <div class="row"><b>Conditions</b><span>${esc(contractRef())}</span></div>
+ ${["RELAIS","PRÉSENCE PROPRIÉTAIRES"].includes(S.result?.contract)?(earlyExecutionNeeded()
+   ?'<div class="neutral"><b>RÉTRACTATION — Accord exprès nécessaire.</b> La question sera présentée au client dans Tally avant paiement.</div>'
+   :'<div class="neutral"><b>RÉTRACTATION — Exécution anticipée non nécessaire.</b> Aucune question d’exécution anticipée ne sera présentée dans Tally pour ce parcours.</div>'):""}
  ${multi?multiPassageRows():""}
  ${multi?`<div class="neutral"><b>MISSION EN PLUSIEURS PASSAGES / JALONS</b>La mission est transmise à Tally avec les passages connus. Les jalons suivants restent rattachés au même dossier et toute majoration éventuelle est traitée selon le créneau concerné.</div>`:""}
  <div class="warn"><b>PAIEMENT — CONFIRMATION HUMAINE</b>Le paiement ne confirme jamais automatiquement la mission, y compris en STANDARD. Après paiement : vérifier la disponibilité puis CONFIRMER, PROPOSER UNE ALTERNATIVE ou REMBOURSER.</div>
