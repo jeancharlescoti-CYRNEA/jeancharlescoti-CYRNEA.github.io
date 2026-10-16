@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-20261016-quarts-heure-v12';
+const CACHE='cyrnea-assistant-20261016-partage-tally-test-orange-v13';
 const ASSETS=['./index.html','./terrain-clock.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
