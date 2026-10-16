@@ -2178,6 +2178,7 @@ function keysTracker(){
 function saveKeysTracker(){
  const old=S.keyCustody||{},received=document.getElementById("keyReceived")?.value==="YES",status=document.getElementById("keyStatus")?.value||"PENDING";
  const source=(document.getElementById("keySource")?.value||"").trim(),proof=(document.getElementById("keyProof")?.value||"").trim(),tracking=(document.getElementById("keyTracking")?.value||"").trim(),deposit=(document.getElementById("keyDeposit")?.value||"").trim();
+ if(old.receivedAt&&!received)return alert("Réception des clés déjà constatée : impossible de l’effacer. Enregistrer leur restitution réelle ou conserver le dossier ouvert.");
  if(received&&!source)return alert("Indiquez la provenance ou la personne ayant remis les clés avant d’enregistrer leur réception.");
  if(status!=="PENDING"&&!received)return alert("Enregistrer d’abord la réception effective des clés.");
  if(["PERSON","BOX"].includes(status)&&status!==S.accessPlan?.returnMode)return alert("Restitution différente de ce qui était convenu : obtenir un nouvel accord.");
