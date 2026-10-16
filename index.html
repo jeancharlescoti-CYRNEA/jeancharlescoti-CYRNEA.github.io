@@ -726,7 +726,6 @@ function saveIdentityV4(){
 const ownerNeeds=[
  ["ART","Artisan / professionnel","Accès, présence courte ou intervention d’un tiers","STANDARD"],
  ["DEL","Livraison / installation / dépannage","Donner accès ou rester pendant un créneau court","STANDARD"],
- ["THIRD","Tiers autorisé","Donner un accès ponctuel à une personne identifiée","STANDARD"],
  ["KEY","Clé / badge","Remettre ou récupérer une clé / un badge","STANDARD"],
  ["OPEN","Ouvrir avant arrivée","Préparer simplement l’ouverture du bien avant l’arrivée","STANDARD"],
  ["WEATHER","Intempérie","Action simple avant ou vérification pratique après","STANDARD"],
@@ -1077,7 +1076,7 @@ function timeDropdownHtml(baseId,onchangeFn="refreshCalendarConstraints()"){
 
   // N'afficher que les heures réellement ouvertes selon l'univers.
   // RELAIS : 08 h 00–18 h 45.
-  // PRÉSENCE propriétaires : 08 h 00–20 h 45, avec 19 h–20 h 59 en HORS STANDARD.
+  // PRÉSENCE propriétaires : 08 h 00–18 h 45 ; aucun nouveau départ à 19 h.
   // B2B logistique / VTP : 08 h 00–18 h 45.
   // B2B Projet / Étendue / Continuité : H24.
   let hours;
@@ -1086,8 +1085,8 @@ function timeDropdownHtml(baseId,onchangeFn="refreshCalendarConstraints()"){
     hours=Array.from({length:24},(_,i)=>pad2(i));
     hoursNote="Heures ouvertes : H24. Avant 08 h et à partir de 19 h, le créneau bascule en HORS STANDARD.";
   } else if(isOwnerPresence){
-    hours=Array.from({length:13},(_,i)=>pad2(i+8));
-    hoursNote="Heures ouvertes : départ de 08 h 00 à 20 h 45. De 19 h 00 à 20 h 59 : SOIR / HORS STANDARD. Aucun départ à partir de 21 h.";
+    hours=Array.from({length:11},(_,i)=>pad2(i+8));
+    hoursNote="Heures ouvertes : départ de 08 h 00 à 18 h 45. Aucun nouveau départ à partir de 19 h, même en soirée.";
   } else if(isRelais || isB2B){
     hours=Array.from({length:11},(_,i)=>pad2(i+8));
     hoursNote="Heures ouvertes : départ de 08 h 00 à 18 h 45. Aucun départ à partir de 19 h.";
@@ -1113,7 +1112,7 @@ function timeDropdownHtml(baseId,onchangeFn="refreshCalendarConstraints()"){
       </select>
     </div>
     <input id="${baseId}" type="hidden" value="">
-    <div class="muted">${hoursNote} Minutes : 00, 15, 30 ou 45 ; en STANDARD, seules 00 et 30 sont acceptées.</div>
+    <div class="muted">${hoursNote} Minutes : 00, 15, 30 ou 45 ; en STANDARD, 00 et 30 sont acceptées, ainsi que 18 h 45 pour le dernier départ.</div>
   </div>`;
 }
 function ensureMultiDraftState(){
@@ -1170,8 +1169,8 @@ function multiTimeDropdownHtml(baseId){
     startHour=0;endHour=23;
     note="Heures ouvertes : H24. Avant 08 h et à partir de 19 h, le créneau bascule en HORS STANDARD.";
   }else if(isOwnerPresence){
-    startHour=8;endHour=20;
-    note="Heures ouvertes : départ de 08 h 00 à 20 h 45. De 19 h 00 à 20 h 59 : SOIR / HORS STANDARD.";
+    startHour=8;endHour=18;
+    note="Heures ouvertes : départ de 08 h 00 à 18 h 45. Aucun nouveau départ à partir de 19 h.";
   }
 
   const values=[];
@@ -1184,7 +1183,7 @@ function multiTimeDropdownHtml(baseId){
       <option value="">Choisir l’heure</option>
       ${values.map(v=>`<option value="${v}">${v}</option>`).join("")}
     </select>
-    <div class="muted">${note} En STANDARD, seules 00 et 30 sont acceptées ; 15 et 45 restent disponibles en HORS STANDARD.</div>
+    <div class="muted">${note} En STANDARD, 00 et 30 sont acceptées, ainsi que 18 h 45 pour le dernier départ ; les autres quarts d’heure 15 et 45 relèvent du HORS STANDARD.</div>
   </div>`;
 }
 
@@ -1374,8 +1373,8 @@ function validateMissionTimeRules(dateStr,timeStr,label="créneau"){
   const projectNightOpen=isB2B && nightAllowedForMission(S.result?.mission);
   const hour=check.dt.getHours();
 
-  if(isOwnerPresence && (hour<8 || hour>=21)){
-    return {ok:false,msg:"PRÉSENCE Propriétaires : départ possible de 08 h 00 à 20 h 45. Aucun nouveau départ à partir de 21 h."};
+  if(isOwnerPresence && (hour<8 || hour>=19)){
+    return {ok:false,msg:"PRÉSENCE Propriétaires : dernier départ à 18 h 45, sans nouveau départ à partir de 19 h. Une mission déjà commencée peut se terminer après 19 h sans majoration automatique de soirée."};
   }
   if(!isOwnerPresence && !projectNightOpen && (hour<8 || hour>=19)){
     return {ok:false,msg:"Ce type de mission : départ possible uniquement entre 08 h 00 et 18 h 45. Aucun nouveau départ à partir de 19 h. Une mission déjà commencée peut toutefois se terminer ou être prolongée selon la règle terrain."};
@@ -1383,8 +1382,8 @@ function validateMissionTimeRules(dateStr,timeStr,label="créneau"){
 
   const c=autoConstraints(dateStr,timeStr);
   const horsStandard=!!S.result?.isQuote || c.priority || c.evening || c.night || c.sunday;
-  if(!horsStandard && !["00","30"].includes(String(timeStr||"").slice(3,5))){
-    return {ok:false,msg:"Créneau STANDARD : choisissez 00 ou 30 minutes. Les quarts d’heure 15 et 45 restent disponibles uniquement en HORS STANDARD."};
+  if(!horsStandard && !["00","30"].includes(String(timeStr||"").slice(3,5)) && timeStr!=="18:45"){
+    return {ok:false,msg:"Créneau STANDARD : choisissez 00 ou 30 minutes. Seul le dernier départ à 18 h 45 reste possible ; les autres quarts d’heure sont réservés au HORS STANDARD."};
   }
   return check;
 }
@@ -1399,7 +1398,7 @@ function autoConstraints(dateStr,timeStr){
   const isB2B=contract==="PRÉSENCE ENTREPRISES" || S.caller==="B2B";
   const isOwnerPresence=contract==="PRÉSENCE PROPRIÉTAIRES";
   const projectNightOpen=isB2B && nightAllowedForMission(S.result?.mission);
-  const evening=(isOwnerPresence || projectNightOpen) && hour>=19 && hour<21;
+  const evening=projectNightOpen && hour>=19 && hour<21;
   // Pour les missions B2B H24, la nuit couvre 21 h 00–07 h 59.
   const night=projectNightOpen && (hour>=21 || hour<8);
   const sunday=dt.getDay()===0 || isFrenchPublicHoliday(dateStr);
@@ -1834,7 +1833,7 @@ function slot(){
        ${multiTimeDropdownHtml(`sl${i}`)}
        <div class="muted" style="margin-bottom:6px">Contraintes détectées automatiquement selon la date, l’heure et l’heure actuelle :</div>
        <label class="check"><input type="checkbox" id="prio24_${i}" disabled> <span>Demandé sous 24 h — ${pri}</span></label>
-       ${(S.result?.contract==="PRÉSENCE PROPRIÉTAIRES" || (isB2B&&nightAllowedForMission(S.result?.mission)))?`<label class="check"><input type="checkbox" id="evening_${i}" disabled> <span>Soir 19 h–20 h 59 — ${pri}</span></label>`:""}
+       ${(isB2B&&nightAllowedForMission(S.result?.mission))?`<label class="check"><input type="checkbox" id="evening_${i}" disabled> <span>Soir 19 h–20 h 59 — ${pri}</span></label>`:""}
        ${isB2B&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="night_${i}" disabled> <span>Nuit à partir de 21 h — ${sun}</span></label>`:""}
        <label class="check"><input type="checkbox" id="sunholiday_${i}" disabled> <span>Dimanche ou jour férié — ${sun}</span></label>
      </div>`;
@@ -1863,14 +1862,14 @@ function slot(){
 
  ${supportsPriority()?`<div class="checkZone"><div class="checkIntro">CONTRAINTE DE DISPONIBILITÉ</div>
  <label class="check"><input type="checkbox" id="prio24" disabled> <span><b>Intervention sous 24 h</b> — détectée automatiquement selon l’heure réelle.</span></label>
- ${(S.result?.contract==="PRÉSENCE PROPRIÉTAIRES" || (S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)))?`<label class="check"><input type="checkbox" id="evening" disabled> <span>Soir 19 h–20 h 59 — détecté automatiquement.</span></label>`:""}
+ ${(S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission))?`<label class="check"><input type="checkbox" id="evening" disabled> <span>Soir 19 h–20 h 59 — détecté automatiquement.</span></label>`:""}
  ${S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="night" disabled> <span>Nuit à partir de 21 h — détectée automatiquement.</span></label>`:""}
  <label class="check"><input type="checkbox" id="sunholiday" disabled> <span>Dimanche ou jour férié — détecté automatiquement.</span></label>
- <div class="muted">Les contraintes ne se cumulent pas : le tarif correspondant à la contrainte la plus élevée s’applique. Pour RELAIS / logistique B2B simple : sous 24 h = même majoration que soirée ; dimanche/jour férié reste la contrainte supérieure.</div>
+ <div class="muted">Les contraintes ne se cumulent pas : le tarif correspondant à la contrainte la plus élevée s’applique. Pour RELAIS / logistique B2B simple : sous 24 h = +40 € et dimanche/jour férié = +60 €. Aucun nouveau départ ordinaire à partir de 19 h.</div>
  </div>`:
  `<div class="checkZone"><div class="checkIntro">CONTRAINTE DE CRÉNEAU</div>
  <label class="check"><input type="checkbox" id="prio24" disabled> <span><b>Intervention sous 24 h</b> — détectée automatiquement selon l’heure réelle.</span></label>
- ${(S.result?.contract==="PRÉSENCE PROPRIÉTAIRES" || (S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)))?`<label class="check"><input type="checkbox" id="evening" disabled> <span>Soir 19 h–20 h 59 — détecté automatiquement.</span></label>`:""}
+ ${(S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission))?`<label class="check"><input type="checkbox" id="evening" disabled> <span>Soir 19 h–20 h 59 — détecté automatiquement.</span></label>`:""}
  ${S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="night" disabled> <span>Nuit à partir de 21 h — détectée automatiquement.</span></label>`:""}
  <label class="check"><input type="checkbox" id="sunholiday" disabled> <span>Dimanche ou jour férié — détecté automatiquement.</span></label>
  <div class="muted">Les contraintes ne se cumulent pas.</div></div>`}
@@ -2078,9 +2077,16 @@ function isOwnerAccessMission(){return S.result && ["RELAIS","PRÉSENCE PROPRIÉ
 
 function isKeyMission(){return S.result?.contract==="RELAIS"&&S.need==="KEY"}
 
-function hasKeyCustody(){return isOwnerAccessMission()&&(isKeyMission()||["LOCAL","POST"].includes(S.accessPlan?.mode))}
+function isB2BKeyMission(){return S.result?.contract==="PRÉSENCE ENTREPRISES"&&S.need==="BLOG"&&["KEY_GET","KEY_GIVE"].includes(S.sub)}
+function isB2BKeyCustody(){return S.result?.contract==="PRÉSENCE ENTREPRISES"&&(isB2BKeyMission()||["Clés reçues / disponibles avant la mission","Clés à récupérer"].includes(String(S.prep?.mode||""))||!!S.keyCustody?.receivedAt||!!S.accessPlan?.keysAvailableConfirmed)}
+function hasKeyCustody(){return (isOwnerAccessMission()&&(isKeyMission()||["LOCAL","POST"].includes(S.accessPlan?.mode)))||isB2BKeyCustody()}
 
 function accessAllowed(){
+ if(isB2BKeyCustody()){
+  if(!S.prep?.addr)return true; // Les déclarations client sont vérifiées dans Tally avant paiement.
+  const p=S.accessPlan||{};
+  return !!(p.approved&&p.keysAvailableConfirmed&&p.contact&&p.returnMode&&p.returnDetail);
+ }
  if(!isOwnerAccessMission())return true;
  const p=S.accessPlan||{};
  if(!p.approved)return false;
@@ -2100,7 +2106,7 @@ function accessIntake(){
  const opt=(v,label,selected)=>`<option value="${v}" ${selected===v?"selected":""}>${label}</option>`;
  draw(`<div class="card"><h1>Organiser l’accès — ${name}</h1>
  <div class="operatorOnly">Cette vérification concerne la faisabilité matérielle. Le client certifie personnellement son droit d’accès dans Tally. Ne saisir aucun code secret ici.</div>
- ${key?`<div class="notice">Une seule remise OU récupération de clés / badges / télécommandes : pas d’accès au bien dans cette mission.</div>${S.sub==="GIVE"?`<div class="field"><label>Où sont les clés à remettre ?</label><select id="keyOrigin">${opt("","Choisir",p.keyOrigin||"")}${opt("LOCAL","Déjà disponibles en Corse",p.keyOrigin||"")}${opt("POST","Sur le continent, envoi postal nécessaire",p.keyOrigin||"")}</select></div>`:""}`:`<div class="field"><label>Comment ${name} accédera-t-il au bien ?</label><select id="accMode">
+ ${key?`<div class="notice">Une seule remise OU récupération de clés / badges / télécommandes : si un accès au lieu est nécessaire, il doit être explicitement convenu et autorisé avant la mission.</div>${S.sub==="GIVE"?`<div class="field"><label>Où sont les clés à remettre ?</label><select id="keyOrigin">${opt("","Choisir",p.keyOrigin||"")}${opt("LOCAL","Déjà disponibles en Corse",p.keyOrigin||"")}${opt("POST","Sur le continent, envoi postal nécessaire",p.keyOrigin||"")}</select></div>`:""}`:`<div class="field"><label>Comment ${name} accédera-t-il au bien ?</label><select id="accMode">
  ${opt("BOX","Accès disponible : code / boîte à clés",p.mode||"BOX")}
  ${opt("PERSON","Une personne ouvrira sur place",p.mode||"BOX")}
  ${opt("LOCAL","Clés à récupérer chez une personne en Corse",p.mode||"BOX")}
@@ -2137,7 +2143,12 @@ function saveAccessIntake(){
  save();bookingHandoff();
 }
 
-function keysReadyForTerrain(){return !hasKeyCustody()||(isKeyMission()&&S.sub==="GET")||!!S.keyCustody?.receivedAt}
+function keysReadyForTerrain(){
+ if(!hasKeyCustody())return true;
+ if(isKeyMission()&&S.sub==="GET")return true;
+ if(isB2BKeyCustody()&&((isB2BKeyMission()&&S.sub==="KEY_GET")||S.prep?.mode==="Clés à récupérer"))return true;
+ return !!S.keyCustody?.receivedAt;
+}
 
 function keysFullyReturned(){
  if(!hasKeyCustody())return true;
@@ -2149,7 +2160,7 @@ function keysFullyReturned(){
 
 function keysTracker(){
  if(!hasKeyCustody())return ready();
- setStage(S.departureAt?"CLÔTURE":"PRÊTE");
+ setStage(S.departureAt?"CLÔTURE":isB2BKeyCustody()&&S.arrivalAt?"TERRAIN":"PRÊTE");
  const k=S.keyCustody||{};
  const opt=(v,label,current)=>`<option value="${v}" ${current===v?"selected":""}>${label}</option>`;
  draw(`<div class="card"><h1>Suivi des clés confiées</h1>
@@ -2167,6 +2178,7 @@ function keysTracker(){
 function saveKeysTracker(){
  const old=S.keyCustody||{},received=document.getElementById("keyReceived")?.value==="YES",status=document.getElementById("keyStatus")?.value||"PENDING";
  const source=(document.getElementById("keySource")?.value||"").trim(),proof=(document.getElementById("keyProof")?.value||"").trim(),tracking=(document.getElementById("keyTracking")?.value||"").trim(),deposit=(document.getElementById("keyDeposit")?.value||"").trim();
+ if(old.receivedAt&&!received)return alert("Réception des clés déjà constatée : impossible de l’effacer. Enregistrer leur restitution réelle ou conserver le dossier ouvert.");
  if(received&&!source)return alert("Indiquez la provenance ou la personne ayant remis les clés avant d’enregistrer leur réception.");
  if(status!=="PENDING"&&!received)return alert("Enregistrer d’abord la réception effective des clés.");
  if(["PERSON","BOX"].includes(status)&&status!==S.accessPlan?.returnMode)return alert("Restitution différente de ce qui était convenu : obtenir un nouvel accord.");
@@ -2177,7 +2189,7 @@ function saveKeysTracker(){
  S.keyCustody={source,receivedAt:received?(old.receivedAt||now):"",status,proof,tracking,deposit,
  returnAt:["PERSON","BOX","POST_DELIVERED"].includes(status)?(old.status===status&&old.returnAt?old.returnAt:now):"",
  sentAt:["POST_SENT","POST_DELIVERED"].includes(status)?(old.sentAt||now):""};
- save();if(S.departureAt)closeMission();else ready();
+ save();if(S.departureAt)closeMission();else if(isB2BKeyCustody()&&S.arrivalAt)terrain();else ready();
 }
 
 function bookingHandoff(){
@@ -2459,7 +2471,7 @@ function preparationMission(){
  </div>
  <div class="guideTitle">ÉTAPE 2</div><div class="bigQuestion">Comment entre-t-on ?</div>
  <div class="field"><label>Mode d'accès</label>
-   <select id="mode"><option>Clés reçues / disponibles avant la mission</option><option>Clés à récupérer</option><option>Code / digicode</option><option>Accès donné par un tiers</option><option>Accès libre / accueil</option><option>Autre</option></select>
+   <select id="mode">${b2b?'<option value="">— Choisir le moyen d’accès —</option>':""}<option>Clés reçues / disponibles avant la mission</option><option>Clés à récupérer</option><option>Code / digicode</option><option>Accès donné par un tiers</option><option>Accès libre / accueil</option><option>Autre</option></select>
  </div>
  ${b2b?`
  <div class="guideTitle">ÉTAPE 3</div><div class="bigQuestion">Y a-t-il quelqu’un à contacter sur place ?</div>
@@ -2509,13 +2521,56 @@ function collectPreparation(){
    note:(document.getElementById('note')?.value||"").trim()
  };
  if(!h.addr)return alert("Adresse exacte obligatoire.");
-
+ if(b2b&&!h.mode)return alert("Choisissez le mode d'accès réellement prévu.");
  S.prep=h;
  save();
  if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{});
+ if(isB2BKeyCustody())return b2bKeysIntake();
  ready();
 }
 
+function b2bKeysIntake(){
+ if(!isB2BKeyCustody())return ready();
+ setStage("PRÊTE");
+ const p=S.accessPlan||{};
+ const select=function(id,options,selected){
+  return '<select id="'+id+'">'+options.map(function(o){return '<option value="'+esc(o[0])+'"'+(o[0]===selected?' selected':'')+'>'+esc(o[1])+'</option>'}).join('')+'</select>';
+ };
+ draw([
+ '<div class="card"><h1>Clés / badges — préparation B2B</h1>',
+ '<div class="operatorOnly">Les déclarations du client restent dans Tally. Confirmer ici la faisabilité opérationnelle, sans enregistrer de code secret.</div>',
+ '<div class="row"><b>Mission</b><span>'+esc(S.result?.mission||"-")+'</span></div>',
+ '<div class="field"><label>Les clés sont-elles réellement disponibles pour la mission ?</label>',
+ select("b2bKeyAvailable",[["","— Vérifier —"],["YES","OUI — disponibilité confirmée"],["NO","NON — clés indisponibles"],["UNKNOWN","JE NE SAIS PAS — non confirmé"]],p.keysAvailableConfirmed?"YES":""),
+ '</div><div class="field"><label>Provenance / personne désignée (nom, contact)</label><input id="b2bKeyContact" value="'+esc(p.contact||"")+'"></div>',
+ '<div class="field"><label>Destination convenue des clés après la mission</label>',
+ select("b2bKeyReturn",[["","— Choisir —"],["PERSON","Remise à une personne désignée"],["BOX","Dépôt dans un dispositif autorisé"],["POST","Retour postal standard en France, inclus dans le tarif"]],p.returnMode||""),
+ '</div><div class="field"><label>Destinataire ou emplacement précis de restitution</label><input id="b2bKeyReturnDetail" value="'+esc(p.returnDetail||"")+'"></div>',
+ '<div class="warn"><b>STOP</b> NON ou JE NE SAIS PAS : ne pas déclarer la mission prête. Sous 24 h, des clés encore sur le continent ne garantissent pas l’accès.</div>',
+ '<div class="notice">Tracer la réception et la restitution. Un courrier expédié ne vaut pas livraison confirmée.</div>',
+ '<button class="btn primary" onclick="saveB2BKeysIntake()">VALIDER LES MODALITÉS DES CLÉS</button></div>'
+ ].join(""));
+}
+function saveB2BKeysIntake(){
+ if(!isB2BKeyCustody())return ready();
+ const available=document.getElementById("b2bKeyAvailable")?.value||"";
+ if(available!=="YES"){
+  // Un choix NON ou JE NE SAIS PAS invalide aussi une ancienne confirmation.
+  S.accessPlan={...(S.accessPlan||{}),approved:false,keysAvailableConfirmed:false};
+  save();
+  return alert("STOP : clés indisponibles ou non confirmées. Ne pas préparer le départ.");
+ }
+ const p=S.accessPlan||{};
+ const contact=String(document.getElementById("b2bKeyContact")?.value||"").trim();
+ const returnMode=document.getElementById("b2bKeyReturn")?.value||"";
+ const returnDetail=String(document.getElementById("b2bKeyReturnDetail")?.value||"").trim();
+ if(!contact||!returnMode||!returnDetail)return alert("Personne désignée, restitution et destination obligatoires.");
+ if(S.keyCustody?.receivedAt&&(contact!==p.contact||returnMode!==p.returnMode||returnDetail!==p.returnDetail))
+  return alert("Clés déjà reçues : ne pas changer leur destination sans accord. Les preuves sont conservées.");
+ S.accessPlan={...p,approved:true,keysAvailableConfirmed:true,contact,returnMode,returnDetail,mode:"KEY"};
+ save();
+ ready();
+}
 function docPack(){
   const m=S.result?.mission||"";
   let fiche="Fiche mission";
@@ -2545,7 +2600,7 @@ function ready(){
  <div class="operatorOnly">Cochez les contrôles un par un. Si vous ne pouvez pas cocher une ligne, revenez à la préparation.</div>
  <div class="guideTitle">CONTRÔLE DÉPART</div>
  ${isOwnerAccessMission()?`<div class="notice"><b>ORGANISATION DE L’ACCÈS</b> — ${esc(S.accessPlan?.mode||"Non renseigné")}<br><button class="btn ghost" onclick="accessIntake()">REVOIR L’ACCÈS ET LA RESTITUTION</button></div>`:""}
- ${hasKeyCustody()?`<div class="${keysReadyForTerrain()?"notice":"stop"}"><b>CLÉS CONFIÉES</b> — ${S.keyCustody?.receivedAt?"Réception enregistrée":"Réception en attente"}<br><button class="btn ghost" onclick="keysTracker()">ENREGISTRER LA RÉCEPTION / LE SUIVI</button></div>`:""}
+ ${hasKeyCustody()?`<div class="${keysReadyForTerrain()?"notice":"stop"}"><b>CLÉS CONFIÉES</b> — ${S.keyCustody?.receivedAt?"Réception enregistrée":"Réception en attente"}<br>${isB2BKeyCustody()?`<button class="btn ghost" onclick="b2bKeysIntake()">REVOIR LES MODALITÉS</button>`:""}<button class="btn ghost" onclick="keysTracker()">ENREGISTRER LA RÉCEPTION / LE SUIVI</button></div>`:""}
  <label class="check"><input type="checkbox" name="readyCheck"><span>J’ai l’adresse exacte et je sais où arriver.</span></label>
  <label class="check"><input type="checkbox" name="readyCheck"><span>La réservation / le créneau est confirmé.</span></label>
  <label class="check"><input type="checkbox" name="readyCheck"><span>Je sais exactement ce que je dois faire / observer.</span></label>
@@ -2566,7 +2621,7 @@ function ready(){
 }
 function startTerrainFromReady(){
  if(S.paymentStatus==='REFUNDED')return alert('Mission remboursée : aucun départ terrain.');
- if(!accessAllowed()){alert('Accès non sécurisé : qualifier la solution avant de partir.');return accessIntake();}
+ if(!accessAllowed()){alert('Accès non sécurisé : qualifier la solution avant de partir.');return isB2BKeyCustody()?b2bKeysIntake():accessIntake();}
  if(!keysReadyForTerrain())return alert('Clés non reçues : enregistrez la réception avant de partir.');
  if(!allChecked("input[name='readyCheck']")) return alert("Cochez tous les contrôles avant de partir.");
  missionDesk();
@@ -2851,7 +2906,7 @@ function missionArchiveText(){
    "Adresse : "+(S.prep?.addr||S.city||"-"),
    "Arrivée : "+(S.arrivalAt||"-"),
    "Départ : "+(S.departureAt||"-"),
-   ...(isOwnerAccessMission()?[
+   ...((isOwnerAccessMission()||isB2BKeyCustody())?[
      "Accès prévu : "+(S.accessPlan?.mode||"Non qualifié"),
      "Contact accès : "+(S.accessPlan?.contact||"-"),
      "Destination clés convenue : "+(S.accessPlan?.returnMode||"-")+" — "+(S.accessPlan?.returnDetail||"-"),
@@ -3236,7 +3291,7 @@ function terrain(){
  <div class="advice"><b>CONSEIL</b>Les cases ci-dessous sont vos contrôles internes. Le client n’a rien à cocher ici.</div>
 
  <div class="row"><b>${esc(S.missionId)}</b><span>${esc(S.result.mission)}</span></div>
- <div class="toolbar"><button class="btn ghost" onclick="missionDesk()">DOSSIER MISSION</button></div>
+ <div class="toolbar"><button class="btn ghost" onclick="missionDesk()">DOSSIER MISSION</button>${isB2BKeyCustody()?`<button class="btn ghost" onclick="keysTracker()">CLÉS — RÉCEPTION / RESTITUTION</button>`:""}</div>
 
  <div class="checkZone">
    <div class="checkIntro">GARDE-FOUS À COCHER</div>
