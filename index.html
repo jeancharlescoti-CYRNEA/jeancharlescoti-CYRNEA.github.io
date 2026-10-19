@@ -238,6 +238,7 @@ const B2B_TALLY_MISSION={
   "RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE B2B - 109 € HT",
   "PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE B2B - 169 € HT"
 };
+function b2bCommercialMissionName(name){const labels={"VISITE TERRAIN PILOTÉE":"VISITE DE SITE","PRÉSENCE PROJET":"PRÉSENCE À UNE ÉTAPE CLÉ","PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE ÉTENDUE","ACCÈS B2B":"DONNER ACCÈS","PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE"};return labels[name]||name}
 function activeMissionKey(st=S){return String(st?.missionId||st?.draftKey||"")}
 function isActiveMissionState(st=S){
  return !!(st && st.result && String(st.result.mission||"").trim() && String(st.result.contract||"").trim() && st.stage!=="ARCHIVE");
@@ -1019,9 +1020,9 @@ function missionPhoneScript(){
   if(m.includes('VOIR')) return "Votre besoin relève d’une mission VOIR : nous observons et documentons ce qui est visible sur place, sans diagnostic. Le tarif est de 260 € TTC.";
   if(m==='DÉCIDER') return "Votre besoin relève d’une mission DÉCIDER : nous recueillons sur place les éléments factuels convenus pour vous aider à décider vous-même. Le tarif est de 480 € TTC.";
   if(m==='SUIVRE') return "Votre besoin relève d’une mission SUIVRE, avec trois présences comparables dans le temps. Le tarif est de 980 € TTC.";
-  if(m==='VISITE TERRAIN PILOTÉE') return "Votre besoin correspond à une VISITE TERRAIN PILOTÉE à 350 € HT.";
-  if(m==='PRÉSENCE PROJET') return "Votre besoin correspond à une PRÉSENCE PROJET à 490 € HT.";
-  if(m==='PRÉSENCE PROJET ÉTENDUE') return "Votre besoin correspond à une PRÉSENCE PROJET ÉTENDUE à 690 € HT.";
+  if(m==='VISITE TERRAIN PILOTÉE') return "Votre besoin correspond à VISITE DE SITE à 350 € HT.";
+  if(m==='PRÉSENCE PROJET') return "Votre besoin correspond à PRÉSENCE À UNE ÉTAPE CLÉ à 490 € HT.";
+  if(m==='PRÉSENCE PROJET ÉTENDUE') return "Votre besoin correspond à PRÉSENCE ÉTENDUE à 690 € HT.";
   if(m==='CONTINUITÉ PROJET') return "Votre besoin correspond à une CONTINUITÉ PROJET, avec trois présences, à 1 190 € HT.";
   if(m==='ACCÈS B2B') return "Votre besoin correspond à DONNER ACCÈS à 109 € HT : accueil, présence pendant l’opération courte et fermeture, 30 minutes maximum au total." ;
   if(m==='REMISE CLÉ / BADGE B2B') return "Votre besoin correspond à une REMISE CLÉ / BADGE B2B à 109 € HT.";
@@ -1034,7 +1035,7 @@ function showResult(){
  const normal=(r.status==="PROPOSER");
  const quote=(r.status==="DEVIS PRÉALABLE");
  draw(`<div class="card"><h1>${esc(r.status)}</h1><div class="readAloud">${esc(missionPhoneScript())}</div>
- <div class="row"><b>Mission</b><span>${esc(r.mission)}</span></div>
+ <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(r.mission))}</span></div>
  ${quote?`<div class="row"><b>Prix</b><span>À CHIFFRER PAR DEVIS</span></div>`:priceRows()}
  <div class="row"><b>Plafond</b><span>${esc(r.cap)}</span></div>
  <div class="row"><b>Contrat</b><span>${esc(r.contract)}</span></div><div class="row"><b>Lieu d’intervention</b><span>${esc(S.city)}</span></div>
