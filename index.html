@@ -1911,7 +1911,7 @@ function contractRef(){
  const c=S.result?.contract;
  if(c==="RELAIS") return "CGV RELAIS PROPRIÉTAIRE V16 CM2C — 05/10/2026";
  if(c==="PRÉSENCE PROPRIÉTAIRES") return "CGV CYRNEA PRÉSENCE — PROPRIÉTAIRES V6 CM2C — 15/09/2026";
- return "CGS CYRNEA PRÉSENCE — ENTREPRISES V6 NUIT B2B — 25/09/2026";
+ return "CGS CYRNEA PRÉSENCE — ENTREPRISES V10 — 19/10/2026 (V9 + additif)";
 }
 function isHorsStandard(){
  if(S.result?.isQuote)return true;
@@ -2736,6 +2736,10 @@ function showMissionDoc(kind){
 }
 function terrainFactOptions(){
   const m=S.result?.mission||"";
+  if(m==="ACCÈS B2B")
+    return ["Heure précise du rendez-vous confirmée par l’entreprise","Intervenant désigné accueilli et identité vérifiée","Accès à la zone autorisée assuré","Présence pendant l’opération courte (attente comprise, 30 min maximum au total)","Intervenant parti et lieux refermés","Exécution et tout incident communiqués à l’entreprise"];
+  if(m==="PRÉSENCE LOGISTIQUE B2B")
+    return ["Heure précise du rendez-vous confirmée par l’entreprise","Professionnel ou livreur désigné accueilli et identité vérifiée","Accès à la zone autorisée assuré si nécessaire","Présence pendant l’opération (attente comprise, 1 heure maximum au total)","Intervenant parti et lieux refermés","Exécution et tout incident communiqués à l’entreprise"];
   if(m==="RELAIS SIMPLE" && S.need==="ART" && S.sub==="ACCESS")
     return ["Professionnel désigné présent","Identité / société vérifiée","Accès donné","Présence pendant l’opération très courte","Lieux refermés avant le départ"];
   if(m==="RELAIS" && S.need==="ART" && S.sub==="STAY")
@@ -3164,6 +3168,9 @@ function needsWaitGuard(){
 
 function overrunRule(){
  const contract=String(S.result?.contract||"");
+ const mission=String(S.result?.mission||"");
+ if(contract==="PRÉSENCE ENTREPRISES" && ["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B"].includes(mission))
+   return {allowed:false,text:"Aucune prolongation horaire automatique ni supplément pour cette mission à 109 € HT. DONNER ACCÈS est limité à 30 minutes au total, fermeture comprise. Au-delà, arrêter et convenir préalablement d’une requalification avec l’entreprise, sans abandonner les lieux ouverts."};
  if(contract==="RELAIS")
    return {allowed:true,unit:40,base:"TTC",max:2,label:"+40 € TTC par tranche de 30 min commencée, maximum 2 tranches, avec accord exprès"};
  if(contract==="PRÉSENCE PROPRIÉTAIRES")
@@ -3336,9 +3343,14 @@ function terrain(){
  let rules=[];
  if(S.result.mission.includes("APRÈS INTEMPÉRIE"))rules=["Vérifier AVANT toute manipulation : pas d'eau","Pas d'humidité anormale","Pas d'odeur de brûlé","Pas d'échauffement","Pas de dommage visible","Un seul réarmement simple maximum si prévu"];
  else if(S.result.mission.includes("VOIR"))rules=["Observer uniquement le périmètre prévu","Séparer OBSERVÉ / DÉCLARÉ / DOCUMENT / NON VÉRIFIABLE","Aucun diagnostic / conformité / cause"];
+ else if(S.result.mission==="ACCÈS B2B" || S.result.mission==="PRÉSENCE LOGISTIQUE B2B")rules=["Heure de début précise confirmée","Accueillir l’intervenant choisi par l’entreprise et rester présent pendant l’opération","Prévoir le départ du tiers et la fermeture dans le plafond total","Aucune coordination ni contrôle technique","En cas de retard ou d’impossibilité de fermeture : contacter l’entreprise et consigner les faits"];
  else if(S.result.mission==="DÉCIDER"||S.result.mission.includes("PRÉSENCE PROJET"))rules=["Suivre le cahier des charges","Poser uniquement les questions convenues","Aucune décision ou signature pour le client"];
  else rules=["Exécuter uniquement l'objet prévu","Ne pas élargir la mission","Documenter uniquement les preuves utiles"];
- if(needsWaitGuard())rules.push("Si tiers / professionnel absent ou en retard : attente incident maximum 15 minutes");
+ if(needsWaitGuard()){
+   if(["ACCÈS B2B","PRÉSENCE LOGISTIQUE B2B"].includes(S.result.mission))
+     rules.push("Retard du professionnel : aucune prolongation automatique ; l’attente consomme les 30 minutes ou l’heure prévues, fermeture comprise.");
+   else rules.push("Si tiers / professionnel absent ou en retard : attente incident maximum 15 minutes");
+ }
 
  const facts=terrainFactOptions();
 
