@@ -821,7 +821,7 @@ function classify(){
  let m={BVISIT:["VISITE TERRAIN PILOTÉE","350 € HT","60 min","R1"],BPROJECT:["PRÉSENCE PROJET","490 € HT","75 min","R2"],BEXT:["PRÉSENCE PROJET ÉTENDUE","690 € HT","3 h","R2"],BCONT:["CONTINUITÉ PROJET","1 190 € HT","3 x 75 min","R3"]}[S.need];
  if(m)r={status:"PROPOSER",mission:m[0],price:m[1],cap:m[2],contract:"PRÉSENCE ENTREPRISES",rest:m[3],multi:S.need==="BCONT"};
  if(S.need==="BLOG"){
-   if(S.sub==="ACCESS")r={status:"PROPOSER",mission:"ACCÈS B2B",price:"109 € HT",cap:"30 min maximum, accueil, présence et fermeture compris",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
+   if(S.sub==="ACCESS")r={status:"PROPOSER",mission:"ACCÈS B2B",price:"109 € HT",cap:"30 min",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="KEY_GIVE")r={status:"PROPOSER",mission:"REMISE CLÉ / BADGE B2B",price:"109 € HT",cap:"action unique, cadre court",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="KEY_GET")r={status:"PROPOSER",mission:"RÉCUPÉRATION CLÉ / BADGE B2B",price:"109 € HT",cap:"action unique, cadre court",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="STAY")r={status:"PROPOSER",mission:"PRÉSENCE LOGISTIQUE B2B",price:"169 € HT",cap:"1 h",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
