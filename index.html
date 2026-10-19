@@ -747,10 +747,10 @@ const relaisNeeds=[
  ["OTHER","Autre demande","Besoin à qualifier séparément","STANDARD"]
 ];
 const b2bNeeds=[
- ["BVISIT","VISITE TERRAIN PILOTÉE","Voir et documenter un site en Corse avant d’y déplacer une équipe ou un technicien.","PRESENCE"],
- ["BPROJECT","PRÉSENCE PROJET","Être présent sur site en Corse lorsque votre équipe est à distance, pour observer, échanger et documenter un moment important du projet.","PRESENCE"],
- ["BEXT","PRÉSENCE PROJET ÉTENDUE","Parcourir plusieurs zones d’un même site, échanger avec plusieurs interlocuteurs au cours d’une même mission.","PRESENCE"],
- ["BCONT","CONTINUITÉ PROJET","Comparer le même projet à trois moments.","PRESENCE"],
+ ["BVISIT","VISITE DE SITE","Observer et documenter un site avant le déplacement de votre équipe ; photographies par drone possibles si le vol est autorisé et réalisable en sécurité.","PRESENCE"],
+ ["BPROJECT","PRÉSENCE À UNE ÉTAPE CLÉ","Assister sur place à un rendez-vous ou une étape de votre projet, vous évitant ainsi de déplacer votre équipe.","PRESENCE"],
+ ["BEXT","PRÉSENCE ÉTENDUE","Parcourir plusieurs zones d’un même site, échanger avec plusieurs interlocuteurs au cours d’une même mission.","PRESENCE"],
+ ["BCONT","CONTINUITÉ PROJET","Documenter et comparer un même projet à trois moments ; drone possible pour visualiser son évolution si chaque vol est autorisé et réalisable en sécurité.","PRESENCE"],
  ["BLOG","Logistique / clé / accès","Accès, clé / badge ou présence logistique ponctuelle à tarif fixe.","STANDARD"],
  ["BOTHER","Autre","Autre besoin professionnel à qualifier.","STANDARD"]
 ];
@@ -820,7 +820,7 @@ function classify(){
  let m={BVISIT:["VISITE TERRAIN PILOTÉE","350 € HT","60 min","R1"],BPROJECT:["PRÉSENCE PROJET","490 € HT","75 min","R2"],BEXT:["PRÉSENCE PROJET ÉTENDUE","690 € HT","3 h","R2"],BCONT:["CONTINUITÉ PROJET","1 190 € HT","3 x 75 min","R3"]}[S.need];
  if(m)r={status:"PROPOSER",mission:m[0],price:m[1],cap:m[2],contract:"PRÉSENCE ENTREPRISES",rest:m[3],multi:S.need==="BCONT"};
  if(S.need==="BLOG"){
-   if(S.sub==="ACCESS")r={status:"PROPOSER",mission:"ACCÈS B2B",price:"109 € HT",cap:"cadre court, non horaire",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
+   if(S.sub==="ACCESS")r={status:"PROPOSER",mission:"ACCÈS B2B",price:"109 € HT",cap:"30 min maximum, accueil, présence et fermeture compris",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="KEY_GIVE")r={status:"PROPOSER",mission:"REMISE CLÉ / BADGE B2B",price:"109 € HT",cap:"action unique, cadre court",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="KEY_GET")r={status:"PROPOSER",mission:"RÉCUPÉRATION CLÉ / BADGE B2B",price:"109 € HT",cap:"action unique, cadre court",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="STAY")r={status:"PROPOSER",mission:"PRÉSENCE LOGISTIQUE B2B",price:"169 € HT",cap:"1 h",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
@@ -894,10 +894,10 @@ function objectOptions(){
     "Comparer la même situation à trois moments clés."
   ];
   else if(["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","PRÉSENCE LOGISTIQUE B2B"].includes(m)){
-    if(S.sub==="ACCESS") out=["Donner accès à l’intervenant professionnel désigné puis repartir"];
+    if(S.sub==="ACCESS") out=["Accueillir l’intervenant désigné, rester présent pendant l’opération courte, refermer les lieux après son départ et confirmer l’exécution (30 minutes maximum au total)"];
     else if(S.sub==="KEY_GIVE") out=["Remettre une clé / un badge à la personne désignée"];
     else if(S.sub==="KEY_GET") out=["Récupérer une clé / un badge auprès de la personne désignée"];
-    else if(S.sub==="STAY") out=["Rester présent pendant le créneau professionnel convenu, sans contrôle technique"];
+    else if(S.sub==="STAY") out=["Accueillir l’intervenant ou livreur désigné, rester présent pendant l’opération et refermer les lieux après son départ (1 heure maximum au total), sans contrôle technique"];
   }
   else if(m==="VISITE TERRAIN PILOTÉE") out=[
     "Voir et documenter un site en Corse avant d’y déplacer une équipe ou un technicien."
@@ -909,7 +909,7 @@ function objectOptions(){
     "Parcourir plusieurs zones d’un même site, échanger avec plusieurs interlocuteurs au cours d’une même mission."
   ];
   else if(m==="CONTINUITÉ PROJET") out=[
-    "Comparer le même projet à trois moments."
+    "Documenter et comparer le même projet à trois moments. Photographier des repères comparables, avec drone possible si chaque vol est autorisé et réalisable en sécurité."
   ];
   if(!out.length) out=["Définir précisément l’objet convenu avec le client"];
   return out;
@@ -1023,10 +1023,10 @@ function missionPhoneScript(){
   if(m==='PRÉSENCE PROJET') return "Votre besoin correspond à une PRÉSENCE PROJET à 490 € HT.";
   if(m==='PRÉSENCE PROJET ÉTENDUE') return "Votre besoin correspond à une PRÉSENCE PROJET ÉTENDUE à 690 € HT.";
   if(m==='CONTINUITÉ PROJET') return "Votre besoin correspond à une CONTINUITÉ PROJET, avec trois présences, à 1 190 € HT.";
-  if(m==='ACCÈS B2B') return "Votre besoin correspond à un ACCÈS B2B à 109 € HT.";
+  if(m==='ACCÈS B2B') return "Votre besoin correspond à DONNER ACCÈS à 109 € HT : accueil, présence pendant l’opération courte et fermeture, 30 minutes maximum au total." ;
   if(m==='REMISE CLÉ / BADGE B2B') return "Votre besoin correspond à une REMISE CLÉ / BADGE B2B à 109 € HT.";
   if(m==='RÉCUPÉRATION CLÉ / BADGE B2B') return "Votre besoin correspond à une RÉCUPÉRATION CLÉ / BADGE B2B à 109 € HT.";
-  if(m==='PRÉSENCE LOGISTIQUE B2B') return "Votre besoin correspond à une PRÉSENCE LOGISTIQUE B2B à 169 € HT, pour une heure maximum.";
+  if(m==='PRÉSENCE LOGISTIQUE B2B') return "Votre besoin correspond à PRÉSENCE LOGISTIQUE à 169 € HT : accueil, présence pendant l’opération et fermeture, une heure maximum au total." ;
   return "Je vais vous orienter vers la mission la plus adaptée et vous indiquer le tarif avant toute réservation.";
 }
 function showResult(){
