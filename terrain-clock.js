@@ -92,9 +92,15 @@
     setText(limitText, clock.limit === null ? 'Mission sans plafond horaire : respecter le cadre convenu.'
       : 'Limite : ' + new Date(clock.limit).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) +
         ' · ' + clock.base + ' min prévues' + (clock.extension ? ' + ' + clock.extension + ' min autorisées' : ''));
-    const message = clock.level === 'over'
-      ? 'LIMITE ATTEINTE — arrêtez ou obtenez un nouvel accord dans la limite de la mission. Aucune prolongation automatique.'
-      : clock.level === 'soon' ? '10 MINUTES OU MOINS — préparez la fin de mission ou demandez l’accord de prolongation.' : '';
+    const b2bNonExtendible = S.result?.contract === 'PRÉSENCE ENTREPRISES'
+      && ['ACCÈS B2B','REMISE CLÉ / BADGE B2B','RÉCUPÉRATION CLÉ / BADGE B2B'].includes(S.result?.mission);
+    const message = b2bNonExtendible
+      ? (clock.level === 'over'
+        ? 'LIMITE ATTEINTE — aucune prolongation horaire. Sécuriser et refermer les lieux, puis requalifier avec l’entreprise.'
+        : clock.level === 'soon' ? '10 MINUTES OU MOINS — préparer la fermeture dans le plafond convenu. Aucune prolongation horaire.' : '')
+      : (clock.level === 'over'
+        ? 'LIMITE ATTEINTE — arrêtez ou obtenez un nouvel accord dans la limite de la mission. Aucune prolongation automatique.'
+        : clock.level === 'soon' ? '10 MINUTES OU MOINS — préparez la fin de mission ou demandez l’accord de prolongation.' : '');
     setText(warning, message);
     if (soundEnabled && audio?.state !== 'running') setText(soundButton, 'RÉACTIVER LE SON');
     if (message && !document.hidden && soundEnabled && audio?.state === 'running') {

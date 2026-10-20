@@ -238,6 +238,7 @@ const B2B_TALLY_MISSION={
   "RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE B2B - 109 € HT",
   "PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE B2B - 169 € HT"
 };
+function b2bCommercialMissionName(name){const labels={"VISITE TERRAIN PILOTÉE":"VISITE DE SITE","PRÉSENCE PROJET":"PRÉSENCE À UNE ÉTAPE CLÉ","PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE ÉTENDUE","ACCÈS B2B":"DONNER ACCÈS","PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE"};return labels[name]||name}
 function activeMissionKey(st=S){return String(st?.missionId||st?.draftKey||"")}
 function isActiveMissionState(st=S){
  return !!(st && st.result && String(st.result.mission||"").trim() && String(st.result.contract||"").trim() && st.stage!=="ARCHIVE");
@@ -482,7 +483,7 @@ function home(remember=true){
    const when=[state.date||"",displayTime4(state.slot||"")].filter(Boolean).join(" · ");
    const amount=state.result?.price||"";
    return `<div style="display:grid;grid-template-columns:minmax(0,1fr) 42px;gap:8px;align-items:stretch;width:100%">
-     <button class="choice presence" style="min-width:0;width:100%" onclick="resumeStoredMission('${esc(id)}')"><span class="missionName">${esc(state.result?.mission||"Mission en cours")} — ${esc(state.name||"Client")}</span><span class="missionGoal">${esc(activeMissionStatus(state))}${when?" · "+esc(when):""}${amount?" · "+esc(amount):""}</span></button>
+     <button class="choice presence" style="min-width:0;width:100%" onclick="resumeStoredMission('${esc(id)}')"><span class="missionName">${esc(b2bCommercialMissionName(state.result?.mission||"Mission en cours"))} — ${esc(state.name||"Client")}</span><span class="missionGoal">${esc(activeMissionStatus(state))}${when?" · "+esc(when):""}${amount?" · "+esc(amount):""}</span></button>
      <button class="btn ghost" style="width:42px;min-width:42px;padding:0;font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center" title="Supprimer cette mission active" aria-label="Supprimer cette mission active" onclick="deleteActiveMission('${esc(id)}')">×</button>
    </div>`;
  }).join("");
@@ -502,7 +503,7 @@ function archivedMissions(){
  const archived=archivedMissionList();
  const cards=archived.map(({id,state})=>{
    const when=[state.date||"",displayTime4(state.slot||"")].filter(Boolean).join(" · ");
-   return `<button type="button" class="choice presence" style="width:100%;display:block;cursor:pointer" onclick="openArchivedMission(\'${esc(id)}\');return false;"><span class="missionName">${esc(state.missionId||id)} — ${esc(state.result?.mission||"Mission")} — ${esc(state.name||"Client")}</span><span class="missionGoal">${esc(state.finalStatus||"MISSION ARCHIVÉE")}${when?" · "+esc(when):""}</span></button>`;
+   return `<button type="button" class="choice presence" style="width:100%;display:block;cursor:pointer" onclick="openArchivedMission(\'${esc(id)}\');return false;"><span class="missionName">${esc(state.missionId||id)} — ${esc(b2bCommercialMissionName(state.result?.mission||"Mission"))} — ${esc(state.name||"Client")}</span><span class="missionGoal">${esc(state.finalStatus||"MISSION ARCHIVÉE")}${when?" · "+esc(when):""}</span></button>`;
  }).join("");
  draw(`<div class="card"><h1>Missions archivées</h1>
    <div class="muted">Dossiers clôturés conservés dans la base centrale CYRNEA.</div>
@@ -747,10 +748,10 @@ const relaisNeeds=[
  ["OTHER","Autre demande","Besoin à qualifier séparément","STANDARD"]
 ];
 const b2bNeeds=[
- ["BVISIT","VISITE TERRAIN PILOTÉE","Voir et documenter un site en Corse avant d’y déplacer une équipe ou un technicien.","PRESENCE"],
- ["BPROJECT","PRÉSENCE PROJET","Être présent sur site en Corse lorsque votre équipe est à distance, pour observer, échanger et documenter un moment important du projet.","PRESENCE"],
- ["BEXT","PRÉSENCE PROJET ÉTENDUE","Parcourir plusieurs zones d’un même site, échanger avec plusieurs interlocuteurs au cours d’une même mission.","PRESENCE"],
- ["BCONT","CONTINUITÉ PROJET","Comparer le même projet à trois moments.","PRESENCE"],
+ ["BVISIT","VISITE DE SITE","Observer et documenter un site avant le déplacement de votre équipe ; photographies par drone possibles si le vol est autorisé et réalisable en sécurité.","PRESENCE"],
+ ["BPROJECT","PRÉSENCE À UNE ÉTAPE CLÉ","Assister sur place à un rendez-vous ou une étape de votre projet, vous évitant ainsi de déplacer votre équipe.","PRESENCE"],
+ ["BEXT","PRÉSENCE ÉTENDUE","Parcourir plusieurs zones d’un même site, échanger avec plusieurs interlocuteurs au cours d’une même mission.","PRESENCE"],
+ ["BCONT","CONTINUITÉ PROJET","Documenter et comparer un même projet à trois moments ; drone possible pour visualiser son évolution si chaque vol est autorisé et réalisable en sécurité.","PRESENCE"],
  ["BLOG","Logistique / clé / accès","Accès, clé / badge ou présence logistique ponctuelle à tarif fixe.","STANDARD"],
  ["BOTHER","Autre","Autre besoin professionnel à qualifier.","STANDARD"]
 ];
@@ -820,7 +821,7 @@ function classify(){
  let m={BVISIT:["VISITE TERRAIN PILOTÉE","350 € HT","60 min","R1"],BPROJECT:["PRÉSENCE PROJET","490 € HT","75 min","R2"],BEXT:["PRÉSENCE PROJET ÉTENDUE","690 € HT","3 h","R2"],BCONT:["CONTINUITÉ PROJET","1 190 € HT","3 x 75 min","R3"]}[S.need];
  if(m)r={status:"PROPOSER",mission:m[0],price:m[1],cap:m[2],contract:"PRÉSENCE ENTREPRISES",rest:m[3],multi:S.need==="BCONT"};
  if(S.need==="BLOG"){
-   if(S.sub==="ACCESS")r={status:"PROPOSER",mission:"ACCÈS B2B",price:"109 € HT",cap:"cadre court, non horaire",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
+   if(S.sub==="ACCESS")r={status:"PROPOSER",mission:"ACCÈS B2B",price:"109 € HT",cap:"30 min",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="KEY_GIVE")r={status:"PROPOSER",mission:"REMISE CLÉ / BADGE B2B",price:"109 € HT",cap:"action unique, cadre court",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="KEY_GET")r={status:"PROPOSER",mission:"RÉCUPÉRATION CLÉ / BADGE B2B",price:"109 € HT",cap:"action unique, cadre court",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="STAY")r={status:"PROPOSER",mission:"PRÉSENCE LOGISTIQUE B2B",price:"169 € HT",cap:"1 h",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
@@ -894,10 +895,10 @@ function objectOptions(){
     "Comparer la même situation à trois moments clés."
   ];
   else if(["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","PRÉSENCE LOGISTIQUE B2B"].includes(m)){
-    if(S.sub==="ACCESS") out=["Donner accès à l’intervenant professionnel désigné puis repartir"];
+    if(S.sub==="ACCESS") out=["Accueillir l’intervenant désigné, rester présent pendant l’opération courte, refermer les lieux après son départ et confirmer l’exécution (30 minutes maximum au total)"];
     else if(S.sub==="KEY_GIVE") out=["Remettre une clé / un badge à la personne désignée"];
     else if(S.sub==="KEY_GET") out=["Récupérer une clé / un badge auprès de la personne désignée"];
-    else if(S.sub==="STAY") out=["Rester présent pendant le créneau professionnel convenu, sans contrôle technique"];
+    else if(S.sub==="STAY") out=["Accueillir l’intervenant ou livreur désigné, rester présent pendant l’opération et refermer les lieux après son départ (1 heure maximum au total), sans contrôle technique"];
   }
   else if(m==="VISITE TERRAIN PILOTÉE") out=[
     "Voir et documenter un site en Corse avant d’y déplacer une équipe ou un technicien."
@@ -909,7 +910,7 @@ function objectOptions(){
     "Parcourir plusieurs zones d’un même site, échanger avec plusieurs interlocuteurs au cours d’une même mission."
   ];
   else if(m==="CONTINUITÉ PROJET") out=[
-    "Comparer le même projet à trois moments."
+    "Documenter et comparer le même projet à trois moments. Photographier des repères comparables, avec drone possible si chaque vol est autorisé et réalisable en sécurité."
   ];
   if(!out.length) out=["Définir précisément l’objet convenu avec le client"];
   return out;
@@ -1019,14 +1020,14 @@ function missionPhoneScript(){
   if(m.includes('VOIR')) return "Votre besoin relève d’une mission VOIR : nous observons et documentons ce qui est visible sur place, sans diagnostic. Le tarif est de 260 € TTC.";
   if(m==='DÉCIDER') return "Votre besoin relève d’une mission DÉCIDER : nous recueillons sur place les éléments factuels convenus pour vous aider à décider vous-même. Le tarif est de 480 € TTC.";
   if(m==='SUIVRE') return "Votre besoin relève d’une mission SUIVRE, avec trois présences comparables dans le temps. Le tarif est de 980 € TTC.";
-  if(m==='VISITE TERRAIN PILOTÉE') return "Votre besoin correspond à une VISITE TERRAIN PILOTÉE à 350 € HT.";
-  if(m==='PRÉSENCE PROJET') return "Votre besoin correspond à une PRÉSENCE PROJET à 490 € HT.";
-  if(m==='PRÉSENCE PROJET ÉTENDUE') return "Votre besoin correspond à une PRÉSENCE PROJET ÉTENDUE à 690 € HT.";
+  if(m==='VISITE TERRAIN PILOTÉE') return "Votre besoin correspond à VISITE DE SITE à 350 € HT.";
+  if(m==='PRÉSENCE PROJET') return "Votre besoin correspond à PRÉSENCE À UNE ÉTAPE CLÉ à 490 € HT.";
+  if(m==='PRÉSENCE PROJET ÉTENDUE') return "Votre besoin correspond à PRÉSENCE ÉTENDUE à 690 € HT.";
   if(m==='CONTINUITÉ PROJET') return "Votre besoin correspond à une CONTINUITÉ PROJET, avec trois présences, à 1 190 € HT.";
-  if(m==='ACCÈS B2B') return "Votre besoin correspond à un ACCÈS B2B à 109 € HT.";
+  if(m==='ACCÈS B2B') return "Votre besoin correspond à DONNER ACCÈS à 109 € HT : accueil, présence pendant l’opération courte et fermeture, 30 minutes maximum au total." ;
   if(m==='REMISE CLÉ / BADGE B2B') return "Votre besoin correspond à une REMISE CLÉ / BADGE B2B à 109 € HT.";
   if(m==='RÉCUPÉRATION CLÉ / BADGE B2B') return "Votre besoin correspond à une RÉCUPÉRATION CLÉ / BADGE B2B à 109 € HT.";
-  if(m==='PRÉSENCE LOGISTIQUE B2B') return "Votre besoin correspond à une PRÉSENCE LOGISTIQUE B2B à 169 € HT, pour une heure maximum.";
+  if(m==='PRÉSENCE LOGISTIQUE B2B') return "Votre besoin correspond à PRÉSENCE LOGISTIQUE à 169 € HT : accueil, présence pendant l’opération et fermeture, une heure maximum au total." ;
   return "Je vais vous orienter vers la mission la plus adaptée et vous indiquer le tarif avant toute réservation.";
 }
 function showResult(){
@@ -1034,7 +1035,7 @@ function showResult(){
  const normal=(r.status==="PROPOSER");
  const quote=(r.status==="DEVIS PRÉALABLE");
  draw(`<div class="card"><h1>${esc(r.status)}</h1><div class="readAloud">${esc(missionPhoneScript())}</div>
- <div class="row"><b>Mission</b><span>${esc(r.mission)}</span></div>
+ <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(r.mission))}</span></div>
  ${quote?`<div class="row"><b>Prix</b><span>À CHIFFRER PAR DEVIS</span></div>`:priceRows()}
  <div class="row"><b>Plafond</b><span>${esc(r.cap)}</span></div>
  <div class="row"><b>Contrat</b><span>${esc(r.contract)}</span></div><div class="row"><b>Lieu d’intervention</b><span>${esc(S.city)}</span></div>
@@ -1770,7 +1771,7 @@ function showManualSlotReview(){
     <div class="neutral"><b>ANTI-DOUBLE-RÉSERVATION</b>En production, le système vérifiera ici l’agenda central CYRNEA. Un créneau déjà occupé sera bloqué. <b>La vérification ne confirme jamais automatiquement la mission.</b></div>
     <div class="row"><b>Date</b><span>${esc(S.date)}</span></div>
     <div class="row"><b>Heure</b><span>${esc(displayTime4(S.slot))}</span></div>
-    <div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div>
+    <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div>
     ${priceRows()}
     <div class="row"><b>Contrainte</b><span>${esc(S.result.availabilityLabel||"Standard")}</span></div>
     <div class="todo"><b>À FAIRE</b>Regarder le créneau et le tarif. Si cela vous convient réellement, confirmer manuellement. Rien n’est envoyé au client avant votre confirmation.</div>
@@ -1910,7 +1911,7 @@ function contractRef(){
  const c=S.result?.contract;
  if(c==="RELAIS") return "CGV RELAIS PROPRIÉTAIRE V16 CM2C — 05/10/2026";
  if(c==="PRÉSENCE PROPRIÉTAIRES") return "CGV CYRNEA PRÉSENCE — PROPRIÉTAIRES V6 CM2C — 15/09/2026";
- return "CGS CYRNEA PRÉSENCE — ENTREPRISES V6 NUIT B2B — 25/09/2026";
+ return "CGS CYRNEA PRÉSENCE — ENTREPRISES V10 — 19/10/2026 (V9 + additif)";
 }
 function isHorsStandard(){
  if(S.result?.isQuote)return true;
@@ -2258,7 +2259,7 @@ function bookingHandoff(){
  S.acceptedSlot=true;
  save();
  draw(`<div class="card"><h1>Réserver et payer</h1>
- <div class="todo"><b>MISSION RETENUE</b>${esc(S.result.mission)} — ${esc(priceText())}</div>
+ <div class="todo"><b>MISSION RETENUE</b>${esc(b2bCommercialMissionName(S.result.mission))} — ${esc(priceText())}</div>
  <div class="row"><b>Objet</b><span>${esc(S.obj)}</span></div>
  <div class="row"><b>Plafond</b><span>${esc(S.result.cap)}</span></div>
  <div class="row"><b>Créneau souhaité</b><span>${esc(scheduleText())}</span></div>
@@ -2273,7 +2274,7 @@ function bookingHandoff(){
  ${multi?`<div class="neutral"><b>MISSION EN PLUSIEURS PASSAGES / JALONS</b>La mission est transmise à Tally avec les passages connus. Les jalons suivants restent rattachés au même dossier et toute majoration éventuelle est traitée selon le créneau concerné.</div>`:""}
  <div class="warn"><b>PAIEMENT — CONFIRMATION HUMAINE</b><br>Le paiement ne confirme jamais automatiquement la mission, y compris en STANDARD. Après paiement : vérifier la disponibilité puis CONFIRMER, PROPOSER UNE ALTERNATIVE ou REMBOURSER.</div>
  <div class="phoneScript"><b>PHRASE À DIRE AU CLIENT</b>
- « La mission adaptée est <b>${esc(S.result.mission)}</b>, au tarif de <b>${esc(priceText())}</b>. Le créneau choisi est pris en compte et vous sera confirmé. Vous pourrez indiquer une autre possibilité avant le paiement. »
+ « La mission adaptée est <b>${esc(b2bCommercialMissionName(S.result.mission))}</b>, au tarif de <b>${esc(priceText())}</b>. Le créneau choisi est pris en compte et vous sera confirmé. Vous pourrez indiquer une autre possibilité avant le paiement. »
  </div>
  <div class="toolbar">${route==="TALLY"?`<button id="tallyClientSend" class="btn primary" onclick="prepareClientTallyLink()">ENVOYER LE LIEN TALLY AU CLIENT</button><button class="btn" onclick="openTallySecure()" style="background:#f59e0b;color:#422006;border:2px solid #b45309">OUVRIR TALLY — TEST</button>`:`<button class="btn primary" onclick="openSimplyBook()">OUVRIR SIMPLYBOOK — RÉSERVER / PAYER</button><button class="btn ghost" onclick="settings()">RÉGLAGES DU LIEN</button>`}</div>
  ${route==="TALLY"?'<div id="tallyClientShare"></div><div class="muted">TEST : ce bouton orange ouvre le véritable formulaire Tally. Les simulations ne doivent pas déclencher de paiement réel.</div>':""}
@@ -2352,7 +2353,7 @@ function postPaymentDecision(){
  if(!GATEWAY_REF_RE.test(String(S.tallyReference||"")))ensureTallyReference();
  draw(`<div class="card"><h1>Paiement reçu — décision humaine</h1>
    <div class="stop"><b>⛔ NE PAS PARTIR EN MISSION</b><br>Un paiement, STANDARD ou HORS STANDARD, n’est jamais une confirmation de disponibilité.</div>
-   <div class="row"><b>Mission</b><span>${esc(S.result?.mission||"-")}</span></div>
+   <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result?.mission||"-"))}</span></div>
    <div class="row"><b>Créneau demandé</b><span>${esc(scheduleText())}</span></div>
    <div class="row"><b>Référence</b><span>${esc(S.tallyReference||"-")}</span></div>
    <div class="toolbar"><button class="btn primary" onclick="openReservationActions()">OUVRIR CONFIRMER / ALTERNATIVE / REMBOURSER</button></div>
@@ -2482,7 +2483,7 @@ function packDocHtml(kind){
     return `<div class="neutral"><b>FICHE MISSION</b>
       <div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div>
       <div class="row"><b>Client</b><span>${esc(S.name)}</span></div>
-      <div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div>
+      <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div>
       <div class="row"><b>Objet</b><span>${esc(S.obj)}</span></div>
       <div class="row"><b>Créneau(x)</b><span>${esc(scheduleText())}</span></div>
       <div class="row"><b>Plafond</b><span>${esc(S.result.cap)}</span></div>
@@ -2491,7 +2492,7 @@ function packDocHtml(kind){
   }
   if(kind==="check"){
     const items=terrainFactOptions();
-    return `<div class="neutral"><b>CHECKLIST TERRAIN — ${esc(S.result.mission)}</b>
+    return `<div class="neutral"><b>CHECKLIST TERRAIN — ${esc(b2bCommercialMissionName(S.result.mission))}</b>
       ${items.map((x,i)=>`<div class="row"><b>□</b><span>${esc(x)}</span></div>`).join("")}
     </div>`;
   }
@@ -2504,7 +2505,7 @@ function packDocHtml(kind){
   }
   return `<div class="neutral"><b>MODÈLE DE RESTITUTION ${esc(p.rest)}</b>
     <div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div>
-    <div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div>
+    <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div>
     <div class="row"><b>Objet</b><span>${esc(S.obj)}</span></div>
     <div class="row"><b>À compléter au terrain</b><span>faits / actions cochés, incident éventuel, preuves utiles</span></div>
     <div class="muted">Le PDF final sera généré automatiquement à partir des cases réellement cochées.</div>
@@ -2597,7 +2598,7 @@ function b2bKeysIntake(){
  draw([
  '<div class="card"><h1>Clés / badges — préparation B2B</h1>',
  '<div class="operatorOnly">Les déclarations du client restent dans Tally. Confirmer ici la faisabilité opérationnelle, sans enregistrer de code secret.</div>',
- '<div class="row"><b>Mission</b><span>'+esc(S.result?.mission||"-")+'</span></div>',
+ '<div class="row"><b>Mission</b><span>'+esc(b2bCommercialMissionName(S.result?.mission||"-"))+'</span></div>',
  '<div class="field"><label>Les clés sont-elles réellement disponibles pour la mission ?</label>',
  select("b2bKeyAvailable",[["","— Vérifier —"],["YES","OUI — disponibilité confirmée"],["NO","NON — clés indisponibles"],["UNKNOWN","JE NE SAIS PAS — non confirmé"]],p.keysAvailableConfirmed?"YES":""),
  '</div><div class="field"><label>Provenance / personne désignée (nom, contact)</label><input id="b2bKeyContact" value="'+esc(p.contact||"")+'"></div>',
@@ -2666,7 +2667,7 @@ function ready(){
  <label class="check"><input type="checkbox" name="readyCheck"><span>J’ai les documents / photos utiles, ou aucun document n’est nécessaire.</span></label>
  ${needsCahier()?`<label class="check"><input type="checkbox" name="readyCheck"><span>Le brief / cahier des charges est clair et complet.</span></label>`:""}
  <div class="neutral"><b>RÉSUMÉ MISSION</b>
- <div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div>
+ <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div>
  <div class="row"><b>Objet</b><span>${esc(S.obj)}</span></div>
  <div class="row"><b>Adresse</b><span>${esc(S.prep.addr||"-")}</span></div>
  <div class="row"><b>Accès</b><span>${esc(S.prep.access||"-")} — ${esc(S.prep.mode||"-")}</span></div>
@@ -2689,7 +2690,7 @@ function startTerrainFromReady(){
 function missionDesk(){
   const p=docPack();
   draw(`<div class="card"><h1>Sur place — suivez l’écran</h1><div class="operatorOnly">Réalisez uniquement ce qui est affiché. Si la situation est différente, utilisez le bouton de doute et n’improvisez pas.</div>
-    <div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div>
+    <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div>
     <div class="row"><b>Objet</b><span>${esc(S.obj)}</span></div>
     <div class="row"><b>Créneau(x)</b><span>${esc(scheduleText())}</span></div>
 
@@ -2711,7 +2712,7 @@ function showMissionDoc(kind){
   if(kind==="fiche"){
     body=`<div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div>
       <div class="row"><b>Client</b><span>${esc(S.name)}</span></div>
-      <div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div>
+      <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div>
       <div class="row"><b>Objet</b><span>${esc(S.obj)}</span></div>
       <div class="row"><b>Créneau(x)</b><span>${esc(scheduleText())}</span></div>
       <div class="row"><b>Plafond</b><span>${esc(S.result.cap)}</span></div>
@@ -2735,6 +2736,10 @@ function showMissionDoc(kind){
 }
 function terrainFactOptions(){
   const m=S.result?.mission||"";
+  if(m==="ACCÈS B2B")
+    return ["Heure précise du rendez-vous confirmée par l’entreprise","Intervenant désigné accueilli et identité vérifiée","Accès à la zone autorisée assuré","Présence pendant l’opération courte (attente comprise, 30 min maximum au total)","Intervenant parti et lieux refermés","Exécution et tout incident communiqués à l’entreprise"];
+  if(m==="PRÉSENCE LOGISTIQUE B2B")
+    return ["Heure précise du rendez-vous confirmée par l’entreprise","Professionnel ou livreur désigné accueilli et identité vérifiée","Accès à la zone autorisée assuré si nécessaire","Présence pendant l’opération (attente comprise, 1 heure maximum au total)","Intervenant parti et lieux refermés","Exécution et tout incident communiqués à l’entreprise"];
   if(m==="RELAIS SIMPLE" && S.need==="ART" && S.sub==="ACCESS")
     return ["Professionnel désigné présent","Identité / société vérifiée","Accès donné","Présence pendant l’opération très courte","Lieux refermés avant le départ"];
   if(m==="RELAIS" && S.need==="ART" && S.sub==="STAY")
@@ -3163,6 +3168,9 @@ function needsWaitGuard(){
 
 function overrunRule(){
  const contract=String(S.result?.contract||"");
+ const mission=String(S.result?.mission||"");
+ if(contract==="PRÉSENCE ENTREPRISES" && ["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B"].includes(mission))
+   return {allowed:false,text:"Aucune prolongation horaire automatique ni supplément pour cette mission à 109 € HT. DONNER ACCÈS est limité à 30 minutes au total, fermeture comprise. Au-delà, arrêter et convenir préalablement d’une requalification avec l’entreprise, sans abandonner les lieux ouverts."};
  if(contract==="RELAIS")
    return {allowed:true,unit:40,base:"TTC",max:2,label:"+40 € TTC par tranche de 30 min commencée, maximum 2 tranches, avec accord exprès"};
  if(contract==="PRÉSENCE PROPRIÉTAIRES")
@@ -3335,9 +3343,14 @@ function terrain(){
  let rules=[];
  if(S.result.mission.includes("APRÈS INTEMPÉRIE"))rules=["Vérifier AVANT toute manipulation : pas d'eau","Pas d'humidité anormale","Pas d'odeur de brûlé","Pas d'échauffement","Pas de dommage visible","Un seul réarmement simple maximum si prévu"];
  else if(S.result.mission.includes("VOIR"))rules=["Observer uniquement le périmètre prévu","Séparer OBSERVÉ / DÉCLARÉ / DOCUMENT / NON VÉRIFIABLE","Aucun diagnostic / conformité / cause"];
+ else if(S.result.mission==="ACCÈS B2B" || S.result.mission==="PRÉSENCE LOGISTIQUE B2B")rules=["Heure de début précise confirmée","Accueillir l’intervenant choisi par l’entreprise et rester présent pendant l’opération","Prévoir le départ du tiers et la fermeture dans le plafond total","Aucune coordination ni contrôle technique","En cas de retard ou d’impossibilité de fermeture : contacter l’entreprise et consigner les faits"];
  else if(S.result.mission==="DÉCIDER"||S.result.mission.includes("PRÉSENCE PROJET"))rules=["Suivre le cahier des charges","Poser uniquement les questions convenues","Aucune décision ou signature pour le client"];
  else rules=["Exécuter uniquement l'objet prévu","Ne pas élargir la mission","Documenter uniquement les preuves utiles"];
- if(needsWaitGuard())rules.push("Si tiers / professionnel absent ou en retard : attente incident maximum 15 minutes");
+ if(needsWaitGuard()){
+   if(["ACCÈS B2B","PRÉSENCE LOGISTIQUE B2B"].includes(S.result.mission))
+     rules.push("Retard du professionnel : aucune prolongation automatique ; l’attente consomme les 30 minutes ou l’heure prévues, fermeture comprise.");
+   else rules.push("Si tiers / professionnel absent ou en retard : attente incident maximum 15 minutes");
+ }
 
  const facts=terrainFactOptions();
 
@@ -3348,7 +3361,7 @@ function terrain(){
    : `<button class="btn primary" onclick="markArrival()">J’ARRIVE SUR PLACE — HORODATER</button>`}
  <div class="advice"><b>CONSEIL</b>Les cases ci-dessous sont vos contrôles internes. Le client n’a rien à cocher ici.</div>
 
- <div class="row"><b>${esc(S.missionId)}</b><span>${esc(S.result.mission)}</span></div>
+ <div class="row"><b>${esc(S.missionId)}</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div>
  <div class="toolbar"><button class="btn ghost" onclick="missionDesk()">DOSSIER MISSION</button>${isB2BKeyCustody()?`<button class="btn ghost" onclick="keysTracker()">CLÉS — RÉCEPTION / RESTITUTION</button>`:""}</div>
 
  <div class="checkZone">
@@ -3489,7 +3502,7 @@ function finalizeArchive(){
  S.finalStatus=document.getElementById("fs")?.value||S.finalStatus||"MISSION CLÔTURÉE";
  save();archive();
 }
-function archive(){if(S.overrun?.accepted&&S.overrun.paymentStatus!=="PAID")return alert("⛔ Archivage bloqué : supplément de prolongation non réglé.");if(!keysFullyReturned() && !(!S.keyCustody?.receivedAt && (S.paymentStatus==="REFUNDED" || String(S.finalStatus||"").startsWith("MISSION IMPOSSIBLE"))))return alert("⛔ Archive bloquée : clés reçues non restituées.");setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(S.result.mission)}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button id="archiveExportBtn" class="btn primary" onclick="exportMissionArchive()">EXPORTER LE DOSSIER → FICHIERS / iCLOUD</button><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
+function archive(){if(S.overrun?.accepted&&S.overrun.paymentStatus!=="PAID")return alert("⛔ Archivage bloqué : supplément de prolongation non réglé.");if(!keysFullyReturned() && !(!S.keyCustody?.receivedAt && (S.paymentStatus==="REFUNDED" || String(S.finalStatus||"").startsWith("MISSION IMPOSSIBLE"))))return alert("⛔ Archive bloquée : clés reçues non restituées.");setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button id="archiveExportBtn" class="btn primary" onclick="exportMissionArchive()">EXPORTER LE DOSSIER → FICHIERS / iCLOUD</button><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
 function exportJSON(){let b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(S.missionId||"CYRNEA-DEMO")+".json";a.click();URL.revokeObjectURL(a.href)}
 function recoverNewerStageViewState(){
  const baseId=activeMissionKey(S);
