@@ -187,6 +187,7 @@ const STATE_KEY="cyrnea_assistant_v53_final_20260928";
 const ACTIVE_MISSIONS_KEY="cyrnea_active_missions_v1";
 const MISSIONS_API_URL="https://cyrnea-missions-api.jeancharles-coti.workers.dev";
 const SYNC_KEY_STORAGE="cyrnea_sync_key_v1";
+const MAIL_KEY_STORAGE="cyrnea_mail_send_key_v1";
 const SYNC_META_STORAGE="cyrnea_sync_meta_v1";
 const SYNC_DELETED_STORAGE="cyrnea_sync_deleted_v2";
 const SYNC_DIRTY_STORAGE="cyrnea_sync_dirty_v3";
@@ -287,6 +288,7 @@ function activeMissionStatus(st){
  return st.stage||"MISSION EN COURS";
 }
 function getSyncKey(){return String(localStorage.getItem(SYNC_KEY_STORAGE)||"").trim()}
+function getMailSendKey(){return String(localStorage.getItem(MAIL_KEY_STORAGE)||"").trim()}
 function loadDeletedIds(){
  try{
    const x=JSON.parse(localStorage.getItem(SYNC_DELETED_STORAGE)||"[]");
@@ -2081,7 +2083,7 @@ async function shareClientTallyLink(){
    if(err?.name!=="AbortError")alert("Partage non effectué : "+String(err?.message||err)+". Le lien reste disponible dans la PWA.");
  }
 }
-/* Courriel client : aperçu puis validation explicite. Clé de synchro conservée localement. */
+/* Courriel client : clé d’envoi distincte de la synchronisation des dossiers. */
 function clientMailIdentity(contract){
  if(contract==="RELAIS")return {from:"contact@relaisproprietaire.fr",brand:"CYRNEA RELAIS"};
  if(contract==="PRÉSENCE PROPRIÉTAIRES"||contract==="PRÉSENCE ENTREPRISES")
@@ -2124,7 +2126,7 @@ function previewClientTallyEmail(){
  try{
   if(!S.tallyIntentReady)throw Error("La référence de réservation n'est pas sécurisée");
   const m=clientMailPayload(input?.value);
-  const sent=clientEmailAlreadySent(m), available=getSyncKey().length>=24;
+  const sent=clientEmailAlreadySent(m), available=getMailSendKey().length>=24;
   target.innerHTML='<div class="neutral"><h3>E-MAIL PROFESSIONNEL — PRÉVISUALISATION</h3>'
     +'<div class="row"><b>Expéditeur</b><span>'+esc(m.from)+'</span></div>'
     +'<div class="row"><b>Destinataire</b><span>'+esc(m.to)+'</span></div>'
@@ -2134,9 +2136,49 @@ function previewClientTallyEmail(){
     +'<p>'+esc(m.notice)+'</p><p>'+esc(m.brand)+'</p>'
     +(sent?'<div class="notice"><b>E-MAIL ENVOYÉ</b> Accusé de prise en charge SMTP enregistré pour cette référence et ce destinataire.</div>'
       :available?'<div class="toolbar"><button id="clientEmailSendButton" class="btn primary" onclick="sendClientTallyEmail()">CONFIRMER ET ENVOYER CET E-MAIL</button></div>'
-      :'<div class="warn"><b>ENVOI NON ACTIVÉ</b> La clé de synchronisation sécurisée doit être active dans la PWA pour autoriser l’envoi.</div>')
+      :'<div class="warn"><b>ENVOI NON ACTIVÉ</b> Clé d’envoi e-mail non configurée sur cet appareil.</div>')
+    +'<details style="margin-top:14px"><summary style="cursor:pointer;font-weight:bold">CONFIGURER / MODIFIER LA CLÉ D’ENVOI E-MAIL</summary>'
+    +'<div class="field"><label>Clé d’envoi (Cloudflare : MAIL_SEND_KEY), différente de la clé de synchronisation</label>'
+    +'<input id="clientMailKeyInput" type="password" autocomplete="off" spellcheck="false" placeholder="Collez la clé, au moins 24 caractères"></div>'
+    +'<button id="clientMailKeySaveButton" class="btn ghost" onclick="configureClientMailKey()">VÉRIFIER ET ENREGISTRER LA CLÉ</button>'
+    +'<p class="muted">Le contrôle vérifie seulement l’autorisation. Il n’envoie aucun e-mail ni ne déclenche de paiement.</p></details>'
     +'</div>';
  }catch(e){target.innerHTML='<div class="stop"><b>Prévisualisation impossible</b> '+esc(String(e?.message||e))+'</div>';}
+}
+async function configureClientMailKey(){
+ const input=document.getElementById("clientMailKeyInput");
+ const btn=document.getElementById("clientMailKeySaveButton");
+ const key=String(input?.value||"").trim();
+ if(key.length<24)return alert("Clé trop courte : saisissez au moins 24 caractères. Ne modifiez pas la clé de synchronisation.");
+ if(btn){btn.disabled=true;btn.textContent="VÉRIFICATION…";}
+ try{
+  // Requête volontairement invalide : autorisation vérifiée, aucun e-mail possible.
+  // Cloudflare répond 400/invalid_payload uniquement si la clé a été acceptée.
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),12000);
+  let res;
+  try{
+   res=await fetch(MAIL_SEND_URL+"/send",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
+    body:"{}",
+    credentials:"omit",
+    cache:"no-store",
+    signal:controller.signal
+   });
+  }finally{clearTimeout(timer);}
+  const data=await res.json().catch(()=>({}));
+  if(res.status!==400||data.error!=="invalid_payload")
+   throw Error(res.status===401?"Clé refusée par Cloudflare. Vérifiez MAIL_SEND_KEY.":String(data.error||"Contrôle non validé (HTTP "+res.status+")"));
+  localStorage.setItem(MAIL_KEY_STORAGE,key);
+  if(input)input.value="";
+  previewClientTallyEmail();
+  alert("Clé d’envoi reconnue par Cloudflare. Aucun e-mail n’a été envoyé.");
+ }catch(err){
+  alert("Clé non enregistrée : "+String(err?.message||err)+". Aucun e-mail n’a été envoyé.");
+ }finally{
+  if(btn?.isConnected){btn.disabled=false;btn.textContent="VÉRIFIER ET ENREGISTRER LA CLÉ";}
+ }
 }
 async function sendClientTallyEmail(){
  const button=document.getElementById("clientEmailSendButton");
@@ -2147,8 +2189,8 @@ async function sendClientTallyEmail(){
  try{m=clientMailPayload(input?.value)}catch(e){return alert(String(e?.message||e));}
  if(clientEmailAlreadySent(m))return alert("E-mail déjà pris en charge. Évitez un second envoi.");
  if(!confirm("Envoyer maintenant depuis "+m.from+" vers "+m.to+" ?"))return;
- const auth=getSyncKey();
- if(auth.length<24)return alert("Clé de synchronisation requise pour l’envoi sécurisé.");
+ const auth=getMailSendKey();
+ if(auth.length<24)return alert("Configurez d’abord la clé d’envoi e-mail sur cet appareil.");
  button.disabled=true;button.textContent="ENVOI EN COURS…";
  try{
   const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),15000);
