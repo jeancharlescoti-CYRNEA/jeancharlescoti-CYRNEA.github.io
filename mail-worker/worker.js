@@ -26,6 +26,7 @@ const h = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"
 const utf8 = s => new TextEncoder().encode(s);
 const b64 = s => { const a = utf8(s); let raw=""; for (const n of a) raw+=String.fromCharCode(n); return btoa(raw); };
 const mimeText = s => "=?UTF-8?B?"+b64(s)+"?=";
+const mimeBody = s => (b64(s).match(/.{1,76}/g)||[]).join("\r\n");
 const response = (body, status, origin) => new Response(JSON.stringify(body), {
   status,
   headers: {
@@ -69,14 +70,14 @@ function makeMessage({id,to,reference,url}){
     "To: <"+to+">",
     "Subject: "+mimeText(subject),
     "Date: "+new Date().toUTCString(),
-    "Message-ID: <"+crypto.randomUUID()+"@cyrneapresence.fr>",
+    "Message-ID: <"+crypto.randomUUID()+"@"+id.from.split("@")[1]+">",
     "X-CYRNEA-Reference: "+reference,
     "MIME-Version: 1.0",
     'Content-Type: multipart/alternative; boundary="'+boundary+'"'
   ].join("\r\n");
   return head+"\r\n\r\n"+
-    "--"+boundary+"\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"+b64(plain)+"\r\n"+
-    "--"+boundary+"\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"+b64(html)+"\r\n"+
+    "--"+boundary+"\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"+mimeBody(plain)+"\r\n"+
+    "--"+boundary+"\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"+mimeBody(html)+"\r\n"+
     "--"+boundary+"--\r\n";
 }
 function smtpStream(socket){
@@ -161,7 +162,7 @@ export default {
     if(token.length<24 || auth!=="Bearer "+token)return response({error:"unauthorized"},401,origin);
     if(Number(request.headers.get("Content-Length")||0)>12000)return response({error:"payload_too_large"},413,origin);
     let data;
-    try{data=checkPayload(await request.json())}
+    try{const raw=await request.text();if(raw.length>12000)return response({error:"payload_too_large"},413,origin);data=checkPayload(JSON.parse(raw))}
     catch(_){return response({error:"invalid_payload"},400,origin)}
     if(!env.SMTP_PASSWORD_PRESENCE || !env.SMTP_PASSWORD_RELAIS)
       return response({error:"server_not_configured"},503,origin);
