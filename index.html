@@ -2058,8 +2058,8 @@ async function prepareClientTallyLink(){
   if(!/^https:\/\/tally\.so\/r\//.test(url))throw new Error("Adresse Tally invalide.");
   box.innerHTML='<div class="notice"><b>LIEN CLIENT SÉCURISÉ</b><p>La référence est enregistrée. Le client complètera lui-même Tally et validera ses déclarations. Le paiement ne confirme pas automatiquement la mission.</p>'
    +'<div class="field"><label>Adresse Tally complète (pour contrôle seulement)</label><input id="clientTallyUrl" readonly value="'+esc(url)+'" onclick="this.select()"></div>'
-   +'<div class="toolbar"><button class="btn primary" onclick="shareClientTallyLink()">PARTAGER — MESSAGES OU MAIL</button><button class="btn ghost" onclick="copyClientTallyLink()">COPIER LE LIEN</button></div>'
-   +'<div class="muted">Le partage natif transmet une adresse web, plutôt qu’un très long texte prérempli. Choisissez le destinataire puis vérifiez avant l’envoi. Le lien reste complet et n’est pas raccourci.</div></div>';
+   +'<div class="toolbar"><button class="btn primary" onclick="shareClientTallyLink()">PARTAGER PAR MESSAGES</button><button class="btn ghost" onclick="copyClientTallyEmail()">1. COPIER E-MAIL MIS EN FORME</button><a class="btn ghost" style="display:inline-flex;align-items:center;text-decoration:none" href="mailto:'+encodeURIComponent(String(S.email||"").trim())+'?subject='+encodeURIComponent("CYRNEA — votre demande")+'">2. OUVRIR MAIL</a><button class="btn ghost" onclick="copyClientTallyLink()">COPIER LE LIEN</button></div>'
+   +'<div class="muted">Pour l’e-mail : COPIER, puis OUVRIR MAIL et COLLER dans le corps du message. Vérifiez que le lien « Compléter votre demande CYRNEA » est cliquable. Rien n’est envoyé automatiquement.</div></div>';
  }catch(err){
   box.innerHTML='<div class="stop"><b>⛔ LIEN NON TRANSMISSIBLE</b><br>'+esc(String(err?.message||err||"Erreur de sécurisation"))+'. Aucun lien client ne doit être envoyé tant que la référence n’est pas enregistrée.</div>';
  }finally{
@@ -2079,6 +2079,26 @@ async function shareClientTallyLink(){
  }catch(err){
    if(err?.name!=="AbortError")alert("Partage non effectué : "+String(err?.message||err)+". Le lien reste disponible dans la PWA.");
  }
+}
+async function copyClientTallyEmail(){
+ const input=document.getElementById("clientTallyUrl");
+ const url=String(input?.value||"");
+ if(!S.tallyIntentReady||!/^https:\/\/tally\.so\/r\//.test(url))return alert("Lien sécurisé non prêt : préparez d’abord la référence.");
+ if(typeof ClipboardItem==="undefined"||typeof navigator.clipboard?.write!=="function")return alert("La copie d’e-mail enrichi n’est pas disponible. Le lien Tally reste accessible par COPIER LE LIEN.");
+ const intro="Bonjour,";
+ const detail="Voici votre lien CYRNEA pour compléter personnellement la demande, vérifier les informations et consulter les conditions de service.";
+ const notice="Le créneau reste soumis à confirmation de disponibilité, même en cas de règlement.";
+ const label="Compléter votre demande CYRNEA";
+ const rich='<div><p>'+intro+'</p><p>'+detail+'</p><p><a href="'+esc(url)+'">'+label+'</a></p><p>'+notice+'</p><p>CYRNEA PRÉSENCE</p></div>';
+ const plain=intro+"\n\n"+detail+"\n\n"+label+" : "+url+"\n\n"+notice+"\n\nCYRNEA PRÉSENCE";
+ try{
+  const item=new ClipboardItem({
+   "text/html":new Blob([rich],{type:"text/html"}),
+   "text/plain":new Blob([plain],{type:"text/plain"})
+  });
+  await navigator.clipboard.write([item]);
+  alert("E-mail mis en forme copié. Ouvrez Mail, collez dans le message et vérifiez le lien avant tout envoi.");
+ }catch(e){alert("Copie enrichie indisponible : "+String(e?.message||e)+". Aucun envoi n’a eu lieu.");}
 }
 async function copyClientTallyLink(){
  const input=document.getElementById("clientTallyUrl");
