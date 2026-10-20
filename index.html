@@ -192,6 +192,7 @@ const SYNC_DELETED_STORAGE="cyrnea_sync_deleted_v2";
 const SYNC_DIRTY_STORAGE="cyrnea_sync_dirty_v3";
 const LEGACY_STATE_KEY="cyrnea_assistant_v50";
 const PAYMENT_GATEWAY_URL="https://cyrnea-payment-gateway.jeancharles-coti.workers.dev";
+const MAIL_SEND_URL="https://cyrnea-mailer.jeancharles-coti.workers.dev";
 const RESERVATION_ACTIONS_URL="https://cyrnea-reservation-actions.jeancharles-coti.workers.dev";
 const RELAIS_OVERRUN_PAYMENT_LINKS={
   40:"https://buy.stripe.com/cNi28s6wnfXxed27L31ZS02",
@@ -2059,7 +2060,7 @@ async function prepareClientTallyLink(){
   box.innerHTML='<div class="notice"><b>LIEN CLIENT SÉCURISÉ</b><p>La référence est enregistrée. Le client complètera lui-même Tally et validera ses déclarations. Le paiement ne confirme pas automatiquement la mission.</p>'
    +'<div class="field"><label>Adresse Tally complète (pour contrôle seulement)</label><input id="clientTallyUrl" readonly value="'+esc(url)+'" onclick="this.select()"></div>'
    +'<div class="toolbar"><button class="btn primary" onclick="shareClientTallyLink()">PARTAGER PAR MESSAGES</button><button class="btn ghost" onclick="previewClientTallyEmail()">PRÉVISUALISER L’E-MAIL PROFESSIONNEL</button><button class="btn ghost" onclick="copyClientTallyLink()">COPIER LE LIEN</button></div>'
-   +'<div id="clientMailPreview"></div><div class="muted">L’e-mail professionnel sera envoyé depuis la PWA après validation manuelle, dès qu’un service d’envoi authentifié aura été connecté. Aucune modification de Tally ou du paiement.</div></div>';
+   +'<div id="clientMailPreview"></div><div class="muted">Après validation manuelle, la PWA utilisera le serveur d’envoi sécurisé. Fonction inactive tant que le Worker SMTP n’est pas configuré. Aucun changement de Tally ou du paiement.</div></div>';
  }catch(err){
   box.innerHTML='<div class="stop"><b>⛔ LIEN NON TRANSMISSIBLE</b><br>'+esc(String(err?.message||err||"Erreur de sécurisation"))+'. Aucun lien client ne doit être envoyé tant que la référence n’est pas enregistrée.</div>';
  }finally{
@@ -2080,24 +2081,41 @@ async function shareClientTallyLink(){
    if(err?.name!=="AbortError")alert("Partage non effectué : "+String(err?.message||err)+". Le lien reste disponible dans la PWA.");
  }
 }
-/* Prévisualisation seule. AUCUN ENVOI tant que le service authentifié n'est pas configuré. */
+/* Courriel client : aperçu puis validation explicite. Clé de synchro conservée localement. */
 function clientMailIdentity(contract){
  if(contract==="RELAIS")return {from:"contact@relaisproprietaire.fr",brand:"CYRNEA RELAIS"};
- return {from:"contact@cyrneapresence.fr",brand:"CYRNEA PRÉSENCE"};
+ if(contract==="PRÉSENCE PROPRIÉTAIRES"||contract==="PRÉSENCE ENTREPRISES")
+  return {from:"contact@cyrneapresence.fr",brand:"CYRNEA PRÉSENCE"};
+ throw Error("Contrat de mission non reconnu : envoi bloqué");
 }
 function clientMailPayload(url){
  const u=new URL(String(url||""),location.href);
- if(u.protocol!=="https:"||u.hostname!=="tally.so"||!/^\/r\/[A-Za-z0-9]+$/.test(u.pathname))throw Error("Lien Tally non valide");
+ if(u.protocol!=="https:"||u.hostname!=="tally.so"||!/^\\/r\\/[A-Za-z0-9]+$/.test(u.pathname))
+  throw Error("Lien Tally non valide");
  const identity=clientMailIdentity(S.result?.contract);
  const to=String(S.email||"").trim();
- if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to))throw Error("L'adresse e-mail du client est absente ou invalide");
- return {from:identity.from,to,brand:identity.brand,subject:identity.brand+" — votre demande",
+ if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(to))throw Error("L'adresse e-mail du client est absente ou invalide");
+ const reference=String(S.tallyReference||"");
+ if(!GATEWAY_REF_RE.test(reference)||u.searchParams.get("reference_temporaire")!==reference)
+  throw Error("La référence Tally ne correspond pas à la réservation enregistrée");
+ const allowed={
+  "RELAIS":["b5oz46","xXOqpk"],
+  "PRÉSENCE PROPRIÉTAIRES":["GxZbE2","7R6AZa"],
+  "PRÉSENCE ENTREPRISES":["RGp0PQ","2EQWLD"]
+ };
+ if(!allowed[S.result.contract]?.includes(u.pathname.slice(3)))
+  throw Error("Ce formulaire Tally ne correspond pas au service");
+ return {from:identity.from,to,brand:identity.brand,contract:S.result.contract,reference,
+   subject:identity.brand+" — votre demande",
    greeting:"Bonjour,",
    intro:"Voici le lien pour compléter personnellement votre demande, vérifier les informations et consulter les conditions de service.",
    linkLabel:"Compléter votre demande CYRNEA",
    link:u.href,
    notice:"Votre demande et le créneau restent soumis à confirmation de disponibilité par CYRNEA, même en cas de règlement."
  };
+}
+function clientEmailAlreadySent(m){
+ return !!(S.mailDispatch?.confirmed && S.mailDispatch.reference===m.reference && S.mailDispatch.to===m.to);
 }
 function previewClientTallyEmail(){
  const target=document.getElementById("clientMailPreview");
@@ -2106,6 +2124,7 @@ function previewClientTallyEmail(){
  try{
   if(!S.tallyIntentReady)throw Error("La référence de réservation n'est pas sécurisée");
   const m=clientMailPayload(input?.value);
+  const sent=clientEmailAlreadySent(m), available=getSyncKey().length>=24;
   target.innerHTML='<div class="neutral"><h3>E-MAIL PROFESSIONNEL — PRÉVISUALISATION</h3>'
     +'<div class="row"><b>Expéditeur</b><span>'+esc(m.from)+'</span></div>'
     +'<div class="row"><b>Destinataire</b><span>'+esc(m.to)+'</span></div>'
@@ -2113,8 +2132,47 @@ function previewClientTallyEmail(){
     +'<p>'+esc(m.greeting)+'</p><p>'+esc(m.intro)+'</p>'
     +'<p><a href="'+esc(m.link)+'" target="_blank" rel="noopener noreferrer"><strong>'+esc(m.linkLabel)+'</strong></a></p>'
     +'<p>'+esc(m.notice)+'</p><p>'+esc(m.brand)+'</p>'
-    +'<div class="notice"><b>ENVOI NON ACTIVÉ</b>Le serveur d’envoi doit encore être configuré et authentifié. Aucune action d’envoi n’est disponible à ce stade.</div></div>';
+    +(sent?'<div class="notice"><b>E-MAIL ENVOYÉ</b> Accusé de prise en charge SMTP enregistré pour cette référence et ce destinataire.</div>'
+      :available?'<div class="toolbar"><button id="clientEmailSendButton" class="btn primary" onclick="sendClientTallyEmail()">CONFIRMER ET ENVOYER CET E-MAIL</button></div>'
+      :'<div class="warn"><b>ENVOI NON ACTIVÉ</b> La clé de synchronisation sécurisée doit être active dans la PWA pour autoriser l’envoi.</div>')
+    +'</div>';
  }catch(e){target.innerHTML='<div class="stop"><b>Prévisualisation impossible</b> '+esc(String(e?.message||e))+'</div>';}
+}
+async function sendClientTallyEmail(){
+ const button=document.getElementById("clientEmailSendButton");
+ const input=document.getElementById("clientTallyUrl");
+ if(!button)return;
+ if(!S.tallyIntentReady)return alert("Envoi bloqué : référence Tally non sécurisée");
+ let m;
+ try{m=clientMailPayload(input?.value)}catch(e){return alert(String(e?.message||e));}
+ if(clientEmailAlreadySent(m))return alert("E-mail déjà pris en charge. Évitez un second envoi.");
+ if(!confirm("Envoyer maintenant depuis "+m.from+" vers "+m.to+" ?"))return;
+ const auth=getSyncKey();
+ if(auth.length<24)return alert("Clé de synchronisation requise pour l’envoi sécurisé.");
+ button.disabled=true;button.textContent="ENVOI EN COURS…";
+ try{
+  const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),15000);
+  let response;
+  try{
+   response=await fetch(MAIL_SEND_URL+"/send",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":"Bearer "+auth},
+    cache:"no-store",
+    credentials:"omit",
+    signal:controller.signal,
+    body:JSON.stringify({contract:m.contract,to:m.to,reference:m.reference,url:m.link})
+   });
+  }finally{clearTimeout(timer);}
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.ok||data.reference!==m.reference)throw Error(String(data.error||"Réponse non confirmée"));
+  S.mailDispatch={reference:m.reference,to:m.to,from:m.from,at:new Date().toISOString(),confirmed:true};
+  save();
+  previewClientTallyEmail();
+ }catch(e){
+  alert("ENVOI NON CONFIRMÉ — "+String(e?.message||e)+". Vérifiez la réception avant toute nouvelle tentative pour éviter un doublon.");
+ }finally{
+  if(button.isConnected){button.disabled=false;button.textContent="CONFIRMER ET ENVOYER CET E-MAIL";}
+ }
 }
 async function copyClientTallyEmail(){
  const input=document.getElementById("clientTallyUrl");
