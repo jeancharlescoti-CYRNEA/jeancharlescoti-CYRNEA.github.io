@@ -2056,24 +2056,28 @@ async function prepareClientTallyLink(){
   await registerTallyIntent();
   const url=buildTallyUrl();
   if(!/^https:\/\/tally\.so\/r\//.test(url))throw new Error("Adresse Tally invalide.");
-  const phone=String(S.phone||"").replace(/[^+\d]/g,"");
-  const email=String(S.email||"").trim();
-  const message="Bonjour, voici le lien CYRNEA pour vérifier votre demande, compléter personnellement les déclarations et procéder au paiement sécurisé après validation :\n"+url+"\nLa mission reste soumise à confirmation de disponibilité.";
-  const apple=/Macintosh|Mac OS X|iPhone|iPad|iPod/i.test(navigator.userAgent||"");
-  const sms=apple
-   ?"sms://open?addresses="+encodeURIComponent(phone)+"&body="+encodeURIComponent(message)
-   :"sms:"+phone+"?body="+encodeURIComponent(message);
-  const mailto="mailto:"+encodeURIComponent(email)+"?subject="+encodeURIComponent("CYRNEA — votre lien de demande")+"&body="+encodeURIComponent(message);
-  box.innerHTML='<div class="notice"><b>LIEN PRÊT À TRANSMETTRE AU CLIENT</b><p>Vous transmettez le lien ; le client complète et valide lui-même Tally. Aucune déclaration ni aucun paiement n’est réalisé ici.</p>'
-   +'<div class="field"><label>Lien Tally prérempli</label><input id="clientTallyUrl" readonly value="'+esc(url)+'" onclick="this.select()"></div>'
-   +'<div class="toolbar"><button class="btn ghost" onclick="copyClientTallyLink()">COPIER LE LIEN</button>'
-   +(phone?'<a class="btn ghost" style="display:inline-flex;align-items:center;text-decoration:none" href="'+esc(sms)+'">SMS AU CLIENT</a>':"")
-   +(email?'<a class="btn ghost" style="display:inline-flex;align-items:center;text-decoration:none" href="'+esc(mailto)+'">E-MAIL AU CLIENT</a>':"")
-   +'</div><div class="muted">SMS et e-mail ouvrent un brouillon : vérifiez puis envoyez vous-même au client.</div></div>';
+  box.innerHTML='<div class="notice"><b>LIEN CLIENT SÉCURISÉ</b><p>La référence est enregistrée. Le client complètera lui-même Tally et validera ses déclarations. Le paiement ne confirme pas automatiquement la mission.</p>'
+   +'<div class="field"><label>Adresse Tally complète (pour contrôle seulement)</label><input id="clientTallyUrl" readonly value="'+esc(url)+'" onclick="this.select()"></div>'
+   +'<div class="toolbar"><button class="btn primary" onclick="shareClientTallyLink()">PARTAGER — MESSAGES OU MAIL</button><button class="btn ghost" onclick="copyClientTallyLink()">COPIER LE LIEN</button></div>'
+   +'<div class="muted">Le partage natif transmet une adresse web, plutôt qu’un très long texte prérempli. Choisissez le destinataire puis vérifiez avant l’envoi. Le lien reste complet et n’est pas raccourci.</div></div>';
  }catch(err){
   box.innerHTML='<div class="stop"><b>⛔ LIEN NON TRANSMISSIBLE</b><br>'+esc(String(err?.message||err||"Erreur de sécurisation"))+'. Aucun lien client ne doit être envoyé tant que la référence n’est pas enregistrée.</div>';
  }finally{
   if(btn && btn.isConnected){btn.disabled=false;btn.textContent="ENVOYER LE LIEN TALLY AU CLIENT";}
+ }
+}
+async function shareClientTallyLink(){
+ const input=document.getElementById("clientTallyUrl");
+ const url=String(input?.value||"");
+ if(!S.tallyIntentReady||!/^https:\/\/tally\.so\/r\//.test(url))return alert("Lien non prêt. Préparez d’abord la référence sécurisée.");
+ const message="Bonjour, voici votre lien CYRNEA pour compléter personnellement votre demande et consulter les conditions de service. Le règlement éventuel ne confirme pas automatiquement le créneau, qui reste soumis à notre confirmation.";
+ if(typeof navigator.share!=="function"){
+   return alert("Le partage natif est indisponible sur ce navigateur. Utilisez COPIER LE LIEN ou ouvrez la PWA sur votre iPhone.");
+ }
+ try{
+   await navigator.share({title:"CYRNEA — demande sécurisée",text:message,url:url});
+ }catch(err){
+   if(err?.name!=="AbortError")alert("Partage non effectué : "+String(err?.message||err)+". Le lien reste disponible dans la PWA.");
  }
 }
 async function copyClientTallyLink(){
