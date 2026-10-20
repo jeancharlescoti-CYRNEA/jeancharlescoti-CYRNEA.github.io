@@ -2090,7 +2090,7 @@ function clientMailIdentity(contract){
 }
 function clientMailPayload(url){
  const u=new URL(String(url||""),location.href);
- if(u.protocol!=="https:"||u.hostname!=="tally.so"||!/^\\/r\\/[A-Za-z0-9]+$/.test(u.pathname))
+ if(u.protocol!=="https:"||u.hostname!=="tally.so"||u.pathname.slice(0,3)!=="/r/"||!/^[A-Za-z0-9]+$/.test(u.pathname.slice(3)))
   throw Error("Lien Tally non valide");
  const identity=clientMailIdentity(S.result?.contract);
  const to=String(S.email||"").trim();
