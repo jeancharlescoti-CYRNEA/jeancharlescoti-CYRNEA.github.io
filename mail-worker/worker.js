@@ -111,7 +111,7 @@ async function sendSmtp(env, data){
   const username=data.id.from, password=String(env[data.id.secret]||"");
   if(!password)throw Error("smtp_password_missing");
   const raw=makeMessage(data);
-  let socket=connect({hostname:"mail.wmaker.net",port:587},{secureTransport:"starttls"});
+  let socket=connect({hostname:"mail.wmaker.net",port:587},{secureTransport:"starttls",allowHalfOpen:false});
   let channel=smtpStream(socket), stage="connect";
   const expect=async(cmd, codes)=>{
     if(cmd!==null)await channel.write(cmd+"\r\n");
