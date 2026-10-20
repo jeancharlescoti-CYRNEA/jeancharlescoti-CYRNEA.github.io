@@ -2060,7 +2060,7 @@ async function prepareClientTallyLink(){
   box.innerHTML='<div class="notice"><b>LIEN CLIENT SÉCURISÉ</b><p>La référence est enregistrée. Le client complètera lui-même Tally et validera ses déclarations. Le paiement ne confirme pas automatiquement la mission.</p>'
    +'<div class="field"><label>Adresse Tally complète (pour contrôle seulement)</label><input id="clientTallyUrl" readonly value="'+esc(url)+'" onclick="this.select()"></div>'
    +'<div class="toolbar"><button class="btn primary" onclick="shareClientTallyLink()">PARTAGER PAR MESSAGES</button><button class="btn ghost" onclick="previewClientTallyEmail()">PRÉVISUALISER L’E-MAIL PROFESSIONNEL</button><button class="btn ghost" onclick="copyClientTallyLink()">COPIER LE LIEN</button></div>'
-   +'<div id="clientMailPreview"></div><div class="muted">Après validation manuelle, la PWA utilisera le serveur d’envoi sécurisé. Fonction inactive tant que le Worker SMTP n’est pas configuré. Aucun changement de Tally ou du paiement.</div></div>';
+   +'<div id="clientMailPreview"></div><div class="muted">L’e-mail sera expédié depuis votre adresse professionnelle uniquement après votre confirmation. Aucun paiement n’est déclenché par l’envoi.</div></div>';
  }catch(err){
   box.innerHTML='<div class="stop"><b>⛔ LIEN NON TRANSMISSIBLE</b><br>'+esc(String(err?.message||err||"Erreur de sécurisation"))+'. Aucun lien client ne doit être envoyé tant que la référence n’est pas enregistrée.</div>';
  }finally{
@@ -2094,7 +2094,7 @@ function clientMailPayload(url){
   throw Error("Lien Tally non valide");
  const identity=clientMailIdentity(S.result?.contract);
  const to=String(S.email||"").trim();
- if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(to))throw Error("L'adresse e-mail du client est absente ou invalide");
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to))throw Error("L'adresse e-mail du client est absente ou invalide");
  const reference=String(S.tallyReference||"");
  if(!GATEWAY_REF_RE.test(reference)||u.searchParams.get("reference_temporaire")!==reference)
   throw Error("La référence Tally ne correspond pas à la réservation enregistrée");
