@@ -2058,8 +2058,8 @@ async function prepareClientTallyLink(){
   if(!/^https:\/\/tally\.so\/r\//.test(url))throw new Error("Adresse Tally invalide.");
   box.innerHTML='<div class="notice"><b>LIEN CLIENT SÉCURISÉ</b><p>La référence est enregistrée. Le client complètera lui-même Tally et validera ses déclarations. Le paiement ne confirme pas automatiquement la mission.</p>'
    +'<div class="field"><label>Adresse Tally complète (pour contrôle seulement)</label><input id="clientTallyUrl" readonly value="'+esc(url)+'" onclick="this.select()"></div>'
-   +'<div class="toolbar"><button class="btn primary" onclick="shareClientTallyLink()">PARTAGER PAR MESSAGES</button><button class="btn ghost" onclick="copyClientTallyEmail()">1. COPIER E-MAIL MIS EN FORME</button><a class="btn ghost" style="display:inline-flex;align-items:center;text-decoration:none" href="mailto:'+encodeURIComponent(String(S.email||"").trim())+'?subject='+encodeURIComponent("CYRNEA — votre demande")+'">2. OUVRIR MAIL</a><button class="btn ghost" onclick="copyClientTallyLink()">COPIER LE LIEN</button></div>'
-   +'<div class="muted">Pour l’e-mail : COPIER, puis OUVRIR MAIL et COLLER dans le corps du message. Vérifiez que le lien « Compléter votre demande CYRNEA » est cliquable. Rien n’est envoyé automatiquement.</div></div>';
+   +'<div class="toolbar"><button class="btn primary" onclick="shareClientTallyLink()">PARTAGER PAR MESSAGES</button><button class="btn ghost" onclick="previewClientTallyEmail()">PRÉVISUALISER L’E-MAIL PROFESSIONNEL</button><button class="btn ghost" onclick="copyClientTallyLink()">COPIER LE LIEN</button></div>'
+   +'<div id="clientMailPreview"></div><div class="muted">L’e-mail professionnel sera envoyé depuis la PWA après validation manuelle, dès qu’un service d’envoi authentifié aura été connecté. Aucune modification de Tally ou du paiement.</div></div>';
  }catch(err){
   box.innerHTML='<div class="stop"><b>⛔ LIEN NON TRANSMISSIBLE</b><br>'+esc(String(err?.message||err||"Erreur de sécurisation"))+'. Aucun lien client ne doit être envoyé tant que la référence n’est pas enregistrée.</div>';
  }finally{
@@ -2079,6 +2079,42 @@ async function shareClientTallyLink(){
  }catch(err){
    if(err?.name!=="AbortError")alert("Partage non effectué : "+String(err?.message||err)+". Le lien reste disponible dans la PWA.");
  }
+}
+/* Prévisualisation seule. AUCUN ENVOI tant que le service authentifié n'est pas configuré. */
+function clientMailIdentity(contract){
+ if(contract==="RELAIS")return {from:"contact@relaisproprietaire.fr",brand:"CYRNEA RELAIS"};
+ return {from:"contact@cyrneapresence.fr",brand:"CYRNEA PRÉSENCE"};
+}
+function clientMailPayload(url){
+ const u=new URL(String(url||""),location.href);
+ if(u.protocol!=="https:"||u.hostname!=="tally.so"||!/^\/r\/[A-Za-z0-9]+$/.test(u.pathname))throw Error("Lien Tally non valide");
+ const identity=clientMailIdentity(S.result?.contract);
+ const to=String(S.email||"").trim();
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to))throw Error("L'adresse e-mail du client est absente ou invalide");
+ return {from:identity.from,to,brand:identity.brand,subject:identity.brand+" — votre demande",
+   greeting:"Bonjour,",
+   intro:"Voici le lien pour compléter personnellement votre demande, vérifier les informations et consulter les conditions de service.",
+   linkLabel:"Compléter votre demande CYRNEA",
+   link:u.href,
+   notice:"Votre demande et le créneau restent soumis à confirmation de disponibilité par CYRNEA, même en cas de règlement."
+ };
+}
+function previewClientTallyEmail(){
+ const target=document.getElementById("clientMailPreview");
+ const input=document.getElementById("clientTallyUrl");
+ if(!target)return;
+ try{
+  if(!S.tallyIntentReady)throw Error("La référence de réservation n'est pas sécurisée");
+  const m=clientMailPayload(input?.value);
+  target.innerHTML='<div class="neutral"><h3>E-MAIL PROFESSIONNEL — PRÉVISUALISATION</h3>'
+    +'<div class="row"><b>Expéditeur</b><span>'+esc(m.from)+'</span></div>'
+    +'<div class="row"><b>Destinataire</b><span>'+esc(m.to)+'</span></div>'
+    +'<div class="row"><b>Objet</b><span>'+esc(m.subject)+'</span></div>'
+    +'<p>'+esc(m.greeting)+'</p><p>'+esc(m.intro)+'</p>'
+    +'<p><a href="'+esc(m.link)+'" target="_blank" rel="noopener noreferrer"><strong>'+esc(m.linkLabel)+'</strong></a></p>'
+    +'<p>'+esc(m.notice)+'</p><p>'+esc(m.brand)+'</p>'
+    +'<div class="notice"><b>ENVOI NON ACTIVÉ</b>Le serveur d’envoi doit encore être configuré et authentifié. Aucune action d’envoi n’est disponible à ce stade.</div></div>';
+ }catch(e){target.innerHTML='<div class="stop"><b>Prévisualisation impossible</b> '+esc(String(e?.message||e))+'</div>';}
 }
 async function copyClientTallyEmail(){
  const input=document.getElementById("clientTallyUrl");
