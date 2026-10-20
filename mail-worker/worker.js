@@ -149,7 +149,7 @@ export default {
   async fetch(request, env){
     const origin=request.headers.get("Origin")||"";
     if(request.method==="OPTIONS"){
-      return response({ok:ALLOWED_ORIGINS.has(origin)},ALLOWED_ORIGINS.has(origin)?204:403,origin);
+      return response({ok:ALLOWED_ORIGINS.has(origin)},ALLOWED_ORIGINS.has(origin)?200:403,origin);
     }
     if(request.method==="GET" && new URL(request.url).pathname==="/health")
       return response({ok:true, ready:!!(env.MAIL_SEND_KEY&&env.SMTP_PASSWORD_PRESENCE&&env.SMTP_PASSWORD_RELAIS)},200,origin);
