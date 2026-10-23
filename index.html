@@ -380,38 +380,41 @@ async function syncCentralMissions(options={}){
    serverMap[id]=st;
  }
 
- // Base = serveur, puis protection des écritures locales en cours.
+ // Les modifications locales peuvent avoir évolué DURANT le fetch : relecture obligatoire.
+ // Ne jamais fusionner sur le seul snapshot pris avant la requête.
+ const localMapLatest=loadActiveMissionMap();
+ const dirtyLatest=new Set(loadDirtyIds());
+ const deletedLatest=new Set(loadDeletedIds());
+ const currentIdLatest=activeMissionKey(S);
  const finalMap={...serverMap};
- for(const [id,st] of Object.entries(localMapBefore)){
-   if(deletedBefore.has(id)||!isStoredMissionState(st))continue;
-   if(dirtyBefore.has(id)||id===currentIdBefore){
+ for(const deletedId of deletedLatest)delete finalMap[deletedId];
+ for(const [id,st] of Object.entries(localMapLatest)){
+   if(deletedLatest.has(id)||!isStoredMissionState(st))continue;
+   const changedDuringRequest=missionSyncSnapshot(st)!==missionSyncSnapshot(localMapBefore[id]);
+   if(dirtyLatest.has(id)||id===currentIdLatest||changedDuringRequest){
      finalMap[id]=JSON.parse(JSON.stringify(st));
    }
  }
  writeActiveMissionMap(finalMap);
 
- // Une suppression explicitement envoyée peut être vidée après réponse OK.
- writeDeletedIds([]);
+ // Seules les suppressions réellement parties dans CETTE requête sont acquittées.
+ writeDeletedIds([...deletedLatest].filter(id=>!deletedBefore.has(id)));
 
- // Ne retirer le marqueur "dirty" que si le serveur renvoie exactement
- // la même mission. Sinon on la renverra au prochain cycle au lieu de la perdre.
+ // Un dossier modifié pendant le réseau doit rester "dirty" jusqu'à acquittement
+ // exact de sa nouvelle version par le serveur.
  const dirtyAfter=[];
- for(const id of dirtyBefore){
-   if(deletedBefore.has(id))continue;
-   const local=localMapBefore[id];
-   const remote=serverMap[id];
-   if(!local)continue;
-   if(!remote || missionSyncSnapshot(local)!==missionSyncSnapshot(remote))dirtyAfter.push(id);
+ for(const id of dirtyLatest){
+   if(deletedLatest.has(id))continue;
+   const local=localMapLatest[id],remote=serverMap[id];
+   if(local && (!remote||missionSyncSnapshot(local)!==missionSyncSnapshot(remote)))dirtyAfter.push(id);
  }
  writeDirtyIds(dirtyAfter);
 
- // Surtout : ne jamais supprimer l'état courant parce qu'une réponse centrale
- // n'a pas renvoyé ce brouillon. Le local reste prioritaire tant qu'il est actif.
- if(currentIdBefore){
-   const localCurrent=localMapBefore[currentIdBefore];
-   const chosen=(dirtyBefore.has(currentIdBefore)&&localCurrent)
-     ? localCurrent
-     : (finalMap[currentIdBefore]||localCurrent);
+ if(currentIdLatest){
+   const localCurrent=localMapLatest[currentIdLatest];
+   const chosen=localCurrent && (dirtyLatest.has(currentIdLatest)||
+     missionSyncSnapshot(localCurrent)!==missionSyncSnapshot(localMapBefore[currentIdLatest]))
+     ?localCurrent:(finalMap[currentIdLatest]||localCurrent);
    if(chosen){
      S=JSON.parse(JSON.stringify(chosen));
      localStorage.setItem(STATE_KEY,JSON.stringify(S));
@@ -815,7 +818,7 @@ function sub(){
 }
 function zone(){
  let x=(S.city||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
- return x==="porto-vecchio"||x==="porto vecchio"||x==="lecci"||x==="sotta"||x.includes("sainte-lucie")||x.includes("sainte lucie")||x.includes("pinarello")||x==="tarco";
+ return new Set(["porto-vecchio","porto vecchio","lecci","sotta","sainte-lucie-de-porto-vecchio","sainte lucie de porto vecchio","sainte-lucie-de-porto-vecchio / pinarello","sainte lucie de porto vecchio / pinarello","pinarello","tarco"]).has(x);
 }
 function voir(){return S.universe==="RELAIS"?{status:"PROPOSER",mission:"VOIR RELAIS",price:"260 € TTC",cap:"1 h 30",contract:"RELAIS",rest:"R1_RELAIS"}:{status:"PROPOSER",mission:"VOIR PRÉSENCE",price:"260 € TTC",cap:"1 h 30",contract:"PRÉSENCE PROPRIÉTAIRES",rest:"R1"}}
 function classify(){
@@ -2306,8 +2309,8 @@ function accessAllowed(){
  const p=S.accessPlan||{};
  if(!p.approved)return false;
  if(p.mode==="NONE")return false;
- if(p.mode==="POST"&&autoConstraints(S.date,S.slot).priority)return false;
- if(isKeyMission()&&S.sub==="GIVE"&&(!p.keyOrigin||(p.keyOrigin==="POST"&&autoConstraints(S.date,S.slot).priority)))return false;
+ if(p.mode==="POST"&&autoConstraints(S.date,S.slot).priority&&!S.keyCustody?.receivedAt)return false;
+ if(isKeyMission()&&S.sub==="GIVE"&&(!p.keyOrigin||(p.keyOrigin==="POST"&&autoConstraints(S.date,S.slot).priority&&!S.keyCustody?.receivedAt)))return false;
  if(["ART","DEL","OPEN"].includes(S.need)&&p.mode==="OUTSIDE")return false;
  if(["ART","DEL"].includes(S.need)&&S.result.contract==="RELAIS"&&(!p.exact||(S.sub==="ACCESS"&&p.duration!=="SHORT")||(S.sub==="STAY"&&!["SHORT","HOUR"].includes(p.duration))))return false;
  if(["LOCAL","PERSON","KEY"].includes(p.mode)&&!p.contact)return false;
@@ -3264,6 +3267,7 @@ function allChecked(selector){
   return xs.length>0 && xs.every(x=>x.checked);
 }
 function continueMultiAfterRestitution(){
+  if(S.overrun?.accepted && S.overrun.paymentStatus!=="PAID")return alert("⛔ Supplément du passage en cours non encaissé : impossible de passer au jalon suivant.");
   const next=S.passage+1;
   const p=(S.multiSlots||[]).find(x=>x.index===next);
   if(!p){
@@ -3282,6 +3286,10 @@ function continueMultiAfterRestitution(){
   S.facts="";
   S.incident="";
   S.terrainMedia=[];
+  if(S.overrun?.accepted){
+    S.overrunHistory=Array.isArray(S.overrunHistory)?S.overrunHistory:[];
+    if(!S.overrunHistory.some(o=>o.passage===S.overrun.passage))S.overrunHistory.push({...S.overrun});
+  }
   S.overrun=null;
   save();
   ready();
@@ -3331,8 +3339,12 @@ function overrunRule(){
  const mission=String(S.result?.mission||"");
  if(contract==="PRÉSENCE ENTREPRISES" && ["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B"].includes(mission))
    return {allowed:false,text:"Aucune prolongation horaire automatique ni supplément pour cette mission à 109 € HT. DONNER ACCÈS est limité à 30 minutes au total, fermeture comprise. Au-delà, arrêter et convenir préalablement d’une requalification avec l’entreprise, sans abandonner les lieux ouverts."};
- if(contract==="RELAIS")
+ if(contract==="RELAIS"){
+   // RELAIS SIMPLE, APRÈS intempérie simple et VOIR n'ont pas la prolongation horaire RELAIS 169 €.
+   if(mission==="RELAIS SIMPLE" || mission==="RELAIS SIMPLE - APRÈS INTEMPÉRIE" || mission.includes("VOIR"))
+     return {allowed:false,text:"Aucune prolongation horaire RELAIS autorisée pour cette formule. Arrêter au plafond convenu et requalifier la demande avant nouvelle prestation."};
    return {allowed:true,unit:40,base:"TTC",max:2,label:"+40 € TTC par tranche de 30 min commencée, maximum 2 tranches, avec accord exprès"};
+ }
  if(contract==="PRÉSENCE PROPRIÉTAIRES")
    return {allowed:true,unit:60,base:"TTC",max:null,label:"+60 € TTC par tranche de 30 min commencée, avec accord exprès"};
  if(contract==="PRÉSENCE ENTREPRISES")
