@@ -600,6 +600,7 @@ function newMission(){
 }
 function newCall(){return newMission()}
 function resumeActiveMission(){
+ if(S.paymentStatus && String(S.paymentStatus).startsWith("PAID") && !paymentReceiptRecorded())return paymentReceiptScreen();
  const st=S.resumeStage||S.stage||"";
  S.resumeStage="";
  if(st==="ARCHIVE") return archive();
@@ -2466,13 +2467,60 @@ async function openReservationActions(){
    alert("Impossible d’ouvrir CONFIRMER / ALTERNATIVE / REMBOURSER : "+String(err?.message||err));
  }
 }
+// Aucun clic unique ne prouve un encaissement. Une preuve du prestataire est
+// saisie manuellement après contrôle DIRECT sur son tableau de bord.
+function paymentReceiptRecorded(){
+ const p=S.paymentReceipt||{};
+ return !!(GATEWAY_REF_RE.test(String(S.tallyReference||"")) &&
+   S.tallyIntentReady && p.reference===S.tallyReference &&
+   p.amountCents===gatewayPaymentCents() && p.currency==="eur" &&
+   ["STRIPE","PAYPAL"].includes(p.provider) &&
+   /^[A-Za-z0-9_-]{8,160}$/.test(String(p.transactionId||"")) &&
+   p.transactionId!==S.tallyReference && p.checkedByOperator===true && p.checkedAt);
+}
+function paymentReceiptScreen(){
+ setStage("RÉSERVATION");
+ if(!S.tallyIntentReady||!GATEWAY_REF_RE.test(String(S.tallyReference||"")))
+   return draw('<div class="card"><div class="stop"><b>PAIEMENT NON VÉRIFIABLE</b><br>La référence d’intention n’est pas sécurisée : revenez à la réservation et préparez le lien Tally avant de continuer. Aucune mission ne peut être confirmée.</div><button class="btn ghost" onclick="bookingHandoff()">RETOUR RÉSERVATION</button></div>');
+ const amt=gatewayPaymentCents();
+ draw(`<div class="card"><h1>Vérifier le paiement réellement encaissé</h1>
+ <div class="stop"><b>⛔ PAIEMENT NON ENCORE CONFIRMÉ</b><br>Ne validez cet écran qu’après avoir retrouvé une transaction effectivement PAYÉE (et non en attente, abandonnée ou simplement autorisée) dans le tableau de bord Stripe ou PayPal. Une référence Tally ne prouve jamais le paiement.</div>
+ <div class="row"><b>Référence CYRNEA</b><span>${esc(S.tallyReference)}</span></div>
+ <div class="row"><b>Somme exacte attendue</b><span>${esc(paymentAmountText())} — ${esc(String(amt))} centimes</span></div>
+ <div class="field"><label>Prestataire contrôlé directement</label><select id="paidProvider"><option value="">— Choisir —</option><option value="STRIPE">STRIPE — transaction payée</option><option value="PAYPAL">PAYPAL — transaction capturée</option></select></div>
+ <div class="field"><label>Identifiant réel de transaction chez le prestataire (pas le numéro Tally)</label><input id="paidTransactionId" maxlength="160" autocomplete="off" placeholder="Identifiant Checkout / PaymentIntent / transaction PayPal"></div>
+ <div class="field"><label>Montant effectivement encaissé, en euros (ex. 169,00)</label><input id="paidAmount" inputmode="decimal" autocomplete="off"></div>
+ <div class="field"><label>Référence CYRNEA vérifiée dans la transaction</label><input id="paidReference" autocomplete="off" placeholder="Recopier la référence figurant sur la transaction"></div>
+ <label class="check"><input type="checkbox" id="paidConfirm"><span>J’ai vérifié moi-même dans Stripe / PayPal que la transaction est encaissée, que la référence et le montant correspondent exactement à ce dossier.</span></label>
+ <div class="warn">Contrôle manuel obligatoire. La PWA ne lit pas encore automatiquement l’état de paiement certifié par Stripe / PayPal. Ne pas saisir une référence fictive : l’enregistrement reste une attestation opérateur, pas une vérification automatique bancaire.</div>
+ <div class="toolbar"><button class="btn primary" onclick="confirmPaymentReceipt()">J’AI VÉRIFIÉ L’ENCAISSEMENT → ENREGISTRER LA PREUVE</button><button class="btn ghost" onclick="bookingHandoff()">RETOUR</button></div></div>`);
+}
+function confirmPaymentReceipt(){
+ const provider=document.getElementById("paidProvider")?.value||"";
+ const transactionId=String(document.getElementById("paidTransactionId")?.value||"").trim();
+ const cents=Math.round(Number(String(document.getElementById("paidAmount")?.value||"").replace(/\s/g,"").replace(",","."))*100);
+ const reference=String(document.getElementById("paidReference")?.value||"").trim();
+ const confirmed=!!document.getElementById("paidConfirm")?.checked;
+ const expected=gatewayPaymentCents();
+ if(!S.tallyIntentReady || !GATEWAY_REF_RE.test(String(S.tallyReference||"")))return alert("Référence d’intention non sécurisée : paiement non enregistrable.");
+ if(!["STRIPE","PAYPAL"].includes(provider))return alert("Prestataire réel obligatoire.");
+ if(!/^[A-Za-z0-9_-]{8,160}$/.test(transactionId)||transactionId===S.tallyReference)
+   return alert("Identifiant réel de transaction Stripe / PayPal requis, distinct de la référence CYRNEA.");
+ if(!Number.isInteger(cents)||cents!==expected)
+   return alert("⛔ MONTANT DIFFÉRENT : paiement non reconnu. Comparez le montant TTC avec la transaction réelle.");
+ if(reference!==S.tallyReference)return alert("⛔ RÉFÉRENCE DIFFÉRENTE : vérifiez que cette transaction appartient bien à ce dossier.");
+ if(!confirmed)return alert("Vous devez contrôler l’encaissement réel dans Stripe / PayPal avant de confirmer.");
+ S.paymentReceipt={provider,transactionId,reference,amountCents:cents,currency:"eur",checkedByOperator:true,checkedAt:new Date().toISOString(),verificationMode:"DECLARATION_OPERATEUR"};
+ S.paymentStatus="PAID_PENDING_CONFIRMATION";
+ S.specialPending=false;
+ save();
+ postPaymentDecision();
+}
 function markBooked(){
  S.specialPending=false;
  if(routeKind()==="TALLY"){
-   ensureTallyReference();
-   S.paymentStatus="PAID_PENDING_CONFIRMATION";
-   save();
-   return postPaymentDecision();
+   // Un bouton ne modifie JAMAIS directement l’état de paiement.
+   return paymentReceiptRecorded()?postPaymentDecision():paymentReceiptScreen();
  }
  return confirmSimplyBookSlot();
 }
@@ -2512,6 +2560,7 @@ function completeSimplyBookBooking(){
  preparationMission();
 }
 function postPaymentDecision(){
+ if(!paymentReceiptRecorded())return paymentReceiptScreen();
  setStage("RÉSERVATION");
  if(!GATEWAY_REF_RE.test(String(S.tallyReference||"")))ensureTallyReference();
  draw(`<div class="card"><h1>Paiement reçu — décision humaine</h1>
@@ -2528,6 +2577,7 @@ function postPaymentDecision(){
  </div>`);
 }
 function decisionConfirmed(){
+ if(!paymentReceiptRecorded())return paymentReceiptScreen();
  if(!accessAllowed())return accessIntake();
 
  S.decisionStatus="CONFIRMED";
@@ -2561,6 +2611,7 @@ function refreshAlternativeConstraints(){
  if(d.value && d.value<today)d.value="";
 }
 function confirmAcceptedAlternative(){
+ if(!paymentReceiptRecorded())return paymentReceiptScreen();
  const d=getDateValue("altDate") || todayLocalISO();
  const altDateEl=document.getElementById("altDate");
  if(altDateEl && !altDateEl.value)altDateEl.value=d;
@@ -2577,6 +2628,11 @@ function confirmAcceptedAlternative(){
  preparationMission();
 }
 async function decisionRefunded(){
+ if(!paymentReceiptRecorded())return paymentReceiptScreen();
+ const refundId=String(prompt("Avant de marquer REMBOURSÉ : saisissez la référence du remboursement EFFECTIVEMENT émis dans Stripe / PayPal (pas la référence de paiement).","")||"").trim();
+ if(!/^[A-Za-z0-9_-]{8,160}$/.test(refundId)||refundId===S.paymentReceipt.transactionId)return alert("⛔ Référence de remboursement indépendante obligatoire. Aucun remboursement ne peut être présumé.");
+ if(!confirm("Confirmez-vous avoir exécuté le remboursement réel depuis Stripe / PayPal ? La PWA ne déclenche aucun remboursement bancaire."))return;
+ S.refundReceipt={transactionId:refundId,provider:S.paymentReceipt.provider,checkedAt:new Date().toISOString(),verificationMode:"DECLARATION_OPERATEUR"};
  S.decisionStatus="REFUNDED";
  S.paymentStatus="REFUNDED";
  if(!S.missionId)S.missionId=missionId();
@@ -2843,6 +2899,7 @@ function ready(){
 }
 function startTerrainFromReady(){
  if(S.paymentStatus==='REFUNDED')return alert('Mission remboursée : aucun départ terrain.');
+ if(!paymentReceiptRecorded() || S.decisionStatus!=="CONFIRMED" && S.decisionStatus!=="CONFIRMED_AFTER_ALTERNATIVE")return alert("⛔ Départ bloqué : paiement encaissé et confirmation humaine non vérifiés dans ce dossier.");
  if(!accessAllowed()){alert('Accès non sécurisé : qualifier la solution avant de partir.');return isB2BKeyCustody()?b2bKeysIntake():accessIntake();}
  if(!keysReadyForTerrain())return alert('Clés non reçues : enregistrez la réception avant de partir.');
  if(!allChecked("input[name='readyCheck']")) return alert("Cochez tous les contrôles avant de partir.");
@@ -3484,6 +3541,10 @@ function openOverrunPayment(){
 }
 function markOverrunPaid(){
  if(!S.overrun?.accepted)return;
+ const proof=String(prompt("SUPPLÉMENT : référence de la transaction RÉELLEMENT encaissée dans Stripe / PayPal (ou autre moyen traçable).","")||"").trim();
+ if(!/^[A-Za-z0-9_-]{8,160}$/.test(proof)||proof===S.paymentReceipt?.transactionId)return alert("⛔ Preuve de règlement indépendante requise. Ne marquez pas encaissé sur la seule ouverture d’un lien de paiement.");
+ if(!confirm("Avez-vous vérifié l’encaissement réel de "+S.overrun.total+" € "+S.overrun.base+" dans votre relevé de paiement ?"))return;
+ S.overrun.paymentEvidence={transactionId:proof,amount:S.overrun.total,checkedAt:new Date().toISOString(),verificationMode:"DECLARATION_OPERATEUR"};
  S.overrun.paymentStatus="PAID";
  S.overrun.paidAt=nowStamp();
  save();
@@ -3674,7 +3735,7 @@ function finalizeArchive(){
  S.finalStatus=document.getElementById("fs")?.value||S.finalStatus||"MISSION CLÔTURÉE";
  save();archive();
 }
-function archive(){if(S.overrun?.accepted&&S.overrun.paymentStatus!=="PAID")return alert("⛔ Archivage bloqué : supplément de prolongation non réglé.");if(!keysFullyReturned() && !(!S.keyCustody?.receivedAt && (S.paymentStatus==="REFUNDED" || String(S.finalStatus||"").startsWith("MISSION IMPOSSIBLE"))))return alert("⛔ Archive bloquée : clés reçues non restituées.");setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button id="archiveExportBtn" class="btn primary" onclick="exportMissionArchive()">EXPORTER LE DOSSIER → FICHIERS / iCLOUD</button><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
+function archive(){if(S.paymentStatus==="REFUNDED"&&!S.refundReceipt?.transactionId)return alert("⛔ Remboursement non justifié.");if(S.overrun?.accepted&&S.overrun.paymentStatus!=="PAID")return alert("⛔ Archivage bloqué : supplément de prolongation non réglé.");if(!keysFullyReturned() && !(!S.keyCustody?.receivedAt && (S.paymentStatus==="REFUNDED" || String(S.finalStatus||"").startsWith("MISSION IMPOSSIBLE"))))return alert("⛔ Archive bloquée : clés reçues non restituées.");setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button id="archiveExportBtn" class="btn primary" onclick="exportMissionArchive()">EXPORTER LE DOSSIER → FICHIERS / iCLOUD</button><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
 function exportJSON(){let b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(S.missionId||"CYRNEA-DEMO")+".json";a.click();URL.revokeObjectURL(a.href)}
 function recoverNewerStageViewState(){
  const baseId=activeMissionKey(S);
