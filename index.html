@@ -463,13 +463,17 @@ function save(){
  if(changed)markMissionDirty(S);
 }
 function reset(){localStorage.removeItem(STATE_KEY);localStorage.removeItem(LEGACY_STATE_KEY);localStorage.removeItem(STAGE_VIEWS_KEY);location.reload()}
-function key(){return "D-"+new Date().toISOString().replace(/\D/g,"").slice(0,14)}
+function key(){return newGatewayReference()}
 function missionId(){
   const p=S.result.contract==="RELAIS"?"RP":"CP";
   const n=new Date();
   const year=n.getFullYear();
-  const seq=String(Date.now()).slice(-4);
-  return `${p}-${year}-${seq}`;
+  const timestamp=n.toISOString().replace(/\D/g,"").slice(0,14);
+  // Identifiant unique entre plusieurs dossiers et appareils ; anciens IDs conservés.
+  let nonce="";
+  try{const bytes=new Uint8Array(8);crypto.getRandomValues(bytes);nonce=[...bytes].map(v=>v.toString(16).padStart(2,"0")).join("").toUpperCase();}
+  catch(e){nonce=Array.from({length:16},()=>Math.floor(Math.random()*16).toString(16)).join("").toUpperCase();}
+  return `${p}-${year}-${timestamp}-${nonce}`;
 }
 function goHome(){
  if(S.stage==="ACCUEIL" && document.querySelector("#app h1")?.textContent==="CYRNEA ASSISTANT") return;
@@ -3518,7 +3522,8 @@ function saveOverrun(unit,base,max){
  const availability=document.getElementById("overrunAvailability")?.value||"";
  if(availability==="BUSY")return alert("⛔ Une mission est prévue derrière : la prolongation est interdite. Arrêtez à l’heure convenue et proposez si nécessaire une nouvelle mission ultérieure.");
  if(availability!=="FREE")return alert("Vérifiez d’abord qu’aucune mission n’occupe la période de prolongation demandée.");
- const n=Math.max(1,Number(document.getElementById("overrunN")?.value||1));
+ const n=Number(document.getElementById("overrunN")?.value||"");
+ if(!Number.isSafeInteger(n)||n<1)return alert("Nombre de tranches invalide : choisir un entier positif.");
  const agreement=document.getElementById("overrunAgreement")?.value||"";
  if(!agreement)return alert("Indiquez comment le client a confirmé son accord : SMS reçu ou accord téléphonique.");
  if(max && n>max) return alert("Maximum autorisé : "+max+" tranche(s). Au-delà : arrêt ou requalification.");
