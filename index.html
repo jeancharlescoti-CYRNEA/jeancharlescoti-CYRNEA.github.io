@@ -604,7 +604,9 @@ function newMission(){
 }
 function newCall(){return newMission()}
 function resumeActiveMission(){
- if(S.paymentStatus && String(S.paymentStatus).startsWith("PAID") && !paymentReceiptRecorded())return paymentReceiptScreen();
+ // Un dossier historique déjà en TERRAIN doit rester consultable même si
+ // le nouveau format de preuve de paiement n'existait pas à sa création.
+ // Les nouveaux départs et confirmations sont protégés séparément.
  const st=S.resumeStage||S.stage||"";
  S.resumeStage="";
  if(st==="ARCHIVE") return archive();
