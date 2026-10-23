@@ -9,9 +9,11 @@
   }
   function capMinutes(cap) {
     const perPassage = String(cap || '').replace(/^\s*\d+\s*[x×]\s*/i, '').trim();
-    const h = perPassage.match(/^(\d+)\s*h(?:\s*(\d+))?$/i);
+    // Les libellés RELAIS comportent souvent des précisions après la durée :
+    // "1 h, accès, présence et fermeture inclus" et "très courte (~30 min)".
+    const h = perPassage.match(/(?:^|[^(\d])\(?\s*(\d+)\s*h(?:\s*(\d+))?\b/i);
     if (h) return +h[1] * 60 + +(h[2] || 0);
-    const m = perPassage.match(/^(\d+)\s*min(?:utes)?$/i);
+    const m = perPassage.match(/(?:^|[^(\d])\(?\s*(\d+)\s*min(?:utes)?\b/i);
     return m ? +m[1] : null;
   }
   function clockState(state, now) {
