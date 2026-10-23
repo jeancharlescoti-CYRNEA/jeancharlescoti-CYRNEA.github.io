@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-20261019-b2b-v10-contrats-v16';
+const CACHE='cyrnea-assistant-20261023-audit-corrections-v1';
 const ASSETS=['./index.html','./terrain-clock.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
