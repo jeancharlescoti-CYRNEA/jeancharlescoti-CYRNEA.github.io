@@ -1,5 +1,5 @@
-const CACHE='cyrnea-assistant-20261019-b2b-v10-contrats-v16';
-const ASSETS=['./index.html','./terrain-clock.js','./manifest.webmanifest','./icons/icon-192.png'];
+const CACHE='cyrnea-assistant-20261023-change-inbox-v1';
+const ASSETS=['./index.html','./terrain-clock.js','./change-inbox.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(
