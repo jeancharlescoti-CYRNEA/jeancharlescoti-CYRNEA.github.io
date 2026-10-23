@@ -2476,7 +2476,8 @@ function paymentReceiptRecorded(){
    p.amountCents===gatewayPaymentCents() && p.currency==="eur" &&
    ["STRIPE","PAYPAL"].includes(p.provider) &&
    /^[A-Za-z0-9_-]{8,160}$/.test(String(p.transactionId||"")) &&
-   p.transactionId!==S.tallyReference && p.checkedByOperator===true && p.checkedAt);
+   p.transactionId!==S.tallyReference && !/^cs_test_/i.test(p.transactionId) &&
+   p.checkedByOperator===true && p.checkedAt);
 }
 function paymentReceiptScreen(){
  setStage("RÉSERVATION");
@@ -2504,7 +2505,7 @@ function confirmPaymentReceipt(){
  const expected=gatewayPaymentCents();
  if(!S.tallyIntentReady || !GATEWAY_REF_RE.test(String(S.tallyReference||"")))return alert("Référence d’intention non sécurisée : paiement non enregistrable.");
  if(!["STRIPE","PAYPAL"].includes(provider))return alert("Prestataire réel obligatoire.");
- if(!/^[A-Za-z0-9_-]{8,160}$/.test(transactionId)||transactionId===S.tallyReference)
+ if(!/^[A-Za-z0-9_-]{8,160}$/.test(transactionId)||transactionId===S.tallyReference||/^cs_test_/i.test(transactionId))
    return alert("Identifiant réel de transaction Stripe / PayPal requis, distinct de la référence CYRNEA.");
  if(!Number.isInteger(cents)||cents!==expected)
    return alert("⛔ MONTANT DIFFÉRENT : paiement non reconnu. Comparez le montant TTC avec la transaction réelle.");
