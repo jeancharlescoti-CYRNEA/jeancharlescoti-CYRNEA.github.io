@@ -1913,9 +1913,9 @@ function bookingPortalKind(){
 }
 function contractRef(){
  const c=S.result?.contract;
- if(c==="RELAIS") return "CGV RELAIS PROPRIÉTAIRE V16 CM2C — 05/10/2026";
- if(c==="PRÉSENCE PROPRIÉTAIRES") return "CGV CYRNEA PRÉSENCE — PROPRIÉTAIRES V6 CM2C — 15/09/2026";
- return "CGS CYRNEA PRÉSENCE — ENTREPRISES V10 — 19/10/2026 (V9 + additif)";
+ if(c==="RELAIS") return "CGV RELAIS PROPRIÉTAIRES V17 CM2C — 25/10/2026";
+ if(c==="PRÉSENCE PROPRIÉTAIRES") return "CGV CYRNEA PRÉSENCE — PROPRIÉTAIRES V8 CM2C — 02/10/2026";
+ return "CGS CYRNEA PRÉSENCE — ENTREPRISES V11 — 25/10/2026";
 }
 function isHorsStandard(){
  if(S.result?.isQuote)return true;
@@ -3330,14 +3330,20 @@ function needsWaitGuard(){
 function overrunRule(){
  const contract=String(S.result?.contract||"");
  const mission=String(S.result?.mission||"");
- if(contract==="PRÉSENCE ENTREPRISES" && ["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B"].includes(mission))
-   return {allowed:false,text:"Aucune prolongation horaire automatique ni supplément pour cette mission à 109 € HT. DONNER ACCÈS est limité à 30 minutes au total, fermeture comprise. Au-delà, arrêter et convenir préalablement d’une requalification avec l’entreprise, sans abandonner les lieux ouverts."};
- if(contract==="RELAIS")
+ if(contract==="RELAIS"){
+   if(mission==="VOIR PRIORITAIRE RELAIS")
+     return {allowed:false,text:"VOIR PRIORITAIRE RELAIS : aucun tarif de prolongation n’est encore validé pour cette mission. Ne pas appliquer les +40 € RELAIS ni les +60 € VOIR RELAIS ; arrêter ou requalifier avec accord exprès du client."};
+   if(mission==="VOIR RELAIS")
+     return {allowed:true,unit:60,base:"TTC",max:null,label:"+60 € TTC par tranche de 30 min commencée, pour terminer l’observation convenue, avec accord exprès"};
    return {allowed:true,unit:40,base:"TTC",max:2,label:"+40 € TTC par tranche de 30 min commencée, maximum 2 tranches, avec accord exprès"};
+ }
  if(contract==="PRÉSENCE PROPRIÉTAIRES")
    return {allowed:true,unit:60,base:"TTC",max:null,label:"+60 € TTC par tranche de 30 min commencée, avec accord exprès"};
- if(contract==="PRÉSENCE ENTREPRISES")
+ if(contract==="PRÉSENCE ENTREPRISES"){
+   if(["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","PRÉSENCE LOGISTIQUE B2B"].includes(mission))
+     return {allowed:true,unit:75,base:"HT",max:2,label:"+75 € HT par tranche de 30 min commencée, maximum 2 tranches, pour terminer la même opération, avec accord exprès"};
    return {allowed:true,unit:75,base:"HT",max:null,label:"+75 € HT par tranche de 30 min commencée, avec accord exprès"};
+ }
  return {allowed:false,text:"La mission doit être requalifiée avant toute prolongation."};
 }
 function clientContactNumber(){
@@ -3389,6 +3395,7 @@ function openMessagesForClient(){
 }
 function overrunGuide(){
  if(!S.arrivalAt)return alert("Une prolongation ne peut être demandée qu’après avoir horodaté votre arrivée sur place et commencé la mission.");
+ if(S.overrun?.accepted && Number(S.overrun.passage)===Number(S.passage))return alert("Une prolongation est déjà enregistrée pour ce passage. Ne pas écraser l’accord client ni son règlement. Toute demande supplémentaire nécessite une nouvelle organisation ou une requalification.");
  captureTerrainDraft();
  const r=overrunRule();
  const phone=clientPhoneDisplay();
@@ -3411,7 +3418,7 @@ function overrunGuide(){
  const maxText=r.max?`, dans la limite de ${r.max} tranche${r.max>1?"s":""} maximum`:"";
  const msg=overrunMissionSummary()+"\n\nLa mission prévue arrive à sa limite de temps. Pour terminer correctement ce qui est prévu, une prolongation est nécessaire. Toute tranche de 30 minutes commencée est facturée "+r.unit+" € "+r.base+maxText+". Souhaitez-vous que je poursuive la mission dans ces conditions ? Merci de me confirmer expressément votre accord. Sans votre accord exprès pour cette prolongation, la mission prendra fin à l’issue de la durée convenue.";
  draw(`<div class="card"><h1>Prolongation imprévue</h1>
-   <div class="warn"><b>RÈGLE GÉNÉRALE</b><br>Toute mission RELAIS, PRÉSENCE Propriétaires ou B2B déjà commencée peut être prolongée uniquement pour terminer l’objet prévu, avec accord exprès du client, et seulement si aucune autre mission n’occupe la période de prolongation demandée. Si une mission est prévue derrière, la mission en cours s’arrête à l’heure convenue et une nouvelle mission ultérieure peut être proposée.</div>
+   <div class="warn"><b>RÈGLE GÉNÉRALE</b><br>Toute mission éligible RELAIS, PRÉSENCE Propriétaires ou B2B déjà commencée peut être prolongée uniquement pour terminer l’objet prévu, avec accord exprès du client, et seulement si aucune autre mission n’occupe la période de prolongation demandée. Si une mission est prévue derrière, la mission en cours s’arrête à l’heure convenue et une nouvelle mission ultérieure peut être proposée.</div>
    <div class="field"><label>Disponibilité après l’heure prévue</label><select id="overrunAvailability" onchange="toggleOverrunAvailability()">
      <option value="">— Vérifier avant toute demande au client —</option>
      <option value="FREE">AUCUNE MISSION DERRIÈRE pendant la prolongation demandée / dernier créneau</option>
@@ -3446,29 +3453,32 @@ function toggleOverrunAvailability(){
  if(allowed)allowed.classList.toggle("hidden",v!=="FREE");
 }
 function saveOverrun(unit,base,max){
+ if(S.overrun?.accepted && Number(S.overrun.passage)===Number(S.passage))return alert("Une prolongation est déjà enregistrée pour ce passage. Ne remplacez pas l’accord client ni l’état du paiement.");
  const availability=document.getElementById("overrunAvailability")?.value||"";
  if(availability==="BUSY")return alert("⛔ Une mission est prévue derrière : la prolongation est interdite. Arrêtez à l’heure convenue et proposez si nécessaire une nouvelle mission ultérieure.");
  if(availability!=="FREE")return alert("Vérifiez d’abord qu’aucune mission n’occupe la période de prolongation demandée.");
- const n=Math.max(1,Number(document.getElementById("overrunN")?.value||1));
+ const n=Number(document.getElementById("overrunN")?.value);
+ if(!Number.isInteger(n)||n<1)return alert("Indiquez un nombre entier de tranches de 30 minutes, à partir de 1.");
  const agreement=document.getElementById("overrunAgreement")?.value||"";
  if(!agreement)return alert("Indiquez comment le client a confirmé son accord : SMS reçu ou accord téléphonique.");
  if(max && n>max) return alert("Maximum autorisé : "+max+" tranche(s). Au-delà : arrêt ou requalification.");
  const total=n*unit;
  const isRelais=S.result?.contract==="RELAIS";
+ const paymentLink=isRelais?(RELAIS_OVERRUN_PAYMENT_LINKS[total]||""):"";
  S.overrun={
    tranches:n,unit,total,base,passage:S.passage,accepted:true,
    availabilityCheck:"FREE",
    agreementMethod:agreement,
    agreementAt:nowStamp(),
    paymentStatus:"PENDING",
-   paymentLink:isRelais?(RELAIS_OVERRUN_PAYMENT_LINKS[total]||""):"",
-   paymentProvider:isRelais?"STRIPE_PAYMENT_LINK":"CYRNEA_GATEWAY_PENDING"
+   paymentLink,
+   paymentProvider:paymentLink?"STRIPE_PAYMENT_LINK":"CYRNEA_GATEWAY_PENDING"
  };
  save(); terrain();
 }
 function openOverrunPayment(){
  const url=String(S.overrun?.paymentLink||"");
- if(!url)return alert("Le paiement automatique de ce supplément PRÉSENCE / B2B doit encore être raccordé au gateway CYRNEA. Encaissez le supplément via le moyen de paiement actif, puis confirmez sa réception dans la PWA.");
+ if(!url)return alert("Aucun lien de paiement automatique n’est configuré pour ce supplément. Encaissez uniquement via un moyen de paiement réellement actif, puis confirmez la réception effective dans la PWA.");
  window.open(url,"_blank","noopener");
 }
 function markOverrunPaid(){
