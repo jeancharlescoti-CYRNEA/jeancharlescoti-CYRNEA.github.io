@@ -475,7 +475,13 @@ function save(){
  persistActiveSnapshot(S);
  if(changed)markMissionDirty(S);
 }
-function key(){return "D-"+new Date().toISOString().replace(/\D/g,"").slice(0,14)}
+function key(){
+ const stamp=new Date().toISOString().replace(/\D/g,"").slice(0,14);
+ const rand=new Uint8Array(6);
+ if(typeof crypto!=="undefined"&&crypto.getRandomValues)crypto.getRandomValues(rand);
+ else for(let i=0;i<rand.length;i++)rand[i]=Math.floor(Math.random()*256);
+ return "D-"+stamp+"-"+[...rand].map(v=>v.toString(16).padStart(2,"0")).join("").toUpperCase();
+}
 function missionId(){
   const p=S.result.contract==="RELAIS"?"RP":"CP";
   const year=new Date().getFullYear();
