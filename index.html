@@ -289,12 +289,6 @@ function persistActiveSnapshot(st=S){
  map[id]=JSON.parse(JSON.stringify(st));
  writeActiveMissionMap(map);
 }
-function removeActiveSnapshot(st=S){
- const id=activeMissionKey(st);
- if(!id)return;
- const map=loadActiveMissionMap();
- if(map[id]){delete map[id];writeActiveMissionMap(map)}
-}
 function activeMissionList(){
  const map=loadActiveMissionMap();
  return Object.entries(map).map(([id,state])=>({id,state})).filter(x=>isActiveMissionState(x.state)).sort((a,b)=>String(a.state.date||"9999").localeCompare(String(b.state.date||"9999"))||String(a.state.slot||"99:99").localeCompare(String(b.state.slot||"99:99")));
@@ -350,14 +344,6 @@ function missionSyncSnapshot(st){
  delete x._serverUpdatedAt;
  return JSON.stringify(x);
 }
-function localDirtyMissionArray(){
- const map=loadActiveMissionMap();
- const dirty=new Set(loadDirtyIds());
- return Object.entries(map)
-   .filter(([id,st])=>dirty.has(id)&&isStoredMissionState(st))
-   .map(([id,st])=>JSON.parse(JSON.stringify(st)));
-}
-let CYRNEA_SYNC_LATEST_REQUEST=0;
 async function syncCentralMissions(options={}){
  const requestSeq=++CYRNEA_SYNC_LATEST_REQUEST;
  const key=getSyncKey();
@@ -489,7 +475,6 @@ function save(){
  persistActiveSnapshot(S);
  if(changed)markMissionDirty(S);
 }
-function reset(){localStorage.removeItem(STATE_KEY);localStorage.removeItem(LEGACY_STATE_KEY);localStorage.removeItem(STAGE_VIEWS_KEY);location.reload()}
 function key(){return "D-"+new Date().toISOString().replace(/\D/g,"").slice(0,14)}
 function missionId(){
   const p=S.result.contract==="RELAIS"?"RP":"CP";
@@ -635,7 +620,6 @@ function newMission(){
  identify();
  updateBack(); save();
 }
-function newCall(){return newMission()}
 function resumeActiveMission(){
  const st=S.resumeStage||S.stage||"";
  S.resumeStage="";
@@ -984,12 +968,6 @@ function saveObject(){
   } else S.obj=s.value;
   return true;
 }
-function daysUntilMission(){
-  if(!S.date)return 9999;
-  const today=new Date(); today.setHours(0,0,0,0);
-  const d=new Date(S.date+"T00:00:00");
-  return Math.ceil((d-today)/86400000);
-}
 function earlyExecutionNeeded(){
   if(S.caller!=="OWNER" || !S.date)return false;
   const today=new Date();today.setHours(0,0,0,0);
@@ -1048,9 +1026,6 @@ function scheduleText(){
     return known.join(" | ");
   }
   return `${S.date||"-"} ${displayTime4(S.slot)||""}`.trim();
-}
-function brandName(){
-  return S.result?.contract==="RELAIS"?"RELAIS PROPRIÉTAIRE":"CABINET CYRNEA PRÉSENCE";
 }
 function missionPhoneScript(){
   const m=S.result?.mission||'';
@@ -1271,12 +1246,6 @@ function syncTimeDropdown(baseId){
   const hidden=document.getElementById(baseId);
   if(hidden) hidden.value=value;
 }
-function clearTimeDropdown(baseId){
-  const h=document.getElementById(baseId+"H"),m=document.getElementById(baseId+"M"),hidden=document.getElementById(baseId);
-  if(h)h.value="";
-  if(m)m.value="";
-  if(hidden)hidden.value="";
-}
 function refreshTimeDropdownAvailability(dateId,baseId){
   const d=document.getElementById(dateId);
   const h=document.getElementById(baseId+"H");
@@ -1340,10 +1309,6 @@ function displayTime4(v){
 function todayLocalISO(){
   const n=new Date();
   return `${n.getFullYear()}-${pad2(n.getMonth()+1)}-${pad2(n.getDate())}`;
-}
-function currentLocalHM(){
-  const n=new Date();
-  return `${pad2(n.getHours())}:${pad2(n.getMinutes())}`;
 }
 function easterSunday(year){
   // Meeus/Jones/Butcher Gregorian algorithm.
@@ -1566,44 +1531,6 @@ function restoreMultiDraftToDom(){
     }
   });
   refreshCalendarConstraints();
-}
-function readMultiPassage(i){
-  const block=document.getElementById(`jalon_${i}`);
-  const active=i===1 || (block && !block.classList.contains("hidden"));
-  if(!active) return null;
-
-  const dateEl=document.getElementById(`d${i}`);
-  const hourEl=document.getElementById(`sl${i}H`);
-  const minuteEl=document.getElementById(`sl${i}M`);
-  const hiddenTimeEl=document.getElementById(`sl${i}`);
-
-  const date=(getDateValue(`d${i}`) || String(dateEl?.value||"").trim());
-
-  const selectedPart=(el)=>{
-    if(!el)return "";
-    const direct=String(el.value??"").trim();
-    if(direct!=="")return direct;
-    const opt=el.options?.[el.selectedIndex];
-    return String(opt?.value ?? opt?.textContent ?? "").trim();
-  };
-
-  const directTime=(hiddenTimeEl && hiddenTimeEl.tagName==="SELECT")
-    ? String(hiddenTimeEl.value||"").trim()
-    : "";
-  const hh=selectedPart(hourEl);
-  const mm=selectedPart(minuteEl);
-  const visibleTime=(hh!=="" && mm!=="")?`${hh.padStart(2,"0")}:${mm.padStart(2,"0")}`:"";
-  const saved=(S.multiDraft && typeof S.multiDraft==="object")?S.multiDraft[i]:null;
-  const time=normalizeTime4(
-    directTime ||
-    visibleTime ||
-    String(hiddenTimeEl?.value||"").trim() ||
-    String(saved?.time||"").trim()
-  );
-  const finalDate=date || String(saved?.date||"").trim();
-
-  const c=autoConstraints(finalDate,time);
-  return {index:i,date:finalDate,time,priority:c.priority,evening:c.evening,night:c.night,sunday:c.sunday};
 }
 function multiPassagePricing(){
   if(["PAID_PENDING_CONFIRMATION","PAID_CONFIRMED"].includes(S.paymentStatus))
@@ -1987,7 +1914,6 @@ function isHorsStandard(){
  return !!(a.priority||a.evening||a.night||a.sunday);
 }
 function routeKind(){return "TALLY";}
-function routeLabel(){return isHorsStandard()?"HORS STANDARD / SUP → TALLY":"STANDARD → TALLY";}
 function standardSimplyBookUrl(){
  const m=String(S.result?.mission||"");
  if(S.result?.contract==="PRÉSENCE ENTREPRISES") return B2B_SERVICE_URLS[m]||"";
@@ -2274,26 +2200,6 @@ async function sendClientTallyEmail(){
  }finally{
   if(button.isConnected){button.disabled=false;button.textContent="CONFIRMER ET ENVOYER CET E-MAIL";}
  }
-}
-async function copyClientTallyEmail(){
- const input=document.getElementById("clientTallyUrl");
- const url=String(input?.value||"");
- if(!S.tallyIntentReady||!/^https:\/\/tally\.so\/r\//.test(url))return alert("Lien sécurisé non prêt : préparez d’abord la référence.");
- if(typeof ClipboardItem==="undefined"||typeof navigator.clipboard?.write!=="function")return alert("La copie d’e-mail enrichi n’est pas disponible. Le lien Tally reste accessible par COPIER LE LIEN.");
- const intro="Bonjour,";
- const detail="Voici votre lien CYRNEA pour compléter personnellement la demande, vérifier les informations et consulter les conditions de service.";
- const notice="Le créneau reste soumis à confirmation de disponibilité, même en cas de règlement.";
- const label="Compléter votre demande CYRNEA";
- const rich='<div><p>'+intro+'</p><p>'+detail+'</p><p><a href="'+esc(url)+'">'+label+'</a></p><p>'+notice+'</p><p>CYRNEA PRÉSENCE</p></div>';
- const plain=intro+"\n\n"+detail+"\n\n"+label+" : "+url+"\n\n"+notice+"\n\nCYRNEA PRÉSENCE";
- try{
-  const item=new ClipboardItem({
-   "text/html":new Blob([rich],{type:"text/html"}),
-   "text/plain":new Blob([plain],{type:"text/plain"})
-  });
-  await navigator.clipboard.write([item]);
-  alert("E-mail mis en forme copié. Ouvrez Mail, collez dans le message et vérifiez le lien avant tout envoi.");
- }catch(e){alert("Copie enrichie indisponible : "+String(e?.message||e)+". Aucun envoi n’a eu lieu.");}
 }
 async function copyClientTallyLink(){
  const input=document.getElementById("clientTallyUrl");
@@ -2727,55 +2633,6 @@ function clientDocsPreview(){
   </div>`;
 }
 
-function packPreview(){
-  const p=docPack();
-  return `<div class="neutral"><b>DOCUMENTS CYRNEA PRÉPARÉS AUTOMATIQUEMENT</b>
-    <div class="row"><b>1</b><span>${esc(p.fiche)}</span></div>
-    <div class="row"><b>2</b><span>${esc(p.checklist)}</span></div>
-    <div class="row"><b>3</b><span>${esc(p.support)}</span></div>
-    <div class="row"><b>4</b><span>Restitution ${esc(p.rest)}</span></div>
-  </div>`;
-}
-
-function packDocHtml(kind){
-  const p=docPack();
-  if(kind==="fiche"){
-    return `<div class="neutral"><b>FICHE MISSION</b>
-      <div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div>
-      <div class="row"><b>Client</b><span>${esc(S.name)}</span></div>
-      <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div>
-      <div class="row"><b>Objet</b><span>${esc(S.obj)}</span></div>
-      <div class="row"><b>Créneau(x)</b><span>${esc(scheduleText())}</span></div>
-      <div class="row"><b>Plafond</b><span>${esc(S.result.cap)}</span></div>
-      <div class="row"><b>Lieu</b><span>${esc(S.prep.addr||S.city)}</span></div>
-    </div>`;
-  }
-  if(kind==="check"){
-    const items=terrainFactOptions();
-    return `<div class="neutral"><b>CHECKLIST TERRAIN — ${esc(b2bCommercialMissionName(S.result.mission))}</b>
-      ${items.map((x,i)=>`<div class="row"><b>□</b><span>${esc(x)}</span></div>`).join("")}
-    </div>`;
-  }
-  if(kind==="support"){
-    return `<div class="neutral"><b>DOCUMENT DE CADRAGE / RÉFÉRENCE</b>
-      <div class="row"><b>Type</b><span>${esc(p.support)}</span></div>
-      <div class="row"><b>Objet verrouillé</b><span>${esc(S.obj)}</span></div>
-      <div class="row"><b>Pièces client</b><span>${S.prep.docsChoice==="OUI"?esc((S.prep.docs||[]).join(" • ")):"AUCUN DOCUMENT"}</span></div>
-    </div>`;
-  }
-  return `<div class="neutral"><b>MODÈLE DE RESTITUTION ${esc(p.rest)}</b>
-    <div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div>
-    <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div>
-    <div class="row"><b>Objet</b><span>${esc(S.obj)}</span></div>
-    <div class="row"><b>À compléter au terrain</b><span>faits / actions cochés, incident éventuel, preuves utiles</span></div>
-    <div class="muted">La restitution sera préparée dans la PWA à partir des cases réellement cochées. Le dossier documentaire pourra ensuite être exporté en ZIP.</div>
-  </div>`;
-}
-
-function showPackDoc(kind){
-  const z=document.getElementById("packDocViewer");
-  if(z)z.innerHTML=packDocHtml(kind);
-}
 function preparationMission(){
  setStage("RÉSERVATION");
  const b2b=S.caller==="B2B";
@@ -3498,10 +3355,6 @@ function clientCallHref(){
  const phone=clientContactNumber();
  return phone?"tel:"+phone:"#";
 }
-function clientSmsHref(){
- const phone=clientContactNumber();
- return phone?"sms:"+phone:"#";
-}
 function overrunMissionSummary(){
  return [
    "CYRNEA — demande de prolongation de mission",
@@ -3887,7 +3740,6 @@ function finalizeArchive(){
  save();archive();
 }
 function archive(){if(S.overrun?.accepted&&S.overrun.paymentStatus!=="PAID")return alert("⛔ Archivage bloqué : supplément de prolongation non réglé.");if(!keysFullyReturned() && !(!S.keyCustody?.receivedAt && (S.paymentStatus==="REFUNDED" || String(S.finalStatus||"").startsWith("MISSION IMPOSSIBLE"))))return alert("⛔ Archive bloquée : clés reçues non restituées.");recordPassageSnapshot();setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button id="archiveExportBtn" class="btn primary" onclick="exportMissionArchive()">EXPORTER LE DOSSIER → FICHIERS / iCLOUD</button><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
-function exportJSON(){let b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(S.missionId||"CYRNEA-DEMO")+".json";a.click();URL.revokeObjectURL(a.href)}
 function recoverNewerStageViewState(){
  const baseId=activeMissionKey(S);
  let best=null;
