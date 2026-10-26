@@ -2051,7 +2051,7 @@ async function prepareClientTallyLink(){
  }catch(err){
   box.innerHTML='<div class="stop"><b>⛔ LIEN NON TRANSMISSIBLE</b><br>'+esc(String(err?.message||err||"Erreur de sécurisation"))+'. Aucun lien client ne doit être envoyé tant que la référence n’est pas enregistrée.</div>';
  }finally{
-  if(btn && btn.isConnected){btn.disabled=false;btn.textContent="ENVOYER LE LIEN TALLY AU CLIENT";}
+  if(btn && btn.isConnected){btn.disabled=false;btn.textContent="PRÉPARER LE LIEN TALLY CLIENT";}
  }
 }
 async function shareClientTallyLink(){
@@ -2217,33 +2217,6 @@ async function copyClientTallyLink(){
  }
 }
 
-async function openTallySecure(){
- if(!accessAllowed())return accessIntake();
-
- const popup=window.open("about:blank","_blank");
- if(!popup)return alert("Le navigateur a bloqué l’ouverture de Tally. Autorisez les fenêtres surgissantes pour cette PWA.");
-
- const renderPopup=(html)=>{
-   try{
-     popup.document.title="CYRNEA — ouverture Tally";
-     popup.document.body.innerHTML=`<div style="font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;padding:28px;line-height:1.45;max-width:720px">${html}</div>`;
-   }catch(e){}
- };
-
- renderPopup("<b>Sécurisation de la mission…</b><p>Création de la référence de paiement CYRNEA avant ouverture de Tally.</p>");
-
- try{
-   await registerTallyIntent();
-   const url=buildTallyUrl();
-   renderPopup("<b>Référence sécurisée.</b><p>Ouverture de Tally…</p>");
-   popup.location.replace(url);
-   try{popup.opener=null}catch(e){}
- }catch(err){
-   const message=String(err?.message||err||"Erreur inconnue");
-   renderPopup(`<b>Impossible d’ouvrir Tally.</b><p>${esc(message)}</p><p>Aucun paiement n’a été lancé. Fermez cette fenêtre puis relancez depuis la PWA.</p>`);
-   alert("⛔ Tally bloqué : "+message+". Aucun paiement n’a été lancé.");
- }
-}
 function openSimplyBook(){
  if(!assertVoirContractInvariant())return;
  const direct=standardSimplyBookUrl();
@@ -2408,8 +2381,8 @@ function bookingHandoff(){
  <div class="phoneScript"><b>PHRASE À DIRE AU CLIENT</b>
  « La mission adaptée est <b>${esc(b2bCommercialMissionName(S.result.mission))}</b>, au tarif de <b>${esc(priceText())}</b>. Le créneau choisi est pris en compte et vous sera confirmé. Vous pourrez indiquer une autre possibilité avant le paiement. »
  </div>
- <div class="toolbar">${route==="TALLY"?`<button id="tallyClientSend" class="btn primary" onclick="prepareClientTallyLink()">ENVOYER LE LIEN TALLY AU CLIENT</button><button class="btn" onclick="openTallySecure()" style="background:#f59e0b;color:#422006;border:2px solid #b45309">OUVRIR TALLY — TEST</button>`:`<button class="btn primary" onclick="openSimplyBook()">OUVRIR SIMPLYBOOK — RÉSERVER / PAYER</button><button class="btn ghost" onclick="settings()">RÉGLAGES DU LIEN</button>`}</div>
- ${route==="TALLY"?'<div id="tallyClientShare"></div><div class="muted">TEST : ce bouton orange ouvre le véritable formulaire Tally. Les simulations ne doivent pas déclencher de paiement réel.</div>':""}
+ <div class="toolbar">${route==="TALLY"?`<button id="tallyClientSend" class="btn primary" onclick="prepareClientTallyLink()">PRÉPARER LE LIEN TALLY CLIENT</button>`:`<button class="btn primary" onclick="openSimplyBook()">OUVRIR SIMPLYBOOK — RÉSERVER / PAYER</button><button class="btn ghost" onclick="settings()">RÉGLAGES DU LIEN</button>`}</div>
+ ${route==="TALLY"?'<div id="tallyClientShare"></div>':""}
  <div class="checkZone"><div class="checkIntro">APRÈS LE PAIEMENT ${route==="TALLY"?"TALLY":"SIMPLYBOOK"}</div>
  <button class="btn primary" onclick="markBooked()">${route==="TALLY"?"PAIEMENT REÇU → DÉCIDER":"RÉSERVATION SIMPLYBOOK CONFIRMÉE → ENREGISTRER LE CRÉNEAU RÉEL"}</button>
  </div>
