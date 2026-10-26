@@ -526,77 +526,7 @@ function home(remember=true){
  <div class="operatorOnly">Les dossiers non terminés ou avec paiement restant dû restent actifs jusqu’à leur clôture définitive. Les dossiers clôturés restent consultables dans MISSIONS ARCHIVÉES.</div>
  </div>`,remember);
 }
-async function purgeAllTestMissions(){
- if(!confirm("SUPPRESSION DEFINITIVE : tous les dossiers sont des ESSAIS, aucun client réel. Effacer les missions actives et archivées, les médias de cet appareil et les dossiers Cloud, sans sauvegarde ni archivage ?"))return;
- const btn=document.querySelector('button[onclick="purgeAllTestMissions()"]');
- const html=btn?.innerHTML||"";
- if(btn){btn.disabled=true;btn.textContent="NETTOYAGE EN COURS…";}
- let cloud=false,local=false,media=false,count=0;
- try{
-   const syncKey=getSyncKey();
-   if(!syncKey)throw new Error("Clé Cloud absente : nettoyage global non autorisé, données inchangées.");
-   const scan=await syncCentralMissions({silent:true});
-   if(scan?.stale)throw new Error("Synchronisation concurrente : réessayez.");
-   const ids=new Set([...Object.keys(loadActiveMissionMap()),...loadDirtyIds(),...loadDeletedIds()]);
-   if(S.result&&activeMissionKey(S))ids.add(activeMissionKey(S));
-   count=ids.size;
-   if(count){
-     const ctl=new AbortController();
-     const timeout=setTimeout(()=>ctl.abort(),12000);
-     let response;
-     try{
-       response=await fetch(MISSIONS_API_URL+"/sync",{
-         method:"POST",headers:{"Content-Type":"text/plain;charset=UTF-8"},
-         cache:"no-store",credentials:"omit",signal:ctl.signal,
-         body:JSON.stringify({key:syncKey,missions:[],deleted_ids:[...ids]})
-       });
-     }finally{clearTimeout(timeout);}
-     let data=null;
-     try{data=await response.json()}catch(e){}
-     if(!response.ok||!data?.ok)throw new Error("Suppression Cloud non confirmée : "+String(data?.error||response.status));
-     if(!Array.isArray(data.missions)||data.missions.length)
-       throw new Error("Le Cloud n'est pas vide : nettoyage local suspendu.");
-   }
-   cloud=true;
-   CYRNEA_SYNC_LATEST_REQUEST++;
-   writeActiveMissionMap({});
-   writeDeletedIds([]);
-   writeDirtyIds([]);
-   localStorage.removeItem(STATE_KEY);
-   localStorage.removeItem(LEGACY_STATE_KEY);
-   localStorage.removeItem(STAGE_VIEWS_KEY);
-   STAGE_VIEWS={};NAV=[];LAST_VIEW=null;REACHED_STAGES=new Set(["ACCUEIL"]);
-   S={stage:"ACCUEIL",mode:"FULL",universe:null,caller:null,name:"",phone:"",email:"",
-     city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",
-     acceptedSlot:false,draftKey:key(),missionId:"",prep:{},facts:"",
-     incident:"",terrainMedia:[],terrainDraft:null,arrivalAt:"",arrivalEpochMs:null,
-     departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",
-     finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,
-     paymentMethod:"",paymentState:"",specialPending:false,resumeStage:"",history:["ACCUEIL"]};
-   local=true;
-   const db=await openMediaDb();
-   try{
-     await new Promise((resolve,reject)=>{
-       const tx=db.transaction(MEDIA_DB_STORE,"readwrite");
-       tx.objectStore(MEDIA_DB_STORE).clear();
-       tx.oncomplete=()=>resolve();
-       tx.onerror=()=>reject(tx.error||new Error("Nettoyage médias impossible"));
-       tx.onabort=()=>reject(tx.error||new Error("Nettoyage médias interrompu"));
-     });
-   }finally{db.close();}
-   media=true;
-   save();home(false);
-   alert("Essais effacés sur cet appareil : "+count+" dossier(s) et médias locaux. Cloud vide. Aucune sauvegarde ni archive créée. Répétez sur iPhone pour effacer sa copie locale.");
- }catch(e){
-   if(local){save();home(false);}
-   alert("Nettoyage "+(local?"PARTIEL":"ARRÊTÉ")+" : "+String(e?.message||e)+
-     ". Cloud : "+(cloud?"contrôlé vide":"non confirmé")+
-     ". Dossiers locaux : "+(local?"effacés":"conservés")+
-     ". Médias : "+(media?"effacés":"non effacés ou à vérifier")+".");
- }finally{
-   if(btn){btn.disabled=false;btn.innerHTML=html;}
- }
-}
+
 function archivedMissions(){
  const archived=archivedMissionList();
  const cards=archived.map(({id,state})=>{
