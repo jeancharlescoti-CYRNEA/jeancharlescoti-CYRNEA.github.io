@@ -3235,6 +3235,7 @@ function missionArchiveText(){
      "La décision appartient exclusivement au client."
    ]:[]),
    "Incident / limite : "+(S.incident||"Aucun"),
+   "Restitution transmise (déclaration opérateur) : "+(S.restitutionSentAt||"Non attestée"),
    "Contrôle paiement initial : "+(S.paymentEvidence?.reference||"Non attesté localement"),
    "Contrôle remboursement : "+(S.refundEvidence?.reference||"-"),
    "Historique terrain :",
@@ -3841,18 +3842,23 @@ function closeMission(){
        <option>MISSION PARTIELLEMENT RÉALISÉE ET CLÔTURÉE</option>
        <option>MISSION IMPOSSIBLE À RÉALISER - CLÔTURÉE AVEC MOTIF DOCUMENTÉ</option>
      </select></div>`}
- <div class="notice">${S.result.contract.startsWith("PRÉSENCE")?"H5 / restitution finale à envoyer.":"Restitution RELAIS à envoyer."}</div>
+ <div class="notice"><b>RESTITUTION AU CLIENT</b> — Le compte rendu et ses pièces doivent être transmis manuellement. La PWA ne garantit pas un envoi automatique. L’export ZIP et son dépôt dans iCloud sont également manuels.</div>
+ ${!unpaidOverrun?`<label class="check"><input type="checkbox" id="reportSentChecked"><span>J’atteste avoir transmis au client la restitution correspondant à cette mission et contrôlé les pièces nécessaires.</span></label>`:""}
  ${unpaidOverrun
    ? `<button class="btn primary" onclick="goHome()">CONSERVER EN ATTENTE DE PAIEMENT → ACCUEIL</button><div class="muted">Cette mission reste dans MISSIONS ACTIVES. Elle pourra être rouverte dès réception du supplément.</div>`
    : `<button class="btn primary" onclick="finalizeArchive()">ARCHIVER LE DOSSIER</button>`}
  </div>`);
 }
 function finalizeArchive(){
+ if(!document.getElementById("reportSentChecked")?.checked)
+   return alert("Archivage bloqué : confirmez d’abord l’envoi réel de la restitution au client. Le dossier peut rester actif.");
  const status=document.getElementById("fs")?.value||"";
  if(!keysFullyReturned()&&!(status.startsWith("MISSION IMPOSSIBLE")&&!S.keyCustody?.receivedAt))return alert("⛔ Archive bloquée : clés non restituées ou retour postal non distribué.");
  if(S.overrun?.accepted && S.overrun.paymentStatus!=="PAID"){
    return alert("Supplément de prolongation non réglé. La mission ne peut pas être archivée définitivement tant que le paiement n’est pas confirmé.");
  }
+ S.restitutionSentAt=nowStamp();
+ S.restitutionProofMode="ATTESTATION_OPERATEUR";
  S.finalStatus=document.getElementById("fs")?.value||S.finalStatus||"MISSION CLÔTURÉE";
  save();archive();
 }
