@@ -146,7 +146,28 @@ function snapshot(){return {s:JSON.stringify(S),html:serializeAppHtml(),status:d
 function cloneView(v){return v?{s:v.s,html:v.html,status:v.status,timeline:v.timeline}:null}
 function saveStageViews(){try{localStorage.setItem(STAGE_VIEWS_KEY,JSON.stringify(STAGE_VIEWS))}catch(e){}}
 function storeCurrentStageView(){if(!LAST_VIEW)return;let oldStage="";try{oldStage=JSON.parse(LAST_VIEW.s||"{}").stage||LAST_VIEW.status}catch(e){oldStage=LAST_VIEW.status}if(!oldStage)return;const temp={...S,stage:oldStage};const v={s:JSON.stringify(temp),html:serializeAppHtml(),status:LAST_VIEW.status||oldStage,timeline:document.getElementById("timeline").innerHTML};STAGE_VIEWS[oldStage]=cloneView(v);LAST_VIEW=cloneView(v);saveStageViews()}
-function restoreView(snap){if(!snap)return false;const restored=JSON.parse(snap.s);(restored.history||[]).forEach(x=>REACHED_STAGES.add(x));S=restored;syncReached();document.getElementById("app").innerHTML=snap.html;document.getElementById("status").textContent=snap.status;LAST_VIEW=cloneView(snap);drawTimeline();updateBack();save();window.scrollTo({top:0,behavior:"instant"});return true}
+function restoreView(snap){
+ if(!snap)return false;
+ let restored;
+ try{restored=JSON.parse(snap.s)}catch(e){alert("Ancienne étape illisible : retour impossible sans recharger le dossier.");return false;}
+ const currentId=activeMissionKey(S),previousId=activeMissionKey(restored);
+ if(currentId&&previousId&&currentId!==previousId){
+   alert("Navigation bloquée : cette ancienne étape appartient à un autre dossier.");
+   return false;
+ }
+ // Le DOM de l'étape précédente revient, mais jamais les anciens paiements,
+ // prolongations, clés, jalons ni autres données plus récentes du dossier.
+ const stage=restored.stage||snap.status||S.stage;
+ (restored.history||[]).forEach(x=>REACHED_STAGES.add(x));
+ S={...restored,...S,stage};
+ syncReached();
+ document.getElementById("app").innerHTML=snap.html;
+ document.getElementById("status").textContent=stage;
+ LAST_VIEW=cloneView({...snap,s:JSON.stringify(S),status:stage});
+ drawTimeline();updateBack();save();
+ window.scrollTo({top:0,behavior:"instant"});
+ return true;
+}
 function draw(x,remember=true){
  const app=document.getElementById("app");
  if(remember&&LAST_VIEW&&LAST_VIEW.html.trim()){storeCurrentStageView();NAV.push(cloneView(LAST_VIEW));}
@@ -1567,6 +1588,8 @@ function readMultiPassage(i){
   return {index:i,date:finalDate,time,priority:c.priority,evening:c.evening,night:c.night,sunday:c.sunday};
 }
 function multiPassagePricing(){
+  if(["PAID_PENDING_CONFIRMATION","PAID_CONFIRMED"].includes(S.paymentStatus))
+    return alert("Mission multi-passages déjà payée : impossible de recalculer et réémettre une commande depuis cet ancien écran.");
   const draft=ensureMultiDraftState();
 
   // Source de vérité = état PWA sauvegardé à chaque sélection.
@@ -1831,6 +1854,8 @@ function manualConfirmMultiSlots(){
   bookingHandoff();
 }
 function confirmSlot(){
+  if(["PAID_PENDING_CONFIRMATION","PAID_CONFIRMED"].includes(S.paymentStatus))
+    return alert("Créneau déjà payé : ne pas refaire une réservation. Utiliser la procédure d’alternative ou requalifier le dossier.");
   S.date=getDateValue("d") || todayLocalISO();
   const dEl=document.getElementById("d");
   if(dEl && !dEl.value)dEl.value=S.date;
