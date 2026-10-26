@@ -349,7 +349,9 @@ function localDirtyMissionArray(){
    .filter(([id,st])=>dirty.has(id)&&isStoredMissionState(st))
    .map(([id,st])=>JSON.parse(JSON.stringify(st)));
 }
+let CYRNEA_SYNC_LATEST_REQUEST=0;
 async function syncCentralMissions(options={}){
+ const requestSeq=++CYRNEA_SYNC_LATEST_REQUEST;
  const key=getSyncKey();
  if(!key)throw new Error("sync_key_missing");
 
@@ -401,44 +403,43 @@ async function syncCentralMissions(options={}){
    serverMap[id]=st;
  }
 
- // Base = serveur, puis protection des écritures locales en cours.
+ // Une requête plus récente ne doit jamais être écrasée par une réponse ancienne.
+ if(requestSeq!==CYRNEA_SYNC_LATEST_REQUEST)
+   return {ok:true,stale:true,received:Number(data.received||0),count:Object.keys(loadActiveMissionMap()).length};
+
+ // Relire l'état local APRES le réseau : des dossiers peuvent avoir changé,
+ // été ajoutés ou supprimés pendant les 12 secondes d'attente.
+ const latestMap=loadActiveMissionMap();
+ const latestDirty=new Set(loadDirtyIds());
+ const latestDeleted=new Set(loadDeletedIds());
+ const latestCurrentId=activeMissionKey(S);
+ const allDeleted=new Set([...deletedBefore,...latestDeleted]);
  const finalMap={...serverMap};
- for(const [id,st] of Object.entries(localMapBefore)){
-   if(deletedBefore.has(id)||!isStoredMissionState(st))continue;
-   if(dirtyBefore.has(id)||id===currentIdBefore){
+ for(const [id,st] of Object.entries(latestMap)){
+   if(allDeleted.has(id)||!isStoredMissionState(st))continue;
+   if(latestDirty.has(id)||id===latestCurrentId||!serverMap[id])
      finalMap[id]=JSON.parse(JSON.stringify(st));
-   }
  }
+ for(const id of allDeleted)delete finalMap[id];
  writeActiveMissionMap(finalMap);
 
- // Une suppression explicitement envoyée peut être vidée après réponse OK.
- writeDeletedIds([]);
+ // Uniquement les suppressions transmises par CETTE requête sont acquittées.
+ // Une suppression survenue pendant l'appel doit être conservée pour le suivant.
+ writeDeletedIds([...latestDeleted].filter(id=>!deletedBefore.has(id)));
 
- // Ne retirer le marqueur "dirty" que si le serveur renvoie exactement
- // la même mission. Sinon on la renverra au prochain cycle au lieu de la perdre.
+ // Les écritures apparues pendant la requête restent à retransmettre si
+ // elles n'ont pas été réellement acquittées dans la réponse du serveur.
  const dirtyAfter=[];
- for(const id of dirtyBefore){
-   if(deletedBefore.has(id))continue;
-   const local=localMapBefore[id];
-   const remote=serverMap[id];
+ for(const id of new Set([...dirtyBefore,...latestDirty])){
+   if(allDeleted.has(id))continue;
+   const local=latestMap[id],remote=serverMap[id];
    if(!local)continue;
-   if(!remote || missionSyncSnapshot(local)!==missionSyncSnapshot(remote))dirtyAfter.push(id);
+   if(!remote||missionSyncSnapshot(local)!==missionSyncSnapshot(remote))dirtyAfter.push(id);
  }
  writeDirtyIds(dirtyAfter);
 
- // Surtout : ne jamais supprimer l'état courant parce qu'une réponse centrale
- // n'a pas renvoyé ce brouillon. Le local reste prioritaire tant qu'il est actif.
- if(currentIdBefore){
-   const localCurrent=localMapBefore[currentIdBefore];
-   const chosen=(dirtyBefore.has(currentIdBefore)&&localCurrent)
-     ? localCurrent
-     : (finalMap[currentIdBefore]||localCurrent);
-   if(chosen){
-     S=JSON.parse(JSON.stringify(chosen));
-     localStorage.setItem(STATE_KEY,JSON.stringify(S));
-   }
- }
-
+ // Ne jamais écraser S (l'écran actif). Une réponse serveur ne représente
+ // pas les champs que l'opérateur est en train de saisir à l'écran.
  return {
    ok:true,
    received:Number(data.received||0),
