@@ -2317,6 +2317,11 @@ function accessAllowed(){
 }
 
 function accessIntake(){
+ // Ne jamais proposer le formulaire d'accès propriétaire à une mission B2B.
+ if(!isOwnerAccessMission()){
+   if(isB2BKeyCustody())return S.prep?.addr?b2bKeysIntake():preparationMission();
+   return S.arrivalAt?terrain():bookingHandoff();
+ }
  setStage("RÉSERVATION");
  const p=S.accessPlan||{},key=isKeyMission(),name=S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE";
  const opt=(v,label,selected)=>`<option value="${v}" ${selected===v?"selected":""}>${label}</option>`;
@@ -2343,6 +2348,8 @@ function accessIntake(){
 }
 
 function saveAccessIntake(){
+ // Bloquer aussi la validation d'un ancien écran propriétaire restauré.
+ if(!isOwnerAccessMission())return accessIntake();
  const old=S.accessPlan||{};
  const mode=isKeyMission()?"KEY":document.getElementById("accMode")?.value||"BOX";
  const p={approved:true,mode,keyOrigin:isKeyMission()&&S.sub==="GIVE"?document.getElementById("keyOrigin")?.value||"":"",contact:(document.getElementById("accContact")?.value||"").trim(),exact:!!document.getElementById("accExact")?.checked,duration:document.getElementById("accDuration")?.value||"",
