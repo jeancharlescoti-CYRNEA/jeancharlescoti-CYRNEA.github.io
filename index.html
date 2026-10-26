@@ -521,83 +521,81 @@ function home(remember=true){
  </div>
  <div style="margin-top:12px"><button type="button" class="choice" style="width:100%;display:block;cursor:pointer" onclick="archivedMissions();return false;"><span class="missionName">MISSIONS ARCHIVÉES — ${archived.length}</span><span class="missionGoal">Consulter les dossiers clôturés conservés dans la base centrale.</span></button></div>
  <div style="margin-top:12px"><button type="button" class="choice" style="width:100%;display:block;cursor:pointer" onclick="openChangeRequests()"><span class="missionName">MODIFICATIONS DEMANDÉES AVANT PAIEMENT</span><span class="missionGoal">Demandes clients à requalifier, distinctes des missions confirmées.</span></button></div>
- <div style="margin-top:12px"><button type="button" class="choice" style="width:100%" onclick="exportAllLocalTestBackup()"><span class="missionName">SAUVEGARDER LES ESSAIS DE CET APPAREIL</span><span class="missionGoal">Archive ZIP : missions, brouillons et médias locaux. Aucune suppression. À faire sur Mac et iPhone.</span></button></div>
+ <div style="margin-top:12px"><button type="button" class="choice" style="width:100%" onclick="purgeAllTestMissions()"><span class="missionName">EFFACER TOUS LES DOSSIERS D’ESSAI</span><span class="missionGoal">Supprimer les essais locaux et synchronisés, sans sauvegarde ni archivage. À faire sur Mac puis iPhone.</span></button></div>
  <div class="toolbar" style="margin-top:10px"><button class="btn primary" onclick="configureCloudSync()">ACTIVER LA SYNCHRO MAC ↔ IPHONE</button><button class="btn ghost" onclick="manualCloudSync()">SYNCHRONISER MAINTENANT</button></div>
  <div class="operatorOnly">Les dossiers non terminés ou avec paiement restant dû restent actifs jusqu’à leur clôture définitive. Les dossiers clôturés restent consultables dans MISSIONS ARCHIVÉES.</div>
  </div>`,remember);
 }
-async function exportAllLocalTestBackup(){
- const button=document.querySelector('button[onclick="exportAllLocalTestBackup()"]');
- const savedLabel=button?.innerHTML||"";
- if(button){button.disabled=true;button.textContent="SAUVEGARDE EN COURS…";}
+async function purgeAllTestMissions(){
+ if(!confirm("SUPPRESSION DEFINITIVE : tous les dossiers sont des ESSAIS, aucun client réel. Effacer les missions actives et archivées, les médias de cet appareil et les dossiers Cloud, sans sauvegarde ni archivage ?"))return;
+ const btn=document.querySelector('button[onclick="purgeAllTestMissions()"]');
+ const html=btn?.innerHTML||"";
+ if(btn){btn.disabled=true;btn.textContent="NETTOYAGE EN COURS…";}
+ let cloud=false,local=false,media=false,count=0;
  try{
-  // Sauvegarde locale, y compris les archives et les dossiers en cours.
-  // Ne contient pas les mots de passe ni les clés Cloud/Mailer.
-  const map=loadActiveMissionMap();
-  const records=Object.keys(map).length;
-  const db=await openMediaDb();
-  let media=[];
-  try{
-    media=await new Promise((resolve,reject)=>{
-      const tx=db.transaction(MEDIA_DB_STORE,"readonly");
-      const req=tx.objectStore(MEDIA_DB_STORE).getAll();
-      req.onsuccess=()=>resolve(Array.isArray(req.result)?req.result:[]);
-      req.onerror=()=>reject(req.error||new Error("Médias illisibles"));
-      tx.onabort=()=>reject(tx.error||new Error("Lecture des médias interrompue"));
-    });
-  }finally{db.close();}
-  const enc=new TextEncoder();
-  const entries=[];
-  const mediaIndex=[];
-  for(let i=0;i<media.length;i++){
-    const item=media[i];
-    if(!item?.blob||typeof item.blob.arrayBuffer!=="function")
-      throw new Error("Fichier média inaccessible : export interrompu pour éviter une sauvegarde incomplète.");
-    const name="MEDIA/"+String(i+1).padStart(4,"0")+"_"+safeArchiveName(item.name||"fichier");
-    const bytes=new Uint8Array(await item.blob.arrayBuffer());
-    entries.push({name,data:bytes});
-    mediaIndex.push({name,originalName:item.name||"",missionId:item.missionId||"",passage:item.passage||1,size:bytes.length});
-  }
-  const backup={
-    title:"CYRNEA — SAUVEGARDE DES ESSAIS",
-    generatedAt:new Date().toISOString(),
-    scope:"APPAREIL LOCAL UNIQUEMENT — NON CERTIFIÉ CLOUD NI AUTRE APPAREIL",
-    missions:map, current:S, stageViews:STAGE_VIEWS,
-    pendingDeletedIds:loadDeletedIds(), pendingDirtyIds:loadDirtyIds(),
-    media:mediaIndex,
-    notes:["Aucun réglage ni clé de connexion exporté","Aucune suppression effectuée",
-      "Effectuer cette sauvegarde séparément sur Mac et iPhone",
-      "Vérifier les archives ZIP avant tout nettoyage Cloud"]
-  };
-  entries.unshift({name:"SAUVEGARDE_ESSAIS.json",data:enc.encode(JSON.stringify(backup,null,2))});
-  entries.unshift({name:"LISEZ_MOI.txt",data:enc.encode("CYRNEA — SAUVEGARDE DE CET APPAREIL\n"+
-    "Dossiers locaux : "+records+"\nMédias locaux : "+media.length+
-    "\nCette archive ne garantit pas la sauvegarde du Cloud ou de l'autre appareil.\n"+
-    "AUCUNE DONNÉE SUPPRIMÉE. Les clés de synchronisation et les réglages ne sont pas exportés.\n")});
-  const zip=await makeStoredZip(entries);
-  const filename="CYRNEA_SAUVEGARDE_ESSAIS_"+new Date().toISOString().slice(0,10)+".zip";
-  let shared=false;
-  if(typeof File==="function"&&navigator.canShare&&navigator.share){
-    const file=new File([zip],filename,{type:"application/zip"});
-    if(navigator.canShare({files:[file]})){
-      try{await navigator.share({files:[file],title:"Sauvegarde CYRNEA — essais"});shared=true;}
-      catch(err){if(err?.name==="AbortError")return;}
-    }
-  }
-  if(!shared){
-    const url=URL.createObjectURL(zip);
-    const link=document.createElement("a");
-    link.href=url;link.download=filename;
-    document.body.appendChild(link);link.click();link.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),60000);
-  }
-  alert("Sauvegarde "+(shared?"partagée":"préparée pour téléchargement")+" : "+
-    records+" dossier(s) et "+media.length+" média(s) locaux.\n"+
-    "Vérifiez le fichier ZIP. Aucune donnée effacée. Faites aussi l'export sur l'autre appareil.");
- }catch(err){
-  alert("SAUVEGARDE NON TERMINÉE : "+String(err?.message||err)+
-    "\nAucune donnée effacée. Ne lancez pas de nettoyage.");
- }finally{if(button){button.disabled=false;button.innerHTML=savedLabel;}}
+   const syncKey=getSyncKey();
+   if(!syncKey)throw new Error("Clé Cloud absente : nettoyage global non autorisé, données inchangées.");
+   const scan=await syncCentralMissions({silent:true});
+   if(scan?.stale)throw new Error("Synchronisation concurrente : réessayez.");
+   const ids=new Set([...Object.keys(loadActiveMissionMap()),...loadDirtyIds(),...loadDeletedIds()]);
+   if(S.result&&activeMissionKey(S))ids.add(activeMissionKey(S));
+   count=ids.size;
+   if(count){
+     const ctl=new AbortController();
+     const timeout=setTimeout(()=>ctl.abort(),12000);
+     let response;
+     try{
+       response=await fetch(MISSIONS_API_URL+"/sync",{
+         method:"POST",headers:{"Content-Type":"text/plain;charset=UTF-8"},
+         cache:"no-store",credentials:"omit",signal:ctl.signal,
+         body:JSON.stringify({key:syncKey,missions:[],deleted_ids:[...ids]})
+       });
+     }finally{clearTimeout(timeout);}
+     let data=null;
+     try{data=await response.json()}catch(e){}
+     if(!response.ok||!data?.ok)throw new Error("Suppression Cloud non confirmée : "+String(data?.error||response.status));
+     if(!Array.isArray(data.missions)||data.missions.length)
+       throw new Error("Le Cloud n'est pas vide : nettoyage local suspendu.");
+   }
+   cloud=true;
+   CYRNEA_SYNC_LATEST_REQUEST++;
+   writeActiveMissionMap({});
+   writeDeletedIds([]);
+   writeDirtyIds([]);
+   localStorage.removeItem(STATE_KEY);
+   localStorage.removeItem(LEGACY_STATE_KEY);
+   localStorage.removeItem(STAGE_VIEWS_KEY);
+   STAGE_VIEWS={};NAV=[];LAST_VIEW=null;REACHED_STAGES=new Set(["ACCUEIL"]);
+   S={stage:"ACCUEIL",mode:"FULL",universe:null,caller:null,name:"",phone:"",email:"",
+     city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",
+     acceptedSlot:false,draftKey:key(),missionId:"",prep:{},facts:"",
+     incident:"",terrainMedia:[],terrainDraft:null,arrivalAt:"",arrivalEpochMs:null,
+     departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",
+     finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,
+     paymentMethod:"",paymentState:"",specialPending:false,resumeStage:"",history:["ACCUEIL"]};
+   local=true;
+   const db=await openMediaDb();
+   try{
+     await new Promise((resolve,reject)=>{
+       const tx=db.transaction(MEDIA_DB_STORE,"readwrite");
+       tx.objectStore(MEDIA_DB_STORE).clear();
+       tx.oncomplete=()=>resolve();
+       tx.onerror=()=>reject(tx.error||new Error("Nettoyage médias impossible"));
+       tx.onabort=()=>reject(tx.error||new Error("Nettoyage médias interrompu"));
+     });
+   }finally{db.close();}
+   media=true;
+   save();home(false);
+   alert("Essais effacés sur cet appareil : "+count+" dossier(s) et médias locaux. Cloud vide. Aucune sauvegarde ni archive créée. Répétez sur iPhone pour effacer sa copie locale.");
+ }catch(e){
+   if(local){save();home(false);}
+   alert("Nettoyage "+(local?"PARTIEL":"ARRÊTÉ")+" : "+String(e?.message||e)+
+     ". Cloud : "+(cloud?"contrôlé vide":"non confirmé")+
+     ". Dossiers locaux : "+(local?"effacés":"conservés")+
+     ". Médias : "+(media?"effacés":"non effacés ou à vérifier")+".");
+ }finally{
+   if(btn){btn.disabled=false;btn.innerHTML=html;}
+ }
 }
 function archivedMissions(){
  const archived=archivedMissionList();
