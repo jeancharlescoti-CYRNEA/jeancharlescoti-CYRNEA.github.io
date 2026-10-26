@@ -1619,9 +1619,9 @@ function multiPassagePricing(){
     S.multiDraft=Object.fromEntries(passages.map(p=>[p.index,{active:true,date:p.date,time:p.time}]));
     S.availability={multi:true};
     S.result.availabilityLabel="Selon devis accepté — contraintes intégrées au devis";
-    S.acceptedSlot=true;
+    S.acceptedSlot=false;
     save();
-    return bookingHandoff();
+    return showManualMultiReview();
   }
 
   let base=0, unitPriority=0, unitSunday=0, suffix="";
@@ -1654,9 +1654,9 @@ function multiPassagePricing(){
   S.result.availabilityLabel=passages.length===1
     ? "1er passage / jalon connu — suivants à programmer"
     : `${passages.length} passages / jalons tarifés individuellement`;
-  S.acceptedSlot=true;
+  S.acceptedSlot=false;
   save();
-  bookingHandoff();
+  showManualMultiReview();
 }
 function multiPassageRows(){
   if(!S.result.multi||!Array.isArray(S.multiSlots)) return "";
@@ -1777,13 +1777,14 @@ function showManualSlotReview(){
   if(!central.ok) return alert(central.msg);
 
   draw(`<div class="card"><h1>Vérification du créneau</h1>
-    <div class="neutral"><b>ANTI-DOUBLE-RÉSERVATION</b>En production, le système vérifiera ici l’agenda central CYRNEA. Un créneau déjà occupé sera bloqué. <b>La vérification ne confirme jamais automatiquement la mission.</b></div>
+    <div class="warn"><b>AGENDA — CONTRÔLE MANUEL OBLIGATOIRE</b>La PWA ne connaît pas les occupations de l’agenda central : elle valide seulement la date et l’heure. Contrôlez personnellement que ce créneau est libre dans votre agenda avant de continuer. Cela ne confirme pas automatiquement la mission auprès du client.</div>
     <div class="row"><b>Date</b><span>${esc(S.date)}</span></div>
     <div class="row"><b>Heure</b><span>${esc(displayTime4(S.slot))}</span></div>
     <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div>
     ${priceRows()}
     <div class="row"><b>Contrainte</b><span>${esc(S.result.availabilityLabel||"Standard")}</span></div>
-    <div class="todo"><b>À FAIRE</b>Regarder le créneau et le tarif. Si cela vous convient réellement, confirmer manuellement. Rien n’est envoyé au client avant votre confirmation.</div>
+    <label class="check"><input type="checkbox" id="agendaManuallyChecked"><span>J’ai vérifié l’agenda CYRNEA : aucun autre rendez-vous n’occupe ce créneau.</span></label>
+    <div class="todo"><b>À FAIRE</b>Regarder le créneau et le tarif. La confirmation du client intervient après vérification du paiement.</div>
     <div class="toolbar">
       <button class="btn ghost" onclick="slot()">MODIFIER LE CRÉNEAU</button>
       <button class="btn primary" onclick="manualConfirmSlot()">JE CONFIRME CE CRÉNEAU</button>
@@ -1791,10 +1792,14 @@ function showManualSlotReview(){
   </div>`);
 }
 function manualConfirmSlot(){
+  if(!document.getElementById("agendaManuallyChecked")?.checked)
+    return alert("Vérifiez l’agenda CYRNEA et cochez la confirmation avant de continuer.");
   // Re-check immediately before the operator confirms.
   const central=centralAvailabilityPrototypeCheck([{date:S.date,time:S.slot,label:"ce créneau"}]);
   if(!central.ok) return alert(central.msg);
+  S.agendaManualCheck={schedule:scheduleText(),checkedAt:nowStamp(),method:"CONTROLE_OPERATEUR"};
   S.acceptedSlot=true;
+  save();
   bookingHandoff();
 }
 function showManualMultiReview(){
@@ -1803,9 +1808,10 @@ function showManualMultiReview(){
   if(!central.ok) return alert(central.msg);
 
   draw(`<div class="card"><h1>Vérification des créneaux connus</h1>
-    <div class="neutral"><b>ANTI-DOUBLE-RÉSERVATION</b>En production, chaque jalon connu sera vérifié dans l’agenda central CYRNEA. <b>Aucun jalon n’est confirmé automatiquement.</b></div>
+    <div class="warn"><b>AGENDA — CONTRÔLE MANUEL OBLIGATOIRE</b>La PWA ne détecte pas les conflits avec l’agenda central. Contrôlez chaque jalon connu et conservez les jalons non datés à programmer plus tard.</div>
     ${multiPassageRows()}
     ${priceRows()}
+    <label class="check"><input type="checkbox" id="agendaMultiChecked"><span>J’ai vérifié dans l’agenda CYRNEA la disponibilité de tous les jalons datés.</span></label>
     <div class="todo"><b>À FAIRE</b>Vérifier les dates, heures et le tarif. Confirmer seulement si vous acceptez réellement ces créneaux.</div>
     <div class="toolbar">
       <button class="btn ghost" onclick="slot()">MODIFIER LES CRÉNEAUX</button>
@@ -1814,10 +1820,14 @@ function showManualMultiReview(){
   </div>`);
 }
 function manualConfirmMultiSlots(){
+  if(!document.getElementById("agendaMultiChecked")?.checked)
+    return alert("Vérifiez chaque jalon daté dans l’agenda CYRNEA et cochez cette confirmation.");
   const slots=(S.multiSlots||[]).map(p=>({date:p.date,time:p.time,label:`le passage / jalon ${p.index}`}));
   const central=centralAvailabilityPrototypeCheck(slots);
   if(!central.ok) return alert(central.msg);
+  S.agendaManualCheck={schedule:scheduleText(),checkedAt:nowStamp(),method:"CONTROLE_OPERATEUR_MULTI"};
   S.acceptedSlot=true;
+  save();
   bookingHandoff();
 }
 function confirmSlot(){
@@ -1829,9 +1839,9 @@ function confirmSlot(){
   if(!check.ok) return alert(check.msg);
   refreshCalendarConstraints();
   availabilityPricing();
-  S.acceptedSlot=true;
+  S.acceptedSlot=false;
   save();
-  bookingHandoff();
+  showManualSlotReview();
 }
 function slot(){
  setStage("CRÉNEAU");
