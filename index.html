@@ -3388,17 +3388,60 @@ function overrunMessageText(){
  const el=document.querySelector(".readAloud");
  return String(el?.textContent||"").trim();
 }
-function openMessagesForClient(){
+async function openMessagesForClient(){
  const phone=clientContactNumber();
  if(!phone)return alert("Aucun numéro client n’est enregistré dans le dossier.");
  const message=overrunMessageText();
  if(!message)return alert("Le texte du SMS est absent. Revenez à l’écran de prolongation.");
- const isApple=/Macintosh|Mac OS X|iPhone|iPad|iPod/i.test(navigator.userAgent||"");
- // Messages Apple : destinataire et texte sont des paramètres de composition.
- // Le SMS reste un brouillon : seul l’utilisateur déclenche son envoi.
- window.location.href=isApple
-   ? "sms://open?addresses="+encodeURIComponent(phone)+"&body="+encodeURIComponent(message)
-   : "sms:"+phone+"?body="+encodeURIComponent(message);
+
+ // Apple ne garantit pas l'insertion du corps d'un SMS depuis une URL.
+ // Copier le texte depuis le clic de l'opérateur avant d'ouvrir Messages.
+ let copied=false;
+ const temp=document.createElement("textarea");
+ temp.value=message;
+ temp.setAttribute("readonly","");
+ temp.style.position="fixed";
+ temp.style.left="0";
+ temp.style.top="0";
+ temp.style.width="1px";
+ temp.style.height="1px";
+ temp.style.opacity="0";
+ document.body.appendChild(temp);
+ try{
+   temp.focus();
+   temp.select();
+   if(typeof temp.setSelectionRange==="function")temp.setSelectionRange(0,message.length);
+   copied=!!document.execCommand?.("copy");
+ }catch(e){}
+ temp.remove();
+ if(!copied && navigator.clipboard?.writeText){
+   try{await navigator.clipboard.writeText(message);copied=true}catch(e){}
+ }
+ if(!copied){
+   // Ne pas ouvrir une fenêtre Messages vide si la copie a échoué.
+   let panel=document.getElementById("smsCopyFallback");
+   if(!panel){
+     panel=document.createElement("div");
+     panel.id="smsCopyFallback";
+     panel.className="warn";
+     const read=document.querySelector(".readAloud");
+     if(read?.parentNode)read.parentNode.insertBefore(panel,read.nextSibling);
+     else document.getElementById("app")?.appendChild(panel);
+   }
+   panel.textContent="Copie automatique indisponible. Sélectionnez le texte ci-dessous, copiez-le manuellement puis ouvrez Messages avec le numéro indiqué.";
+   const field=document.createElement("textarea");
+   field.value=message;
+   field.readOnly=true;
+   field.rows=8;
+   field.style.width="100%";
+   panel.appendChild(field);
+   field.focus();
+   field.select();
+   return;
+ }
+ alert("Texte du SMS copié. Messages va s’ouvrir avec le destinataire. Collez le texte dans la zone de saisie (⌘ V sur Mac, Coller sur iPhone), vérifiez-le puis envoyez-le vous-même.");
+ // L'URL SMS sert uniquement à ouvrir le destinataire, jamais à certifier l'envoi.
+ window.location.href="sms:"+phone;
 }
 function overrunGuide(){
  if(!S.arrivalAt)return alert("Une prolongation ne peut être demandée qu’après avoir horodaté votre arrivée sur place et commencé la mission.");
@@ -3415,7 +3458,7 @@ function overrunGuide(){
      <div class="row"><b>Téléphone</b><span>${esc(phone||"NON RENSEIGNÉ")}</span></div>
      <div class="toolbar">
        <a class="btn primary" href="${esc(clientCallHref())}">APPELER LE CLIENT</a>
-       <button class="btn ghost" onclick="openMessagesForClient()">ENVOYER LE SMS</button>
+       <button class="btn ghost" onclick="openMessagesForClient()">COPIER LE SMS ET OUVRIR MESSAGES</button>
      </div>
      <div class="muted">Aucune prolongation n’est enregistrée sur cette mission. Retour au terrain uniquement après requalification.</div>
      <button class="btn ghost" onclick="terrain()">RETOUR AU TERRAIN</button>
@@ -3440,7 +3483,7 @@ function overrunGuide(){
      <div class="row"><b>Téléphone</b><span>${esc(phone||"NON RENSEIGNÉ")}</span></div>
      <div class="toolbar">
        <a class="btn primary" href="${esc(clientCallHref())}">APPELER LE CLIENT</a>
-       <button class="btn ghost" onclick="openMessagesForClient()">ENVOYER LE SMS</button>
+       <button class="btn ghost" onclick="openMessagesForClient()">COPIER LE SMS ET OUVRIR MESSAGES</button>
      </div>
      <div class="field"><label>Mode de confirmation du client</label><select id="overrunAgreement">
        <option value="">— Choisir —</option>
