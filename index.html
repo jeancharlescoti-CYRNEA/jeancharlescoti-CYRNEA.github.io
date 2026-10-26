@@ -2482,7 +2482,7 @@ function recordFinancialEvidence(kind,amountText){
    return false;
  }
  if(!confirm("Confirmez-vous avoir personnellement vérifié "+(isRefund?"le remboursement":"l’encaissement")+" réel de "+amountText+" auprès du prestataire de paiement ? Il s’agit d’une ATTESTATION MANUELLE, et non d’une vérification automatique du serveur."))return false;
- const key=isRefund?"refundEvidence":"paymentEvidence";
+ const key=isRefund?"refundEvidence":kind==="OVERRUN"?"overrunPaymentEvidence":"paymentEvidence";
  S[key]={reference:clean,amount:amountText,checkedAt:nowStamp(),method:"ATTESTATION_OPERATEUR_NON_VERIFIEE_AUTOMATIQUEMENT"};
  return true;
 }
@@ -2490,7 +2490,7 @@ function markBooked(){
  if(routeKind()==="TALLY"){
    if(!S.tallyIntentReady||!GATEWAY_REF_RE.test(String(S.tallyReference||"")))
      return alert("Aucun paiement ne peut être déclaré reçu : référence Gateway / intention de paiement non enregistrée. Revenir au lien Tally sécurisé.");
-   if(!S.paymentEvidence?.reference && !recordFinancialEvidence("PAYMENT",priceText()))return;
+   if((!S.paymentEvidence?.reference||S.paymentEvidence.amount!==priceText()) && !recordFinancialEvidence("PAYMENT",priceText()))return;
    S.specialPending=false;
    S.paymentStatus="PAID_PENDING_CONFIRMATION";
    save();
@@ -2550,8 +2550,9 @@ function postPaymentDecision(){
  </div>`);
 }
 function decisionConfirmed(){
- if(S.paymentStatus!=="PAID_PENDING_CONFIRMATION"||!S.paymentEvidence?.reference)
-   return alert("Confirmation impossible : paiement non attesté avec sa référence. Vérifier l’encaissement réel avant de continuer.");
+ if(S.paymentStatus!=="PAID_PENDING_CONFIRMATION")
+   return alert("Confirmation impossible : statut de paiement non vérifié. Revenir à l’étape de contrôle.");
+ if(!S.paymentEvidence?.reference && !recordFinancialEvidence("PAYMENT",priceText()))return;
  if(!accessAllowed())return accessIntake();
 
  S.decisionStatus="CONFIRMED";
@@ -2585,7 +2586,7 @@ function refreshAlternativeConstraints(){
  if(d.value && d.value<today)d.value="";
 }
 function confirmAcceptedAlternative(){
- if(!S.paymentEvidence?.reference)return alert("Alternative non confirmable : preuve de contrôle du paiement manquante. Revenir à la décision après vérification réelle.");
+ if(!S.paymentEvidence?.reference && !recordFinancialEvidence("PAYMENT",priceText()))return;
  // Un seul champ date/heure ne peut jamais reprogrammer trois jalons.
  if(S.result?.multi||(S.multiSlots||[]).length)
    return alert("Mission multi-passages : modification d’un seul créneau interdite. Conserver les jalons existants et requalifier l’ensemble des dates et du tarif avant une nouvelle confirmation.");
@@ -3597,7 +3598,7 @@ function markOverrunPaid(){
  if(!S.overrun?.accepted)return;
  if(S.overrun.paymentStatus==="PAID")return alert("Ce supplément est déjà déclaré réglé.");
  if(!recordFinancialEvidence("OVERRUN",String(S.overrun.total)+" € "+S.overrun.base))return;
- S.overrun.paymentEvidence={...(S.paymentEvidence||{})};
+ S.overrun.paymentEvidence={...(S.overrunPaymentEvidence||{})};
  // La référence du règlement de prolongation doit rester distincte de l'acompte initial.
  S.overrun.paymentStatus="PAID";
  S.overrun.paidAt=nowStamp();
