@@ -2566,13 +2566,25 @@ function refreshAlternativeConstraints(){
  if(d.value && d.value<today)d.value="";
 }
 function confirmAcceptedAlternative(){
- const d=getDateValue("altDate") || todayLocalISO();
- const altDateEl=document.getElementById("altDate");
- if(altDateEl && !altDateEl.value)altDateEl.value=d;
+ // Un seul champ date/heure ne peut jamais reprogrammer trois jalons.
+ if(S.result?.multi||(S.multiSlots||[]).length)
+   return alert("Mission multi-passages : modification d’un seul créneau interdite. Conserver les jalons existants et requalifier l’ensemble des dates et du tarif avant une nouvelle confirmation.");
+ const d=getDateValue("altDate");
+ if(!d)return alert("Renseignez une date alternative réelle.");
  const t=normalizeTime4(getDropdownTime("altTime"));
  const check=validateMissionTimeRules(d,t,"le créneau alternatif");
  if(!check.ok)return alert(check.msg);
- S.date=d;S.slot=t;S.multiSlots=[];S.availability=autoConstraints(d,t);
+ // Éviter d'accepter un créneau dont le supplément diffère de celui déjà payé.
+ const previousDate=S.date,previousSlot=S.slot,previousAvailability={...(S.availability||{})};
+ const previousResult={...(S.result||{})};
+ const previousAmount=gatewayPaymentCents();
+ S.date=d;S.slot=t;S.availability=autoConstraints(d,t);
+ availabilityPricing();
+ const newAmount=gatewayPaymentCents();
+ if(!Number.isInteger(previousAmount)||!Number.isInteger(newAmount)||newAmount!==previousAmount){
+   S.date=previousDate;S.slot=previousSlot;S.availability=previousAvailability;S.result=previousResult;
+   return alert("Nouveau créneau : le tarif / supplément diffère de la commande payée. Aucune modification enregistrée. Requalifier le montant et le paiement via le parcours sécurisé avant confirmation.");
+ }
  if(!accessAllowed()){alert("Nouveau créneau : accès à requalifier avant confirmation (notamment si moins de 24 h).");return accessIntake();}
  S.decisionStatus="CONFIRMED_AFTER_ALTERNATIVE";
  S.paymentStatus="PAID_CONFIRMED";
@@ -3281,6 +3293,10 @@ function continueMultiAfterRestitution(){
       <button class="btn ghost" onclick="archivePartialMulti()">CONSERVER LA MISSION EN COURS</button>
     </div>`);
   }
+  const validation=validateMissionTimeRules(p.date,p.time,"le prochain passage");
+  if(!validation.ok)return alert("Prochain passage : "+validation.msg+" Conserver le dossier sans démarrer.");
+  if(!["CONFIRMED","CONFIRMED_AFTER_ALTERNATIVE"].includes(S.decisionStatus))
+    return alert("Prochain passage : confirmation humaine de la mission requise.");
   S.passage=next;
   S.date=p.date;
   S.slot=p.time;
