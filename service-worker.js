@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-20261023-change-inbox-v1';
+const CACHE='cyrnea-assistant-20261026-fiabilite-v2';
 const ASSETS=['./index.html','./terrain-clock.js','./change-inbox.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
@@ -41,11 +41,26 @@ self.addEventListener('fetch',event=>{
     return;
   }
 
+  // JS/manifeste : dernière version réseau, puis repli hors connexion.
+  if(requestUrl.pathname.endsWith('.js') || requestUrl.pathname.endsWith('.webmanifest')){
+    event.respondWith(
+      fetch(event.request,{cache:'no-store'})
+        .then(response=>{
+          if(response.ok){
+            const copy=response.clone();
+            caches.open(CACHE).then(cache=>cache.put(event.request,copy)).catch(()=>{});
+          }
+          return response;
+        })
+        .catch(()=>caches.match(event.request))
+    );
+    return;
+  }
   event.respondWith(
     caches.match(event.request).then(cached=>
       cached || fetch(event.request).then(response=>{
         const copy=response.clone();
-        caches.open(CACHE).then(cache=>cache.put(event.request,copy));
+        caches.open(CACHE).then(cache=>cache.put(event.request,copy)).catch(()=>{});
         return response;
       })
     )
