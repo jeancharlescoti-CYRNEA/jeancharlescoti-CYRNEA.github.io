@@ -300,7 +300,7 @@ function archivedMissionList(){
 }
 function activeMissionStatus(st){
  if(st.overrun?.accepted && st.overrun.paymentStatus!=="PAID")return "SUPPLÉMENT À ENCAISSER";
- if(st.paymentStatus==="PAID_PENDING_CONFIRMATION")return "PAIEMENT REÇU — À CONFIRMER";
+ if(st.paymentStatus==="PAID_PENDING_CONFIRMATION")return "PAIEMENT ATTESTÉ MANUELLEMENT — CRÉNEAU À CONFIRMER";
  if(st.decisionStatus==="ALTERNATIVE_PROPOSED")return "ALTERNATIVE EN ATTENTE";
  if(st.stage==="CLÔTURE")return "À CLÔTURER";
  if(st.stage==="TERRAIN")return "SUR PLACE / TERRAIN";
@@ -3479,9 +3479,8 @@ function clientSmsHref(){
  return phone?"sms:"+phone:"#";
 }
 function overrunMissionSummary(){
- const paid=["PAID_CONFIRMED","PAID","SEPA_RECEIVED"].includes(S.paymentStatus);
  return [
-   "CYRNEA — "+(paid?"mission réglée":"mission réservée"),
+   "CYRNEA — demande de prolongation de mission",
    "Référence : "+(S.missionId||"non renseignée"),
    "Mission : "+(S.result?.mission||"non renseignée"),
    "Objet prévu : "+(S.obj||"non renseigné"),
