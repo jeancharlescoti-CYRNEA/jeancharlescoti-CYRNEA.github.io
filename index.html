@@ -815,8 +815,9 @@ function sub(){
  draw(`<div class="card"><h1>Précisez</h1><div class="choices">${l.map(([v,t])=>`<button class="choice standard" onclick="S.sub='${v}';classify()">${t}</button>`).join("")}</div></div>`)
 }
 function zone(){
- let x=(S.city||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
- return x==="porto-vecchio"||x==="porto vecchio"||x==="lecci"||x==="sotta"||x.includes("sainte-lucie")||x.includes("sainte lucie")||x.includes("pinarello")||x==="tarco";
+ const x=String(S.city||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[-_]/g," ").replace(/\s+/g," ").trim();
+ // Les autres communes nommées Sainte-Lucie ne font pas partie du secteur.
+ return ["porto vecchio","lecci","sotta","sainte lucie de porto vecchio","pinarello","tarco"].includes(x);
 }
 function voir(){return S.universe==="RELAIS"?{status:"PROPOSER",mission:"VOIR RELAIS",price:"260 € TTC",cap:"1 h 30",contract:"RELAIS",rest:"R1_RELAIS"}:{status:"PROPOSER",mission:"VOIR PRÉSENCE",price:"260 € TTC",cap:"1 h 30",contract:"PRÉSENCE PROPRIÉTAIRES",rest:"R1"}}
 function classify(){
@@ -1339,10 +1340,14 @@ function isFrenchPublicHoliday(dateStr){
   return movable.has(dateStr);
 }
 function localDateTime(dateStr,timeStr){
-  if(!dateStr||!timeStr) return null;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr||"")) || !/^\d{2}:\d{2}$/.test(String(timeStr||"")))return null;
   const [y,m,d]=dateStr.split("-").map(Number);
   const [hh,mm]=timeStr.split(":").map(Number);
-  return new Date(y,m-1,d,hh,mm,0,0);
+  if(y<2020||y>2100||m<1||m>12||d<1||d>31||hh>23||mm>59)return null;
+  const result=new Date(y,m-1,d,hh,mm,0,0);
+  if(result.getFullYear()!==y||result.getMonth()!==m-1||result.getDate()!==d||
+     result.getHours()!==hh||result.getMinutes()!==mm)return null;
+  return result;
 }
 function isQuarterHour(timeStr){
   const m=String(timeStr||"").match(/^(\d{2}):(\d{2})$/);
