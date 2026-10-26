@@ -514,7 +514,6 @@ function home(remember=true){
  }).join("");
  draw(`<div class="card"><h1>CYRNEA ASSISTANT</h1>
  <div class="bigQuestion">Que voulez-vous faire ?</div>
- <div style="margin-top:12px"><button type="button" class="choice" style="width:100%" onclick="purgeAllTestMissions()"><span class="missionName">EFFACER TOUS LES DOSSIERS D’ESSAI</span><span class="missionGoal">Supprimer les essais locaux et synchronisés, sans sauvegarde ni archivage. À faire sur Mac puis iPhone.</span></button></div>
  ${active.length?`<div class="guideTitle">MISSIONS ACTIVES — ${active.length}</div><div class="choices">${cards}</div>`:`<div class="neutral">Aucune mission active enregistrée.</div>`}
  <div class="grid" style="margin-top:10px">
    <button class="choice" onclick="newMission()"><span class="missionName">NOUVELLE MISSION</span><span class="missionGoal">Créer un nouveau dossier sans supprimer les missions actives.</span></button>
