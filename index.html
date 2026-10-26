@@ -911,7 +911,7 @@ function sub(){
 function zone(){
  const x=String(S.city||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[-_]/g," ").replace(/\s+/g," ").trim();
  // Les autres communes nommées Sainte-Lucie ne font pas partie du secteur.
- return ["porto vecchio","lecci","sotta","sainte lucie de porto vecchio","pinarello","tarco"].includes(x);
+ return ["porto vecchio","lecci","sotta","sainte lucie de porto vecchio","sainte lucie de porto vecchio / pinarello","pinarello","tarco"].includes(x);
 }
 function voir(){return S.universe==="RELAIS"?{status:"PROPOSER",mission:"VOIR RELAIS",price:"260 € TTC",cap:"1 h 30",contract:"RELAIS",rest:"R1_RELAIS"}:{status:"PROPOSER",mission:"VOIR PRÉSENCE",price:"260 € TTC",cap:"1 h 30",contract:"PRÉSENCE PROPRIÉTAIRES",rest:"R1"}}
 function classify(){
