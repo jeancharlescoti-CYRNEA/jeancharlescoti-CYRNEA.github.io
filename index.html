@@ -2471,10 +2471,27 @@ async function openReservationActions(){
    alert("Impossible d’ouvrir CONFIRMER / ALTERNATIVE / REMBOURSER : "+String(err?.message||err));
  }
 }
+function recordFinancialEvidence(kind,amountText){
+ const isRefund=kind==="REFUND";
+ const ask=isRefund?"REMBOURSEMENT":"PAIEMENT";
+ const ref=prompt("CONTROLE MANUEL "+ask+" : après vérification de l’opération réelle dans Stripe / PayPal / Gateway, indiquez sa référence de transaction (et non la référence de commande CYRNEA). Annuler si aucune preuve.", "");
+ if(ref===null)return false;
+ const clean=String(ref).trim();
+ if(clean.length<8||clean.length>160||clean===String(S.tallyReference||"")){
+   alert("Référence de transaction absente ou non exploitable. Aucun statut financier modifié.");
+   return false;
+ }
+ if(!confirm("Confirmez-vous avoir personnellement vérifié "+(isRefund?"le remboursement":"l’encaissement")+" réel de "+amountText+" auprès du prestataire de paiement ? Il s’agit d’une ATTESTATION MANUELLE, et non d’une vérification automatique du serveur."))return false;
+ const key=isRefund?"refundEvidence":"paymentEvidence";
+ S[key]={reference:clean,amount:amountText,checkedAt:nowStamp(),method:"ATTESTATION_OPERATEUR_NON_VERIFIEE_AUTOMATIQUEMENT"};
+ return true;
+}
 function markBooked(){
- S.specialPending=false;
  if(routeKind()==="TALLY"){
-   ensureTallyReference();
+   if(!S.tallyIntentReady||!GATEWAY_REF_RE.test(String(S.tallyReference||"")))
+     return alert("Aucun paiement ne peut être déclaré reçu : référence Gateway / intention de paiement non enregistrée. Revenir au lien Tally sécurisé.");
+   if(!S.paymentEvidence?.reference && !recordFinancialEvidence("PAYMENT",priceText()))return;
+   S.specialPending=false;
    S.paymentStatus="PAID_PENDING_CONFIRMATION";
    save();
    return postPaymentDecision();
@@ -2519,8 +2536,8 @@ function completeSimplyBookBooking(){
 function postPaymentDecision(){
  setStage("RÉSERVATION");
  if(!GATEWAY_REF_RE.test(String(S.tallyReference||"")))ensureTallyReference();
- draw(`<div class="card"><h1>Paiement reçu — décision humaine</h1>
-   <div class="stop"><b>⛔ NE PAS PARTIR EN MISSION</b><br>Un paiement, STANDARD ou HORS STANDARD, n’est jamais une confirmation de disponibilité.</div>
+ draw(`<div class="card"><h1>Paiement déclaré — décision humaine</h1>
+   <div class="stop"><b>⛔ NE PAS PARTIR EN MISSION</b><br>Le paiement a été attesté manuellement par l’opérateur. La PWA ne consulte pas directement le statut bancaire. Vérifier la transaction auprès du prestataire. Même payé, aucun créneau n’est confirmé automatiquement.</div>
    <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result?.mission||"-"))}</span></div>
    <div class="row"><b>Créneau demandé</b><span>${esc(scheduleText())}</span></div>
    <div class="row"><b>Référence</b><span>${esc(S.tallyReference||"-")}</span></div>
@@ -2533,6 +2550,8 @@ function postPaymentDecision(){
  </div>`);
 }
 function decisionConfirmed(){
+ if(S.paymentStatus!=="PAID_PENDING_CONFIRMATION"||!S.paymentEvidence?.reference)
+   return alert("Confirmation impossible : paiement non attesté avec sa référence. Vérifier l’encaissement réel avant de continuer.");
  if(!accessAllowed())return accessIntake();
 
  S.decisionStatus="CONFIRMED";
@@ -2566,6 +2585,7 @@ function refreshAlternativeConstraints(){
  if(d.value && d.value<today)d.value="";
 }
 function confirmAcceptedAlternative(){
+ if(!S.paymentEvidence?.reference)return alert("Alternative non confirmable : preuve de contrôle du paiement manquante. Revenir à la décision après vérification réelle.");
  // Un seul champ date/heure ne peut jamais reprogrammer trois jalons.
  if(S.result?.multi||(S.multiSlots||[]).length)
    return alert("Mission multi-passages : modification d’un seul créneau interdite. Conserver les jalons existants et requalifier l’ensemble des dates et du tarif avant une nouvelle confirmation.");
@@ -2594,6 +2614,7 @@ function confirmAcceptedAlternative(){
  preparationMission();
 }
 async function decisionRefunded(){
+ if(!recordFinancialEvidence("REFUND",priceText()))return;
  S.decisionStatus="REFUNDED";
  S.paymentStatus="REFUNDED";
  if(!S.missionId)S.missionId=missionId();
@@ -3574,6 +3595,10 @@ function openOverrunPayment(){
 }
 function markOverrunPaid(){
  if(!S.overrun?.accepted)return;
+ if(S.overrun.paymentStatus==="PAID")return alert("Ce supplément est déjà déclaré réglé.");
+ if(!recordFinancialEvidence("OVERRUN",String(S.overrun.total)+" € "+S.overrun.base))return;
+ S.overrun.paymentEvidence={...(S.paymentEvidence||{})};
+ // La référence du règlement de prolongation doit rester distincte de l'acompte initial.
  S.overrun.paymentStatus="PAID";
  S.overrun.paidAt=nowStamp();
  save();
