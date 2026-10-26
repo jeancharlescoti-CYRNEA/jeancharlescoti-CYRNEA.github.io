@@ -2753,7 +2753,7 @@ function packDocHtml(kind){
     <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div>
     <div class="row"><b>Objet</b><span>${esc(S.obj)}</span></div>
     <div class="row"><b>À compléter au terrain</b><span>faits / actions cochés, incident éventuel, preuves utiles</span></div>
-    <div class="muted">Le PDF final sera généré automatiquement à partir des cases réellement cochées.</div>
+    <div class="muted">La restitution sera préparée dans la PWA à partir des cases réellement cochées. Le dossier documentaire pourra ensuite être exporté en ZIP.</div>
   </div>`;
 }
 
@@ -2946,7 +2946,7 @@ function missionDesk(){
       <button class="choice" onclick="showMissionDoc('rest')"><b>RESTITUTION</b><br><span class="muted">Se remplit à partir de vos coches terrain.</span></button>
     </div>
 
-    <div class="notice"><b>RÈGLE TERRAIN</b>Vous ne modifiez jamais un PDF ou un Word sur place. Vous cochez et sélectionnez dans l’assistant ; il génère ensuite la restitution PDF.</div>
+    <div class="notice"><b>RÈGLE TERRAIN</b>Sur place, vous cochez et sélectionnez dans l’assistant. Il prépare la restitution et permet l’export d’un dossier ZIP contenant les données et les pièces conservées localement.</div>
 
     <div class="toolbar"><button class="btn ghost" onclick="ready()">RETOUR MISSION PRÊTE</button></div>
   </div>`);
@@ -2972,7 +2972,7 @@ function showMissionDoc(kind){
     body=`<div class="row"><b>Modèle</b><span>${esc(p.rest)}</span></div>
       <div class="row"><b>Faits / actions terrain</b><span>${esc(S.facts||"Pas encore renseignés")}</span></div>
       <div class="row"><b>Incident / limite</b><span>${esc(S.incident||"Pas encore renseigné")}</span></div>
-      <div class="notice">La restitution n’est pas saisie comme un document Word. Elle est générée automatiquement à partir des données terrain, puis convertie en PDF.</div>`;
+      <div class="notice">La restitution est préparée depuis les données terrain dans la PWA. L’export disponible est un dossier ZIP, et non un PDF créé automatiquement.</div>`;
   }
   draw(`<div class="card"><h1>${kind==="fiche"?"Fiche mission":kind==="support"?"Documents / photos":"Restitution"}</h1>
     ${body}
@@ -3264,8 +3264,15 @@ async function exportMissionArchive(){
    const entries=[];
    entries.push({name:"DOSSIER_MISSION.txt",data:enc.encode(missionArchiveText())});
    entries.push({name:"MISSION.json",data:enc.encode(JSON.stringify(S,null,2))});
-   let media=[];
-   try{media=await getTerrainMediaRecords(S,true)}catch(e){}
+   // Ne jamais fournir silencieusement un ZIP amputé des pièces terrain.
+   // Les médias peuvent exister seulement sur l'iPhone : dans ce cas, ouvrir l'export sur cet appareil.
+   const media=await getTerrainMediaRecords(S,true);
+   const expectedNames=[...(Array.isArray(S.terrainMedia)?S.terrainMedia:[]),
+     ...(Array.isArray(S.passageHistory)?S.passageHistory.flatMap(p=>Array.isArray(p.media)?p.media:[]):[])];
+   const actualNames=new Set(media.map(m=>String(m.name||"")));
+   const missing=[...new Set(expectedNames.map(String))].filter(n=>n&&!actualNames.has(n));
+   if(missing.length)throw new Error("Pièces terrain manquantes sur cet appareil : "+missing.join(", ")+
+     ". Ouvrez la PWA sur l'appareil ayant conservé ces fichiers avant d'exporter.");
    const used=new Map();
    for(const r of media){
      let base=String(r.name||"fichier");
