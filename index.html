@@ -2491,7 +2491,38 @@ function postPaymentDecision(){
    </div>
  </div>`);
 }
-function decisionConfirmed(){
+
+/* Contact locataire : relecture privée de la réponse Tally, après paiement.
+   Pas de données personnelles dans l'URL ni de modification de l'état paiement. */
+function paidTallyEscort(){
+ const c=S.tallyEscort;
+ if(!c||c.reference!==S.tallyReference||c.source!=="TALLY_VERIFIED")return null;
+ const name=String(c.name||"").trim(),contact=String(c.contact||"").trim();
+ return name&&contact?{name,contact,reference:c.reference}:null;
+}
+async function retrievePaidTallyEscort(){
+ if(S.paymentStatus!=="PAID_CONFIRMED")return false;
+ const reference=String(S.tallyReference||""),syncKey=getSyncKey();
+ if(!GATEWAY_REF_RE.test(reference)||!syncKey)return false;
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),6500);
+ try{
+  const response=await fetch(PAYMENT_GATEWAY_URL+"/pwa/escort-contact",{
+   method:"POST",headers:{"content-type":"application/json","x-cyrnea-sync-key":syncKey},
+   body:JSON.stringify({reference}),credentials:"omit",cache:"no-store",signal:controller.signal
+  });
+  if(!response.ok)return false;
+  const data=await response.json();
+  if(!data?.ok||!data?.paid||!data?.escort_required||data.reference!==reference)return false;
+  const name=String(data.escort_name||"").trim().slice(0,200);
+  const contact=String(data.escort_contact||"").trim().slice(0,200);
+  if(!name||!contact)return false;
+  S.tallyEscort={source:"TALLY_VERIFIED",reference,name,contact};
+  save();return true;
+ }catch(e){return false}
+ finally{clearTimeout(timeout)}
+}
+
+async function decisionConfirmed(){
  if(S.paymentStatus!=="PAID_PENDING_CONFIRMATION")
    return alert("Confirmation impossible : statut de paiement non vérifié. Revenir à l’étape de contrôle.");
  if(!S.paymentEvidence?.reference && !recordFinancialEvidence("PAYMENT",priceText()))return;
@@ -2502,6 +2533,7 @@ function decisionConfirmed(){
  if(!S.missionId)S.missionId=missionId();
  save();
  if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{});
+ await retrievePaidTallyEscort();
  preparationMission();
 }
 function decisionAlternative(){
@@ -2614,6 +2646,8 @@ function clientDocsPreview(){
 function preparationMission(){
  setStage("RÉSERVATION");
  const b2b=S.caller==="B2B";
+ const escort=paidTallyEscort();
+ const escortContact=escort?escort.name+" — "+escort.contact:"";
  draw(`<div class="card"><h1>Préparer la mission</h1>
  <div class="operatorOnly">Suivez simplement les étapes. Si une information manque, demandez-la au client ou laissez la mission en attente. N’inventez rien.</div>
  <div class="guideTitle">ÉTAPE 1</div><div class="bigQuestion">Où faut-il aller ?</div>
@@ -2630,12 +2664,13 @@ function preparationMission(){
  ${b2b?`
  <div class="guideTitle">ÉTAPE 3</div><div class="bigQuestion">Y a-t-il quelqu’un à contacter sur place ?</div>
  <div class="choices">
-  <label class="choice"><input type="radio" name="contactChoice" value="CONTACT" onchange="toggleContactChoice()"> OUI — j’ai un contact</label>
-  <label class="choice"><input type="radio" name="contactChoice" value="AUCUN" onchange="toggleContactChoice()"> NON — aucun contact</label>
+  <label class="choice"><input type="radio" name="contactChoice" value="CONTACT" onchange="toggleContactChoice()" ${escort?"checked":""}> OUI — j’ai un contact</label>
+  <label class="choice"><input type="radio" name="contactChoice" value="AUCUN" onchange="toggleContactChoice()" ${escort?"disabled":""}> NON — aucun contact</label>
  </div>
- <div class="field hidden" id="contactDetailsWrap"><label>Nom + téléphone du contact</label><input id="contact" placeholder="Nom — téléphone"></div>
+ ${escort?`<div class="notice"><b>ACCOMPAGNANT AUTORISÉ PAR LE LOCATAIRE — DONNÉES TALLY</b><br>La personne annoncée doit être présente, donner accès et accompagner CYRNEA pendant toute la mission. En cas de doute : ne pas entrer.</div>`:""}
+ <div class="field ${escort?"":"hidden"}" id="contactDetailsWrap"><label>Nom + téléphone du contact</label><input id="contact" placeholder="Nom — téléphone" value="${esc(escortContact)}" ${escort?"readonly":""}></div>
  <div class="field"><label>Localisation / lien Plans ou Maps</label><input id="map" placeholder="Coller le lien si utile"></div>
- `:`<div class="guideTitle">ÉTAPE 3</div><div class="bigQuestion">Y a-t-il un contact sur place ?</div><div class="field"><label>Contact sur place — facultatif</label><input id="contact" placeholder="Nom — téléphone si utile"></div>`}
+ `:`<div class="guideTitle">ÉTAPE 3</div><div class="bigQuestion">Y a-t-il un contact sur place ?</div>${escort?`<div class="notice"><b>ACCOMPAGNANT AUTORISÉ PAR LE LOCATAIRE — DONNÉES TALLY</b><br>Cette personne doit être présente et accompagner CYRNEA durant toute l’intervention. En cas de doute ou d’absence : ne pas entrer.</div>`:""}<div class="field"><label>${escort?"Accompagnant du locataire — contact reçu de Tally":"Contact sur place — facultatif"}</label><input id="contact" placeholder="Nom — téléphone si utile" value="${esc(escortContact)}" ${escort?"readonly":""}></div>`}
  <div class="guideTitle">ÉTAPE 4</div><div class="bigQuestion">Faut-il emporter ou consulter un document ?</div>
  ${clientDocsPreview()}
  <div class="choices"><label class="choice"><input type="radio" name="docsChoice" value="OUI" onchange="toggleDocsChoice()"> OUI — ajouter un document / une photo</label><label class="choice"><input type="radio" name="docsChoice" value="AUCUN" onchange="toggleDocsChoice()"> NON — aucun document utile</label></div>
@@ -2649,6 +2684,7 @@ function preparationMission(){
 }
 function collectPreparation(){
  const b2b=S.caller==="B2B";
+ const escort=paidTallyEscort();
  const contactChoice=b2b?(document.querySelector('input[name="contactChoice"]:checked')?.value||""):"OPTIONNEL";
  const docsChoice=document.querySelector('input[name="docsChoice"]:checked')?.value||"";
 
@@ -2656,6 +2692,7 @@ function collectPreparation(){
  if(!docsChoice)return alert("Choisissez OUI — AJOUTER ou AUCUN DOCUMENT.");
 
  const contact=(document.getElementById('contact')?.value||"").trim();
+ if(escort&&contact!==(escort.name+" — "+escort.contact))return alert("Les coordonnées de l’accompagnant doivent correspondre aux données Tally.");
  if(b2b && contactChoice==="CONTACT" && !contact)return alert("Renseignez le nom + téléphone du contact.");
  const map=(document.getElementById('map')?.value||"").trim();
  if(b2b && !map)return alert("B2B : localisation / lien Plans ou Maps obligatoire.");
