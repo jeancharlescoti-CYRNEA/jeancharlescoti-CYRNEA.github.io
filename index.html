@@ -2222,8 +2222,8 @@ function accessAllowed(){
  const p=S.accessPlan||{};
  if(!p.approved)return false;
  if(p.mode==="NONE")return false;
- if(p.mode==="POST"&&autoConstraints(S.date,S.slot).priority)return false;
- if(isKeyMission()&&S.sub==="GIVE"&&(!p.keyOrigin||(p.keyOrigin==="POST"&&autoConstraints(S.date,S.slot).priority)))return false;
+ if(p.mode==="POST"&&!p.keysAvailableBefore)return false;
+ if(isKeyMission()&&S.sub==="GIVE"&&(!p.keyOrigin||(p.keyOrigin==="POST"&&!p.keysAvailableBefore)))return false;
  if(["ART","DEL","OPEN"].includes(S.need)&&p.mode==="OUTSIDE")return false;
  if(["ART","DEL"].includes(S.need)&&S.result.contract==="RELAIS"&&(!p.exact||(S.sub==="ACCESS"&&p.duration!=="SHORT")||(S.sub==="STAY"&&!["SHORT","HOUR"].includes(p.duration))))return false;
  if(["LOCAL","PERSON","KEY"].includes(p.mode)&&!p.contact)return false;
@@ -2257,7 +2257,8 @@ function accessIntake(){
  ${opt("POST","Retour postal standard en France inclus",p.returnMode||"")}
  ${opt("BOX","Dépôt dans le dispositif convenu",p.returnMode||"")}</select></div>
  <div class="field"><label>Nom / adresse du destinataire ou emplacement convenu</label><input id="accReturnDetail" value="${esc(p.returnDetail||"")}" placeholder="À renseigner lorsque des clés sont confiées"></div>
- <div class="warn"><b>⚠️ VIGILANCE — DÉLAI INFÉRIEUR À 24 H</b><br>Si les clés doivent encore venir du continent et qu’aucun autre accès n’est possible : ne pas ouvrir Tally ni encaisser. Reporter ou obtenir un accès local effectif.</div>
+ <label class="check"><input type="checkbox" id="keysAvailableBefore" ${p.keysAvailableBefore?"checked":""}><span><b>Clés en provenance du continent :</b> leur disponibilité effective en Corse avant le créneau est confirmée (obligatoire uniquement si ce mode est choisi).</span></label>
+ <div class="warn"><b>⚠️ CLÉS / ACCÈS</b><br>Aucun préavis minimal de réservation. Si les clés ne sont pas disponibles à temps, ne pas ouvrir Tally ni encaisser : prévoir un accès local effectif ou reporter.</div>
  <div class="notice">Le retour postal standard des clés en France est inclus dans le tarif, sans étiquette prépayée à demander au propriétaire.</div>
  <button class="btn primary" onclick="saveAccessIntake()">VALIDER L’ACCÈS ET CONTINUER</button><button class="btn ghost" onclick="slot()">MODIFIER LE CRÉNEAU</button></div>`);
 }
@@ -2268,9 +2269,9 @@ function saveAccessIntake(){
  const old=S.accessPlan||{};
  const mode=isKeyMission()?"KEY":document.getElementById("accMode")?.value||"BOX";
  const p={approved:true,mode,keyOrigin:isKeyMission()&&S.sub==="GIVE"?document.getElementById("keyOrigin")?.value||"":"",contact:(document.getElementById("accContact")?.value||"").trim(),exact:!!document.getElementById("accExact")?.checked,duration:document.getElementById("accDuration")?.value||"",
- returnMode:(document.getElementById("accReturn")?.value||""),returnDetail:(document.getElementById("accReturnDetail")?.value||"").trim()};
+ returnMode:(document.getElementById("accReturn")?.value||""),returnDetail:(document.getElementById("accReturnDetail")?.value||"").trim(),keysAvailableBefore:!!document.getElementById("keysAvailableBefore")?.checked};
  if(!isKeyMission()&&!["LOCAL","POST"].includes(mode)){p.returnMode="";p.returnDetail="";}
- const changedAccess=(old.mode!==p.mode||old.keyOrigin!==p.keyOrigin||old.returnMode!==p.returnMode||old.returnDetail!==p.returnDetail);
+ const changedAccess=(old.mode!==p.mode||old.keyOrigin!==p.keyOrigin||old.returnMode!==p.returnMode||old.returnDetail!==p.returnDetail||old.keysAvailableBefore!==p.keysAvailableBefore);
  if(S.keyCustody?.receivedAt && changedAccess){
    alert("Clés déjà reçues : impossible de remplacer le mode d’accès ou leur destination et d’effacer la traçabilité. Conservez le dossier ouvert et faites acter toute nouvelle modalité de restitution avant correction.");
    return accessIntake();
