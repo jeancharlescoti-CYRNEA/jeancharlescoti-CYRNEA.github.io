@@ -1823,8 +1823,7 @@ function slot(){
    <button id="add_jalon_2" class="btn ghost" onclick="toggleMultiJalon(2)">+ AJOUTER LE JALON 2 SI SA DATE EST CONNUE</button>
    ${jalonBlock(2,true)}
 
-   <button id="add_jalon_3" class="btn ghost hidden" onclick="toggleMultiJalon(3)">+ AJOUTER LE JALON 3 SI SA DATE EST CONNUE</button>
-   ${jalonBlock(3,true)}
+   ${(S.result?.mission==="SUIVRE"&&S.result?.passages===2)?"":`<button id="add_jalon_3" class="btn ghost hidden" onclick="toggleMultiJalon(3)">+ AJOUTER LE JALON 3 SI SA DATE EST CONNUE</button>${jalonBlock(3,true)}`}
 
    <div class="notice">${isB2B?"Les autres jalons seront programmés ultérieurement, avec leurs éventuelles majorations.":"Les autres passages restent compris dans le prix choisi et seront convenus ultérieurement."}</div>
    <button class="btn primary" onclick="multiPassagePricing()">VÉRIFIER DISPONIBILITÉ ET TARIF</button>
@@ -3505,7 +3504,7 @@ function markOverrunPaid(){
 
 function extraMomentRule(){
  const m=baseMissionName(S.result?.mission||"");
- if(m==="SUIVRE") return {unit:300,base:"TTC",name:"moment"};
+ if(m==="SUIVRE") return S.result?.passages===2 && Number(S.passage)===2 ? {unit:200,base:"TTC",name:"observation"} : null;
  if(m==="CONTINUITÉ PROJET") return {unit:420,base:"HT",name:"jalon"};
  return null;
 }
@@ -3513,6 +3512,13 @@ function extraMomentInfo(){
  const r=extraMomentRule();
  if(!r)return;
  const next=S.passage+1;
+ if(S.result?.mission==="SUIVRE"){
+   return draw(`<div class="card"><h1>Troisième observation facultative</h1>
+     <div class="notice">+200 € TTC, pour une troisième observation factuelle de la même situation après la formule à 490 €.</div>
+     <div class="stop"><b>PAIEMENT SPÉCIFIQUE NON RACCORDÉ</b><br>Ne pas réserver automatiquement 200 € dans Tally : aucun formulaire correspondant n'est configuré. Accord et paiement distinct à faire valider avant cette observation, sans altérer la commande initiale.</div>
+     <button class="btn ghost" onclick="restitution()">RETOUR À LA RESTITUTION</button>
+   </div>`);
+ }
  if(next>5){
    return draw(`<div class="card"><h1>Passage supplémentaire</h1><div class="stop"><b>⛔ À PARTIR DU 6e</b><br>Devis, requalification ou refus si la demande devient récurrente. Ne pas lancer un nouveau passage automatiquement.</div><button class="btn ghost" onclick="restitution()">RETOUR</button></div>`);
  }
@@ -3606,20 +3612,6 @@ function terrain(){
  restoreTerrainDraft();
  setTimeout(refreshTerrainMediaStatus,0);
 }
-function saveDeciderR2(){
- if(S.result?.mission!=="DÉCIDER")return;
- const keys=["informations","documents","questions","synthese"];
- const next={...(S.deciderR2||{})};
- for(const k of keys){const e=document.getElementById("deciderR2_"+k);if(e)next[k]=e.value.trim()}
- S.deciderR2=next;
- save();
-}
-function validateDeciderR2(){
- saveDeciderR2();
- const d=S.deciderR2||{};
- if(["informations","documents","questions","synthese"].some(k=>!d[k]))return alert("Complétez les quatre rubriques DÉCIDER. Indiquez « Aucun » ou « Non disponible » si nécessaire. N’inventez aucune information.");
- closeMission();
-}
 function restitution(){
  setStage("RESTITUTION");
  const interim=!!S.result.multi&&S.passage<plannedPassageCount();
@@ -3635,11 +3627,11 @@ function restitution(){
  <div class="row"><b>Accord client</b><span>${esc(S.overrun.agreementMethod==="SMS"?"SMS reçu":"Accord téléphonique")} — ${esc(S.overrun.agreementAt||"-")}</span></div>
  <div class="row"><b>Supplément</b><span>${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":S.overrun.paymentStatus==="PENDING"?"À ENCAISSER":"À VÉRIFIER")}</span></div>`:""}
  <div class="row"><b>Médias / preuves</b><span>${S.terrainMedia.length?esc(S.terrainMedia.join(" • ")):"AUCUN FICHIER AJOUTÉ"}</span></div>
- ${S.result.mission==="DÉCIDER"?`<div class="neutral"><b>DOSSIER PRÉPARATOIRE À LA DÉCISION — R2</b><div class="muted">Faits vérifiés ou déclarations attribuées à leur source. Le client reste seul décisionnaire.</div>${[["informations","Informations recueillies"],["documents","Documents et réponses disponibles (avec sources)"],["questions","Points restant à éclaircir"],["synthese","Synthèse factuelle préparatoire à la décision"]].map(([k,label])=>`<div class="field"><label>${label}</label><textarea id="deciderR2_${k}" rows="3" onchange="saveDeciderR2()" onblur="saveDeciderR2()" placeholder="Faits uniquement ; « Aucun » ou « Non disponible » si nécessaire.">${esc(S.deciderR2?.[k]||"")}</textarea></div>`).join("")}</div>`:""}
+ ${S.result.mission==="DÉCIDER"?`<div class="neutral"><b>DÉCIDER — RESTITUTION FACTUELLE</b><div class="muted">Les faits et les limites de vérification sont repris ci-dessus. Aucun dossier préparatoire complexe obligatoire. Le client décide lui-même.</div></div>`:""}
  <div class="notice">La PWA rassemble les données nécessaires à la restitution R0/R1/R2/R3 et évite de ressaisir les informations déjà connues.</div>
  ${interim
    ? `<button class="btn primary" onclick="continueMultiAfterRestitution()">ENREGISTRER L’INTERMÉDIAIRE ET PRÉPARER LE PASSAGE ${S.passage+1}</button>`
-   : `<button class="btn primary" onclick="${S.result.mission==="DÉCIDER"?"validateDeciderR2()":"closeMission()"}">VALIDER LA RESTITUTION FINALE</button>${S.result.multi&&S.passage>=3?`<button class="btn ghost" onclick="extraMomentInfo()" style="margin-top:10px">UN 4e / 5e PASSAGE LIÉ EST ENVISAGÉ</button>`:""}`}
+   : `<button class="btn primary" onclick="closeMission()">VALIDER LA RESTITUTION FINALE</button>${extraMomentRule()&&!interim?`<button class="btn ghost" onclick="extraMomentInfo()" style="margin-top:10px">${S.result?.mission==="SUIVRE"?"3e OBSERVATION FACULTATIVE (+200 €)":"PASSAGE B2B SUPPLÉMENTAIRE À REQUALIFIER"}</button>`:""}`}
  </div>`);
  save();
 }
