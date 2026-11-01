@@ -3202,6 +3202,46 @@ function recordPassageSnapshot(){
  });
  S.passageHistory=history;
 }
+function replanExpiredSuivrePassage(){
+ if(S.result?.mission!=="SUIVRE")return alert("Non disponible.");
+ const next=Number(S.passage||1)+1;
+ S.multiSlots=(S.multiSlots||[]).filter(x=>Number(x.index)!==next);
+ const draft=ensureMultiDraftState();delete draft[next];S.multiDraft=draft;
+ save();scheduleNextSuivrePassage();
+}
+function scheduleNextSuivrePassage(){
+ if(S.result?.mission!=="SUIVRE"||!S.result?.multi)return alert("Programmation réservée à SUIVRE.");
+ const next=Number(S.passage||1)+1;
+ if(next>plannedPassageCount())return alert("Tous les passages de la formule sont déjà réalisés.");
+ if(S.paymentStatus!=="PAID_CONFIRMED"||!["CONFIRMED","CONFIRMED_AFTER_ALTERNATIVE"].includes(S.decisionStatus))
+   return alert("La mission initiale doit être payée et confirmée avant un nouveau départ.");
+ draw(`<div class="card"><h1>Programmer le passage ${next} — SUIVRE</h1>
+   <div class="notice"><b>COMPRIS DANS LA FORMULE</b><br>Aucun nouveau paiement. Le prochain passage est une observation de la même situation et du même objet.</div>
+   <div class="field"><label>Date souhaitée</label><input id="suivreNextDate" type="date" min="${todayLocalISO()}" value="${todayLocalISO()}"></div>
+   ${timeDropdownHtml("suivreNextTime","")}
+   <div class="warn"><b>AGENDA</b><br>Contrôler personnellement la disponibilité avant validation. Pas de départ le dimanche, un jour férié, ni en dehors de 08 h 00–18 h 45.</div>
+   <button class="btn primary" onclick="confirmNextSuivrePassage()">CONFIRMER CE PASSAGE — SANS NOUVEAU PAIEMENT</button>
+   <button class="btn ghost" onclick="restitution()">RETOUR</button>
+ </div>`);
+}
+function confirmNextSuivrePassage(){
+ if(S.result?.mission!=="SUIVRE"||!S.result?.multi)return alert("Mission incompatible.");
+ if(S.paymentStatus!=="PAID_CONFIRMED"||!["CONFIRMED","CONFIRMED_AFTER_ALTERNATIVE"].includes(S.decisionStatus))
+   return alert("Mission initiale non confirmée : nouvelle intervention bloquée.");
+ const next=Number(S.passage||1)+1;
+ if(next>plannedPassageCount())return alert("Aucun passage supplémentaire inclus.");
+ const date=getDateValue("suivreNextDate");
+ const time=normalizeTime4(getDropdownTime("suivreNextTime"));
+ const check=validateMissionTimeRules(date,time,"le passage suivant");
+ if(!check.ok)return alert(check.msg);
+ const exists=(S.multiSlots||[]).some(p=>Number(p.index)===next);
+ if(exists)return alert("Ce passage possède déjà un créneau : ne pas écraser une date enregistrée.");
+ if(!confirm("Avez-vous vérifié votre agenda et accepté personnellement ce créneau pour le même dossier SUIVRE ? Aucun paiement supplémentaire ne sera créé."))return;
+ const p={index:next,date,time,priority:false,evening:false,night:false,sunday:false,surcharge:0,label:"Standard — inclus dans la formule"};
+ S.multiSlots=[...(S.multiSlots||[]),p].sort((a,b)=>Number(a.index)-Number(b.index));
+ const draft=ensureMultiDraftState();draft[next]={active:true,date,time};S.multiDraft=draft;
+ save();continueMultiAfterRestitution();
+}
 function continueMultiAfterRestitution(){
   if(S.overrun?.accepted&&S.overrun.paymentStatus!=="PAID")
     return alert("Passage suivant bloqué : supplément du passage actuel non encore encaissé et vérifié.");
@@ -3213,11 +3253,12 @@ function continueMultiAfterRestitution(){
     return draw(`<div class="card"><h1>Passage / jalon ${next} à programmer</h1>
       <div class="warn"><b>⚠️ ARRÊT NORMAL</b><br>Le prochain créneau n’est pas fixé. Aucun passage suivant ne peut être lancé sans date, heure, contrôle d’agenda et éventuelle majoration.</div>
       <div class="notice">${S.result?.mission==="SUIVRE"?"Le passage restant est inclus dans le tarif de la formule : confirmer sa date sans créer un second paiement.":"Avant un nouveau jalon B2B, vérifier les contraintes et la confirmation humaine."}</div>
+      ${S.result?.mission==="SUIVRE"?`<button class="btn primary" onclick="scheduleNextSuivrePassage()">PROGRAMMER LE PASSAGE ${next} (DÉJÀ INCLUS)</button>`:""}
       <button class="btn ghost" onclick="archivePartialMulti()">CONSERVER LA MISSION EN COURS</button>
     </div>`);
   }
   const validation=validateMissionTimeRules(p.date,p.time,"le prochain passage");
-  if(!validation.ok)return alert("Prochain passage : "+validation.msg+" Conserver le dossier sans démarrer.");
+ if(!validation.ok)return S.result?.mission==="SUIVRE"?draw(`<div class="card"><h1>Passage à reprogrammer</h1><div class="stop">${esc(validation.msg)}</div><button class="btn primary" onclick="replanExpiredSuivrePassage()">REPROGRAMMER CE PASSAGE</button><button class="btn ghost" onclick="archivePartialMulti()">CONSERVER EN COURS</button></div>`):alert("Prochain passage : "+validation.msg+" Conserver le dossier sans démarrer.");
   if(!["CONFIRMED","CONFIRMED_AFTER_ALTERNATIVE"].includes(S.decisionStatus))
     return alert("Prochain passage : confirmation humaine de la mission requise.");
   S.passage=next;
