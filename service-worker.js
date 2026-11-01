@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-20261026-fiabilite-v2';
+const CACHE='cyrnea-assistant-20261102-conformite-v3';
 const ASSETS=['./index.html','./terrain-clock.js','./change-inbox.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
@@ -13,9 +13,8 @@ self.addEventListener('activate',event=>{
   event.waitUntil(
     caches.keys()
       .then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
+      // Aucun rechargement forcé d'une mission en cours pendant la mise à jour.
       .then(()=>self.clients.claim())
-      .then(()=>self.clients.matchAll({type:'window',includeUncontrolled:true}))
-      .then(clients=>Promise.all(clients.map(client=>client.navigate(client.url).catch(()=>null))))
   );
 });
 
