@@ -730,6 +730,12 @@ function identify(){
 <option value="Sotta">Sotta</option>
 <option value="Sainte-Lucie-de-Porto-Vecchio / Pinarello">Sainte-Lucie-de-Porto-Vecchio / Pinarello</option>
 <option value="Tarco">Tarco</option>
+<option value="San-Gavino-di-Carbini">San-Gavino-di-Carbini</option>
+<option value="Zonza">Zonza</option>
+<option value="Fautea">Fautea</option>
+<option value="Favone">Favone</option>
+<option value="Figa">Figa</option>
+<option value="Sari-Solenzara">Sari-Solenzara</option>
 <option value="__OTHER__">AUTRE SECTEUR — préciser</option>
 </select>
 <div class="field hidden" id="otherCityWrap" style="margin-top:8px"><label>Autre commune / secteur</label><input id="otherCity" placeholder="Ex. Figari"></div>
@@ -764,7 +770,7 @@ const ownerNeeds=[
  ["WEATHER","Intempérie","Action simple avant ou vérification pratique après","STANDARD"],
  ["SEE","VOIR","Observer et documenter un point précis pour savoir ce qui est objectivement visible sur place","VIEW"],
  ["DECIDE","DÉCIDER","Réunir les éléments factuels prévus avant une décision du client","PRESENCE"],
- ["FOLLOW","SUIVRE","Comparer la même situation à trois moments clés.","PRESENCE"],
+ ["FOLLOW","SUIVRE","Comparer la même situation en 2 ou 3 observations ponctuelles.","PRESENCE"],
  ["OTHER","Autre","Besoin ne correspondant pas aux choix ci-dessus","STANDARD"]
 ];
 
@@ -847,7 +853,7 @@ function sub(){
 function zone(){
  const x=String(S.city||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[-_]/g," ").replace(/\s+/g," ").trim();
  // Les autres communes nommées Sainte-Lucie ne font pas partie du secteur.
- return ["porto vecchio","lecci","sotta","sainte lucie de porto vecchio","sainte lucie de porto vecchio / pinarello","pinarello","tarco"].includes(x);
+ return ["porto vecchio","lecci","sotta","san gavino di carbini","zonza","sainte lucie de porto vecchio","sainte lucie de porto vecchio / pinarello","pinarello","fautea","tarco","favone","figa","sari solenzara"].includes(x);
 }
 function voir(){return S.universe==="RELAIS"?{status:"PROPOSER",mission:"VOIR RELAIS",price:"260 € TTC",cap:"1 h",contract:"RELAIS",rest:"R1_RELAIS"}:{status:"PROPOSER",mission:"VOIR PRÉSENCE",price:"260 € TTC",cap:"1 h",contract:"PRÉSENCE PROPRIÉTAIRES",rest:"R1"}}
 function classify(){
@@ -928,7 +934,7 @@ function objectOptions(){
     "Recueillir les éléments factuels prévus au cahier des charges avant la décision du client"
   ];
   else if(m==="SUIVRE") out=[
-    "Comparer la même situation à trois moments clés."
+    "Comparer la même situation en 2 ou 3 observations ponctuelles."
   ];
   else if(["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","PRÉSENCE LOGISTIQUE B2B"].includes(m)){
     if(S.sub==="ACCESS") out=["Accueillir l’intervenant désigné, rester présent pendant l’opération courte, refermer les lieux après son départ et confirmer l’exécution (30 minutes maximum au total)"];
@@ -1029,7 +1035,7 @@ function paymentAmountText(){
 function scheduleText(){
   if(S.result?.multi && Array.isArray(S.multiSlots)){
     const known=S.multiSlots.map(p=>`Jalon ${p.index}: ${p.date} ${displayTime4(p.time)} (${p.label})`);
-    const missing=Math.max(0,(S.result?.mission==="SUIVRE"?(S.result?.passages||2):3)-S.multiSlots.length);
+    const missing=Math.max(0,plannedPassageCount()-S.multiSlots.length);
     if(missing) known.push(`${missing} jalon(s) restant(s) : date(s) à programmer ultérieurement`);
     return known.join(" | ");
   }
@@ -1075,7 +1081,7 @@ function showResult(){
  : `<div class="stop"><b>⛔ MISSION NON RÉSERVABLE</b><br>Le parcours commercial s'arrête ici. Aucun paiement ni mission terrain.</div><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button>`}
  </div>`)
 }
-function needsCahier(){return ["DÉCIDER","SUIVRE","PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","CONTINUITÉ PROJET"].includes(S.result.mission)}
+function needsCahier(){return ["PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","CONTINUITÉ PROJET"].includes(S.result.mission)}
 
 function baseMissionName(m){
   if(m==="VOIR PRIORITAIRE RELAIS") return "VOIR RELAIS";
@@ -1637,12 +1643,13 @@ function multiPassagePricing(){
   save();
   showManualMultiReview();
 }
+function plannedPassageCount(){return S.result?.mission==="SUIVRE"?(S.result?.passages===3?3:2):3;}
 function multiPassageRows(){
   if(!S.result.multi||!Array.isArray(S.multiSlots)) return "";
   let rows=S.multiSlots.map(p=>`
     <div class="row"><b>Passage / jalon ${p.index}</b><span>${esc(p.date)} · ${esc(displayTime4(p.time))} — ${esc(p.label)}${p.surcharge?` (+${p.surcharge} ${S.result.contract==="PRÉSENCE ENTREPRISES"?"€ HT":"€ TTC"})`:""}</span></div>
   `).join("");
-  if(S.multiSlots.length<(S.result?.mission==="SUIVRE"?(S.result?.passages||2):3)){
+  if(S.multiSlots.length<plannedPassageCount()){
     rows+=`<div class="row"><b>Passages restants</b><span>${S.result?.mission==="SUIVRE"?"Dates à convenir ultérieurement, incluses dans le tarif fixe.":"Dates à programmer, avec majorations éventuelles B2B validées ultérieurement."}</span></div>`;
   }
   return rows;
@@ -3201,11 +3208,12 @@ function continueMultiAfterRestitution(){
     return alert("Passage suivant bloqué : supplément du passage actuel non encore encaissé et vérifié.");
   recordPassageSnapshot();
   const next=S.passage+1;
+  if(next>plannedPassageCount())return closeMission();
   const p=(S.multiSlots||[]).find(x=>x.index===next);
   if(!p){
     return draw(`<div class="card"><h1>Passage / jalon ${next} à programmer</h1>
       <div class="warn"><b>⚠️ ARRÊT NORMAL</b><br>Le prochain créneau n’est pas fixé. Aucun passage suivant ne peut être lancé sans date, heure, contrôle d’agenda et éventuelle majoration.</div>
-      <div class="notice">En pratique : créneau → Tally / paiement → confirmation humaine CYRNEA → préparation interne → mission prête.</div>
+      <div class="notice">${S.result?.mission==="SUIVRE"?"Le passage restant est inclus dans le tarif de la formule : confirmer sa date sans créer un second paiement.":"Avant un nouveau jalon B2B, vérifier les contraintes et la confirmation humaine."}</div>
       <button class="btn ghost" onclick="archivePartialMulti()">CONSERVER LA MISSION EN COURS</button>
     </div>`);
   }
@@ -3521,7 +3529,8 @@ function terrain(){
  if(S.result.mission.includes("APRÈS INTEMPÉRIE"))rules=["Vérifier AVANT toute manipulation : pas d'eau","Pas d'humidité anormale","Pas d'odeur de brûlé","Pas d'échauffement","Pas de dommage visible","Un seul réarmement simple maximum si prévu"];
  else if(S.result.mission.includes("VOIR"))rules=["Observer uniquement le périmètre prévu","Séparer OBSERVÉ / DÉCLARÉ / DOCUMENT / NON VÉRIFIABLE","Aucun diagnostic / conformité / cause"];
  else if(S.result.mission==="ACCÈS B2B" || S.result.mission==="PRÉSENCE LOGISTIQUE B2B")rules=["Heure de début précise confirmée","Accueillir l’intervenant choisi par l’entreprise et rester présent pendant l’opération","Prévoir le départ du tiers et la fermeture dans le plafond total","Aucune coordination ni contrôle technique","En cas de retard ou d’impossibilité de fermeture : contacter l’entreprise et consigner les faits"];
- else if(S.result.mission==="DÉCIDER"||S.result.mission.includes("PRÉSENCE PROJET"))rules=["Suivre le cahier des charges","Poser uniquement les questions convenues","Aucune décision ou signature pour le client"];
+ else if(S.result.mission==="DÉCIDER")rules=["Relever les éléments factuels convenus","Séparer les faits observés, les déclarations et les points non vérifiables","Le client décide lui-même : aucun avis technique ni signature pour lui"];
+  else if(S.result.mission.includes("PRÉSENCE PROJET"))rules=["Suivre le cahier des charges","Poser uniquement les questions convenues","Aucune décision ou signature pour le client"];
  else rules=["Exécuter uniquement l'objet prévu","Ne pas élargir la mission","Documenter uniquement les preuves utiles"];
  if(needsWaitGuard()){
    if(["ACCÈS B2B","PRÉSENCE LOGISTIQUE B2B"].includes(S.result.mission))
@@ -3613,7 +3622,7 @@ function validateDeciderR2(){
 }
 function restitution(){
  setStage("RESTITUTION");
- const interim=S.result.multi&&S.passage<3;
+ const interim=!!S.result.multi&&S.passage<plannedPassageCount();
  draw(`<div class="card"><h1>${interim?"Restitution intermédiaire":"Restitution finale"}</h1><div class="operatorOnly">Décrivez uniquement ce qui a été vu, fait, dit ou impossible à vérifier. Pas d’interprétation technique.</div>
  <div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div>
  <div class="row"><b>Passage</b><span>${esc(String(S.passage))}</span></div>
