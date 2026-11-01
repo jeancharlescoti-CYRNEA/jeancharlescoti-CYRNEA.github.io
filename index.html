@@ -221,9 +221,7 @@ const RELAIS_OVERRUN_PAYMENT_LINKS={
 };
 const B2B_PAYMENT_CAPABILITIES={CARD:true,PAYPAL:true,SEPA_TRANSFER:false};
 const TALLY_URLS={
-  RELAIS_HS:"https://tally.so/r/b5oz46",
   RELAIS_STANDARD:"https://tally.so/r/xXOqpk",
-  PRESENCE_HS:"https://tally.so/r/GxZbE2",
   PRESENCE_STANDARD:"https://tally.so/r/7R6AZa",
   B2B_HS:"https://tally.so/r/RGp0PQ",
   B2B_STANDARD:"https://tally.so/r/2EQWLD"
@@ -1914,9 +1912,9 @@ function tallyAvailabilityMode(){
 }
 function tallyBaseUrl(){
  const standard=!isHorsStandard();
- if(S.result?.contract==="RELAIS")return standard?TALLY_URLS.RELAIS_STANDARD:TALLY_URLS.RELAIS_HS;
+ if(S.result?.contract==="RELAIS")return TALLY_URLS.RELAIS_STANDARD;
  if(S.result?.contract==="PRÉSENCE ENTREPRISES")return standard?TALLY_URLS.B2B_STANDARD:TALLY_URLS.B2B_HS;
- return standard?TALLY_URLS.PRESENCE_STANDARD:TALLY_URLS.PRESENCE_HS;
+ return TALLY_URLS.PRESENCE_STANDARD;
 }
 function tallyMissionValue(){
  const m=String(S.result?.mission||"");
