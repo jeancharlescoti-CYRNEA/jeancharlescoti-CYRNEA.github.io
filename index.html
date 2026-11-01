@@ -1154,7 +1154,7 @@ function timeDropdownHtml(baseId,onchangeFn="refreshCalendarConstraints()"){
       </select>
     </div>
     <input id="${baseId}" type="hidden" value="">
-    <div class="muted">${hoursNote} Minutes : 00, 15, 30 ou 45, en STANDARD comme en HORS STANDARD. Les suppléments dépendent des contraintes réelles du créneau, jamais des minutes choisies.</div>
+    <div class="muted">${hoursNote} Minutes : 00, 15, 30 ou 45.${isB2B?" Les éventuels suppléments B2B dépendent uniquement des contraintes du créneau.":" Aucun délai minimal ni supplément pour les propriétaires."}</div>
   </div>`;
 }
 function ensureMultiDraftState(){
@@ -1800,8 +1800,8 @@ function slot(){
 
  if(multi){
    const isB2B=S.result.contract==="PRÉSENCE ENTREPRISES";
-   const pri=isB2B?"+120 € HT":"+90 € TTC";
-   const sun=isB2B?"+180 € HT":"+120 € TTC";
+   const pri="+120 € HT";
+   const sun="+180 € HT";
    const jalonBlock=(i, hidden)=>`
      <div id="jalon_${i}" class="checkZone${hidden?" hidden":""}">
        <div class="checkIntro">PASSAGE / JALON ${i}${i>1?" — UNIQUEMENT SI DATE CONNUE":""}</div>
@@ -2608,7 +2608,7 @@ function clientDocSuggestions(){
   if(m.includes("APRÈS INTEMPÉRIE")) return ["Photo / repère des points à vérifier","Document de référence utile si comparaison nécessaire"];
   if(m.includes("VOIR")) return ["Photo(s) de référence","Devis / facture / document à comparer si utile"];
   if(m==="DÉCIDER") return ["Devis / facture / document du rendez-vous","Photos ou document(s) de référence"];
-  if(m==="SUIVRE") return ["Photos / repères de référence","Document de cadrage commun aux 3 passages"];
+  if(m==="SUIVRE") return ["Photos / repères utiles à comparer","Indications factuelles précisant la situation commune aux observations"];
   if(m==="VISITE TERRAIN PILOTÉE") return ["Brief / plan / photo de repère","Consignes d’accès ou de sécurité du site"];
   if(m==="PRÉSENCE PROJET") return ["Cahier des charges / ordre du jour","Document(s) à montrer, remettre ou vérifier","Consignes du site"];
   if(m==="PRÉSENCE PROJET ÉTENDUE") return ["Cahier des charges / ordre du jour","Plan / documents utiles aux différentes zones","Consignes du site"];
@@ -2747,8 +2747,8 @@ function docPack(){
   let support="Aucun document supplémentaire";
   let rest=S.result?.rest||"R0";
 
-  if(m==="DÉCIDER"){support="Cahier des charges validé";rest="R2"}
-  else if(m==="SUIVRE"){support="Cahier des charges commun aux 3 passages";rest="R3 comparative"}
+  if(m==="DÉCIDER"){support="Liste des points factuels convenus, si utile";rest="Restitution factuelle"}
+  else if(m==="SUIVRE"){support="Situation commune + repères comparables (sans surveillance)";rest=(S.result?.passages===3?"3":"2")+" observations factuelles"}
   else if(m==="PRÉSENCE PROJET"){support="Cahier des charges validé";rest="R2 B2B"}
   else if(m==="PRÉSENCE PROJET ÉTENDUE"){support="Objectif unique + brief validé";rest="R2 B2B"}
   else if(m==="CONTINUITÉ PROJET"){support="Cahier des charges commun aux 3 jalons";rest="R3 B2B"}
@@ -3719,6 +3719,8 @@ function restitution(){
  save();
 }
 function closeMission(){
+ if(S.result?.multi&&S.paymentStatus!=="REFUNDED"&&Number(S.passage||1)<plannedPassageCount())
+   return alert("Mission en plusieurs passages : la clôture définitive ne peut intervenir avant le dernier passage inclus. Conserver le dossier actif.");
  if(!S.departureAt)return alert("⛔ Impossible de clôturer sans contrôle terrain terminé et heure de départ.");
  setStage("CLÔTURE");
  const ov=S.overrun?.accepted?S.overrun:null;
@@ -3756,6 +3758,8 @@ function closeMission(){
  </div>`);
 }
 function finalizeArchive(){
+ if(S.result?.multi&&S.paymentStatus!=="REFUNDED"&&Number(S.passage||1)<plannedPassageCount())
+   return alert("Archivage impossible : les passages inclus dans la mission ne sont pas terminés.");
  if(!document.getElementById("reportSentChecked")?.checked)
    return alert("Archivage bloqué : confirmez d’abord l’envoi réel de la restitution au client. Le dossier peut rester actif.");
  const status=document.getElementById("fs")?.value||"";
@@ -3768,7 +3772,7 @@ function finalizeArchive(){
  S.finalStatus=document.getElementById("fs")?.value||S.finalStatus||"MISSION CLÔTURÉE";
  save();archive();
 }
-function archive(){if(S.overrun?.accepted&&S.overrun.paymentStatus!=="PAID")return alert("⛔ Archivage bloqué : supplément de prolongation non réglé.");if(!keysFullyReturned() && !(!S.keyCustody?.receivedAt && (S.paymentStatus==="REFUNDED" || String(S.finalStatus||"").startsWith("MISSION IMPOSSIBLE"))))return alert("⛔ Archive bloquée : clés reçues non restituées.");recordPassageSnapshot();setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button id="archiveExportBtn" class="btn primary" onclick="exportMissionArchive()">EXPORTER LE DOSSIER → FICHIERS / iCLOUD</button><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
+function archive(){if(S.result?.multi&&S.paymentStatus!=="REFUNDED"&&Number(S.passage||1)<plannedPassageCount())return alert("⛔ Archiver uniquement après le dernier passage inclus.");if(S.overrun?.accepted&&S.overrun.paymentStatus!=="PAID")return alert("⛔ Archivage bloqué : supplément de prolongation non réglé.");if(!keysFullyReturned() && !(!S.keyCustody?.receivedAt && (S.paymentStatus==="REFUNDED" || String(S.finalStatus||"").startsWith("MISSION IMPOSSIBLE"))))return alert("⛔ Archive bloquée : clés reçues non restituées.");recordPassageSnapshot();setStage("ARCHIVE");save();const archivedId=activeMissionKey(S);if(archivedId){writeDeletedIds(loadDeletedIds().filter(x=>x!==archivedId));if(getSyncKey())syncCentralMissions({silent:true}).catch(()=>{})}const refunded=S.paymentStatus==="REFUNDED";draw(`<div class="card"><h1>${refunded?"Dossier remboursé et archivé":"Mission archivée"}</h1><div class="row"><b>Référence</b><span>${esc(S.missionId)}</span></div><div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div><div class="row"><b>Statut</b><span>${esc(S.finalStatus)}</span></div>${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":"À SUIVRE")}</span></div>`:""}<div class="row"><b>Archive cible</b><span>iCloud Drive / CYRNEA / MISSIONS / ${esc(S.result.contract==="RELAIS"?"RELAIS":"PRÉSENCE")} / ${esc(S.missionId)}</span></div><div class="notice">${refunded?"Dossier arrêté après remboursement. Aucun départ terrain ne doit être effectué.":"Mission terminée : appel → préparation → terrain → restitution → clôture."}<br><br><b>Archivage :</b> la mission clôturée reste conservée dans la base centrale CYRNEA et n’apparaît plus dans les missions actives. L’archive iCloud reste le stockage documentaire de fond.</div><div class="toolbar"><button id="archiveExportBtn" class="btn primary" onclick="exportMissionArchive()">EXPORTER LE DOSSIER → FICHIERS / iCLOUD</button><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button></div></div>`)}
 function recoverNewerStageViewState(){
  const baseId=activeMissionKey(S);
  let best=null;
