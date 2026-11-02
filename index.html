@@ -1065,13 +1065,9 @@ function missionPhoneScript(){
   if(m==='PRÉSENCE LOGISTIQUE B2B') return "Votre besoin correspond à PRÉSENCE LOGISTIQUE à 169 € HT : accueil, présence pendant l’opération et fermeture, une heure maximum au total." ;
   return "Je vais vous orienter vers la mission la plus adaptée et vous indiquer le tarif avant toute réservation.";
 }
-function isB2BContactOnlyOffer(result=S.result){
- return result?.contract==="PRÉSENCE ENTREPRISES" && result?.mission==="SUIVI DE PROJET - 2 PASSAGES";
-}
 function showResult(){
  setStage("CADRAGE");let r=S.result;
- const contactOnly=isB2BContactOnlyOffer(r);
- const normal=(r.status==="PROPOSER" && !contactOnly);
+ const normal=(r.status==="PROPOSER");
  const quote=(r.status==="DEVIS PRÉALABLE");
  draw(`<div class="card"><h1>${esc(r.status)}</h1><div class="readAloud">${esc(missionPhoneScript())}</div>
  <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(r.mission))}</span></div>
@@ -1084,7 +1080,6 @@ function showResult(){
  <div class="field"><label>Montant du devis accepté</label><input id="quotePrice" placeholder="${S.caller==="B2B"?"Ex. 500 € HT":"Ex. 149 € TTC"}"></div>
  <button class="btn primary" onclick="if(!saveObject())return;let q=document.getElementById('quotePrice').value.trim();if(!q)return alert('Montant du devis requis');if(S.caller==='B2B'&&!/HT/i.test(q))return alert('Pour le B2B, indiquez le montant du devis en HT.');if(S.caller!=='B2B'&&!/TTC/i.test(q))return alert('Pour un particulier, indiquez le montant du devis en TTC.');S.result.price=q;S.result.status='PROPOSER';S.result.isQuote=true;slot()">DEVIS ACCEPTÉ → CONTINUER</button>`
  : normal?`<button class="btn primary" onclick="if(!saveObject())return;slot()">CONTINUER VERS LE CRÉNEAU</button>`
- : contactOnly?`<div class="neutral"><b>SUIVI DE PROJET — 2 PASSAGES : CONTACT DIRECT</b>La formule à 850 € HT se convient directement avec CYRNEA. Aucun lien Tally, aucune commande et aucun paiement automatique ne seront préparés depuis la PWA pour cette formule.</div><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button>`
  : `<div class="stop"><b>⛔ MISSION NON RÉSERVABLE</b><br>Le parcours commercial s'arrête ici. Aucun paiement ni mission terrain.</div><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button>`}
  </div>`)
 }
@@ -1622,7 +1617,7 @@ function multiPassagePricing(){
   else return alert("Cette fonction multi-passage ne s'applique pas à cette mission.");
   // Pas de majoration appliquée à tort sur l'ensemble du forfait multi-passages.
   // Toute contrainte hors standard B2B se décide par contact direct.
-  if(b2bSuivi && passages.some(p=>p.priority||p.evening||p.night||p.sunday))
+  if(b2bSuivi && passages.some(p=>p.evening||p.night||p.sunday))
     return alert("SUIVI DE PROJET B2B : au moins un passage est hors standard. Contactez CYRNEA directement ; aucun paiement forfaitaire automatique pour ce cas.");
   const total=base;
   passages.forEach(p=>{p.surcharge=0;p.label="Standard — inclus dans le forfait";});
@@ -1701,7 +1696,7 @@ function availabilityPricing(){
   if(m==="CONTINUITÉ PROJET"||m==="SUIVI DE PROJET - 2 PASSAGES"){
     const base=m==="CONTINUITÉ PROJET"?1190:850;
     S.result.price=base.toLocaleString("fr-FR")+" € HT";
-    S.result.availabilityLabel=(priority||evening||night||sunday)?"HORS STANDARD — contact direct":"Standard";
+    S.result.availabilityLabel=(evening||night||sunday)?"HORS STANDARD — contact direct":priority?"Demande sous 24 h — confirmation humaine obligatoire":"Standard";
   }
 }
 function supportsPriority(){
@@ -1804,7 +1799,7 @@ function slot(){
        <div class="checkIntro">PASSAGE / JALON ${i}${i>1?" — UNIQUEMENT SI DATE CONNUE":""}</div>
        ${multiDateDropdownHtml(`d${i}`)}
        ${multiTimeDropdownHtml(`sl${i}`)}
-       ${b2bSuivi?'<div class="muted">SUIVI B2B : seules les dates standard sont réservables en ligne. Moins de 24 h, soirée, nuit, dimanche ou jour férié : contact direct avec CYRNEA.</div>':'<div class="muted">Passage standard, sans majoration.</div>'}
+       ${b2bSuivi?'<div class="muted">SUIVI B2B : demande possible de 08 h 00 à 18 h 45, du lundi au samedi, y compris à moins de 24 h. CYRNEA confirme personnellement le créneau. Soir, nuit, dimanche ou férié : contact direct.</div>':'<div class="muted">Passage standard, sans majoration.</div>'}
      </div>`;
 
    draw(`<div class="card"><h1>Créneaux — mission en plusieurs passages / jalons</h1>
@@ -1872,6 +1867,8 @@ function contractRef(){
 }
 function isHorsStandard(){
  if(["RELAIS","PRÉSENCE PROPRIÉTAIRES"].includes(S.result?.contract))return false;
+ if(S.result?.contract==="PRÉSENCE ENTREPRISES" && ["CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(S.result?.mission))
+   return Array.isArray(S.multiSlots) && S.multiSlots.some(p=>p.evening||p.night||p.sunday||Number(p.surcharge||0)>0);
  if(S.result?.isQuote)return true;
  const mission=String(S.result?.mission||"");
  const label=String(S.result?.availabilityLabel||"");
@@ -1890,6 +1887,8 @@ function standardSimplyBookUrl(){
 }
 function tallyAvailabilityMode(){
  if(["RELAIS","PRÉSENCE PROPRIÉTAIRES"].includes(S.result?.contract))return "standard";
+ if(S.result?.contract==="PRÉSENCE ENTREPRISES" && ["CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(S.result?.mission))
+   return "standard";
  if(S.result?.isQuote)return "quote";
  if(Array.isArray(S.multiSlots)&&S.multiSlots.length){
    if(S.multiSlots.some(p=>p?.sunday))return "sunday";
@@ -2017,13 +2016,12 @@ function validateB2BMultiBeforeGateway(){
    const check=validateMissionTimeRules(p.date,p.time,"le passage / jalon "+i);
    if(!check.ok)throw Error(check.msg);
    const c=autoConstraints(p.date,p.time);
-   if(c.priority||c.evening||c.night||c.sunday||Number(p.surcharge||0)>0)
+   if(c.evening||c.night||c.sunday||Number(p.surcharge||0)>0)
      throw Error("SUIVI B2B hors standard : contacter CYRNEA pour accord, aucun paiement forfaitaire automatique.");
  }
  return true;
 }
 async function registerTallyIntent(){
- if(isB2BContactOnlyOffer())throw Error("SUIVI B2B — 2 passages à 850 € HT : contact direct obligatoire, sans paiement automatique.");
  validateOwnerTariffAndSchedule();
  validateB2BMultiBeforeGateway();
  if(!assertVoirContractInvariant())throw new Error("Incohérence VOIR / contrat.");
@@ -3305,8 +3303,8 @@ function confirmNextSuivrePassage(){
  if(!check.ok)return alert(check.msg);
  if(S.result?.contract==="PRÉSENCE ENTREPRISES"){
    const c=autoConstraints(date,time);
-   if(c.priority||c.evening||c.night||c.sunday)
-     return alert("Passage SUIVI B2B hors standard : confirmer les conditions directement avec CYRNEA, sans programmation automatique de ce supplément.");
+   if(c.evening||c.night||c.sunday)
+     return alert("Passage SUIVI B2B en soirée, nuit, dimanche ou jour férié : accord direct préalable, sans supplément automatique.");
  }
  const exists=(S.multiSlots||[]).some(p=>Number(p.index)===next);
  if(exists)return alert("Ce passage possède déjà un créneau : ne pas écraser une date enregistrée.");
