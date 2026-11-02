@@ -1628,9 +1628,11 @@ function multiPassagePricing(){
   S.multiDraft=Object.fromEntries(passages.map(p=>[p.index,{active:true,date:p.date,time:p.time}]));
   S.availability={multi:true};
   S.result.price=total.toLocaleString("fr-FR")+" "+suffix;
-  S.result.availabilityLabel=passages.length===1
-    ? "1er passage / jalon connu — suivants à programmer"
-    : `${passages.length} passages / jalons tarifés individuellement`;
+  S.result.availabilityLabel=b2bSuivi
+    ? `Forfait SUIVI — ${passages.length} passage(s) daté(s), confirmation CYRNEA obligatoire`
+    : passages.length===1
+      ? "1er passage / jalon connu — suivants à programmer"
+      : `${passages.length} passages / jalons compris dans la formule`;
   S.acceptedSlot=false;
   save();
   showManualMultiReview();
