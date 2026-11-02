@@ -1996,6 +1996,8 @@ function validateB2BMultiBeforeGateway(){
  const mission=String(S.result?.mission||"");
  const two=mission==="SUIVI DE PROJET - 2 PASSAGES",three=mission==="CONTINUITÉ PROJET";
  if(!two&&!three)return true;
+ if(["PAID_PENDING_CONFIRMATION","PAID_CONFIRMED","REFUNDED"].includes(String(S.paymentStatus||"")))
+   throw Error("Forfait SUIVI B2B déjà payé ou remboursé : ne pas créer de nouveau paiement sur le même dossier.");
  if(S.result?.status!=="PROPOSER"||S.result?.isQuote||!S.result?.multi)
    throw Error("Forfait SUIVI B2B non réservable automatiquement : requalifier la commande.");
  const count=two?2:3,amount=two?850:1190;
