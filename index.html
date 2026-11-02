@@ -1065,9 +1065,13 @@ function missionPhoneScript(){
   if(m==='PRÉSENCE LOGISTIQUE B2B') return "Votre besoin correspond à PRÉSENCE LOGISTIQUE à 169 € HT : accueil, présence pendant l’opération et fermeture, une heure maximum au total." ;
   return "Je vais vous orienter vers la mission la plus adaptée et vous indiquer le tarif avant toute réservation.";
 }
+function isB2BContactOnlyOffer(result=S.result){
+ return result?.contract==="PRÉSENCE ENTREPRISES" && result?.mission==="SUIVI DE PROJET - 2 PASSAGES";
+}
 function showResult(){
  setStage("CADRAGE");let r=S.result;
- const normal=(r.status==="PROPOSER");
+ const contactOnly=isB2BContactOnlyOffer(r);
+ const normal=(r.status==="PROPOSER" && !contactOnly);
  const quote=(r.status==="DEVIS PRÉALABLE");
  draw(`<div class="card"><h1>${esc(r.status)}</h1><div class="readAloud">${esc(missionPhoneScript())}</div>
  <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(r.mission))}</span></div>
@@ -1080,6 +1084,7 @@ function showResult(){
  <div class="field"><label>Montant du devis accepté</label><input id="quotePrice" placeholder="${S.caller==="B2B"?"Ex. 500 € HT":"Ex. 149 € TTC"}"></div>
  <button class="btn primary" onclick="if(!saveObject())return;let q=document.getElementById('quotePrice').value.trim();if(!q)return alert('Montant du devis requis');if(S.caller==='B2B'&&!/HT/i.test(q))return alert('Pour le B2B, indiquez le montant du devis en HT.');if(S.caller!=='B2B'&&!/TTC/i.test(q))return alert('Pour un particulier, indiquez le montant du devis en TTC.');S.result.price=q;S.result.status='PROPOSER';S.result.isQuote=true;slot()">DEVIS ACCEPTÉ → CONTINUER</button>`
  : normal?`<button class="btn primary" onclick="if(!saveObject())return;slot()">CONTINUER VERS LE CRÉNEAU</button>`
+ : contactOnly?`<div class="neutral"><b>SUIVI DE PROJET — 2 PASSAGES : CONTACT DIRECT</b>La formule à 850 € HT se convient directement avec CYRNEA. Aucun lien Tally, aucune commande et aucun paiement automatique ne seront préparés depuis la PWA pour cette formule.</div><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button>`
  : `<div class="stop"><b>⛔ MISSION NON RÉSERVABLE</b><br>Le parcours commercial s'arrête ici. Aucun paiement ni mission terrain.</div><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button>`}
  </div>`)
 }
@@ -2018,6 +2023,7 @@ function validateB2BMultiBeforeGateway(){
  return true;
 }
 async function registerTallyIntent(){
+ if(isB2BContactOnlyOffer())throw Error("SUIVI B2B — 2 passages à 850 € HT : contact direct obligatoire, sans paiement automatique.");
  validateOwnerTariffAndSchedule();
  validateB2BMultiBeforeGateway();
  if(!assertVoirContractInvariant())throw new Error("Incohérence VOIR / contrat.");
