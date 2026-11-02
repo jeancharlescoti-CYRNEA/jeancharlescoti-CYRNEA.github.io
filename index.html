@@ -253,12 +253,13 @@ const B2B_TALLY_MISSION={
   "PRÉSENCE PROJET":"PRÉSENCE PROJET - 490 € HT",
   "PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE PROJET ÉTENDUE - 690 € HT",
   "CONTINUITÉ PROJET":"CONTINUITÉ PROJET - 1190 € HT",
+  "SUIVI DE PROJET - 2 PASSAGES":"SUIVI DE PROJET - 2 PASSAGES - 850 € HT",
   "ACCÈS B2B":"ACCÈS B2B - 109 € HT",
   "REMISE CLÉ / BADGE B2B":"REMISE CLÉ / BADGE B2B - 109 € HT",
   "RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE B2B - 109 € HT",
   "PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE B2B - 169 € HT"
 };
-function b2bCommercialMissionName(name){const labels={"VISITE TERRAIN PILOTÉE":"VISITE DE SITE","PRÉSENCE PROJET":"PRÉSENCE À UNE ÉTAPE CLÉ","PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE ÉTENDUE","ACCÈS B2B":"DONNER ACCÈS","PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE"};return labels[name]||name}
+function b2bCommercialMissionName(name){const labels={"VISITE TERRAIN PILOTÉE":"VISITE DE SITE","PRÉSENCE PROJET":"PRÉSENCE — 1 H 15","PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE — 3 H","SUIVI DE PROJET - 2 PASSAGES":"SUIVI DE PROJET — 2 PASSAGES","CONTINUITÉ PROJET":"SUIVI DE PROJET — 3 PASSAGES","ACCÈS B2B":"DONNER ACCÈS","PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE"};return labels[name]||name}
 function activeMissionKey(st=S){return String(st?.missionId||st?.draftKey||"")}
 function isActiveMissionState(st=S){
  return !!(st && st.result && String(st.result.mission||"").trim() && String(st.result.contract||"").trim() && st.stage!=="ARCHIVE");
@@ -785,9 +786,10 @@ const relaisNeeds=[
 ];
 const b2bNeeds=[
  ["BVISIT","VISITE DE SITE","Observer et documenter un site avant le déplacement de votre équipe ; photographies par drone possibles si le vol est autorisé et réalisable en sécurité.","PRESENCE"],
- ["BPROJECT","PRÉSENCE À UNE ÉTAPE CLÉ","Assister sur place à un rendez-vous ou une étape de votre projet, vous évitant ainsi de déplacer votre équipe.","PRESENCE"],
- ["BEXT","PRÉSENCE ÉTENDUE","Parcourir plusieurs zones d’un même site, échanger avec plusieurs interlocuteurs au cours d’une même mission.","PRESENCE"],
- ["BCONT","CONTINUITÉ PROJET","Documenter et comparer un même projet à trois moments ; drone possible pour visualiser son évolution si chaque vol est autorisé et réalisable en sécurité.","PRESENCE"],
+ ["BPROJECT","PRÉSENCE — 1 H 15","Assister sur place à un rendez-vous ou une étape clé (1 h 15 maximum).","PRESENCE"],
+ ["BEXT","PRÉSENCE — 3 H","Présence factuelle jusqu’à 3 heures pour un même objectif, sans coordination ni expertise.","PRESENCE"],
+ ["BSUIVI2","SUIVI DE PROJET — 2 PASSAGES","Documenter et comparer le même projet à deux moments utiles, 2 × 1 h 15.","PRESENCE"],
+  ["BCONT","SUIVI DE PROJET — 3 PASSAGES","Documenter et comparer le même projet à trois moments utiles, 3 × 1 h 15.","PRESENCE"],
  ["BLOG","Logistique / clé / accès","Accès, clé / badge ou présence logistique ponctuelle à tarif fixe.","STANDARD"],
  ["BOTHER","Autre","Autre besoin professionnel à qualifier.","STANDARD"]
 ];
@@ -830,7 +832,7 @@ function sub(){
 }
 
  if(S.caller==="B2B"){
-   if(["BVISIT","BPROJECT","BEXT","BCONT"].includes(S.need)){S.sub="STD";return classify()}
+   if(["BVISIT","BPROJECT","BEXT","BSUIVI2","BCONT"].includes(S.need)){S.sub="STD";return classify()}
    if(S.need==="BLOG"){
      const l=subs.BLOG;
      return draw(`<div class="card"><h1>Précisez le besoin logistique B2B</h1>
@@ -858,7 +860,8 @@ function classify(){
  let r={status:"À CLARIFIER",mission:"À CLARIFIER",price:"-",cap:"-",contract:"À DÉTERMINER",rest:""};
  if(S.caller==="B2B"){
  let m={BVISIT:["VISITE TERRAIN PILOTÉE","350 € HT","60 min","R1"],BPROJECT:["PRÉSENCE PROJET","490 € HT","75 min","R2"],BEXT:["PRÉSENCE PROJET ÉTENDUE","690 € HT","3 h","R2"],BCONT:["CONTINUITÉ PROJET","1 190 € HT","3 x 75 min","R3"]}[S.need];
- if(m)r={status:"PROPOSER",mission:m[0],price:m[1],cap:m[2],contract:"PRÉSENCE ENTREPRISES",rest:m[3],multi:S.need==="BCONT"};
+ if(m)r={status:"PROPOSER",mission:m[0],price:m[1],cap:m[2],contract:"PRÉSENCE ENTREPRISES",rest:m[3],multi:S.need==="BCONT",passages:S.need==="BCONT"?3:undefined};
+  if(S.need==="BSUIVI2")r={status:"PROPOSER",mission:"SUIVI DE PROJET - 2 PASSAGES",price:"850 € HT",cap:"2 × 1 h 15",contract:"PRÉSENCE ENTREPRISES",rest:"R3",multi:true,passages:2};
  if(S.need==="BLOG"){
    if(S.sub==="ACCESS")r={status:"PROPOSER",mission:"ACCÈS B2B",price:"109 € HT",cap:"30 min",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="KEY_GIVE")r={status:"PROPOSER",mission:"REMISE CLÉ / BADGE B2B",price:"109 € HT",cap:"action unique, cadre court",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
@@ -1054,7 +1057,8 @@ function missionPhoneScript(){
   if(m==='VISITE TERRAIN PILOTÉE') return "Votre besoin correspond à VISITE DE SITE à 350 € HT.";
   if(m==='PRÉSENCE PROJET') return "Votre besoin correspond à PRÉSENCE À UNE ÉTAPE CLÉ à 490 € HT.";
   if(m==='PRÉSENCE PROJET ÉTENDUE') return "Votre besoin correspond à PRÉSENCE ÉTENDUE à 690 € HT.";
-  if(m==='CONTINUITÉ PROJET') return "Votre besoin correspond à une CONTINUITÉ PROJET, avec trois présences, à 1 190 € HT.";
+  if(m==='SUIVI DE PROJET - 2 PASSAGES') return "Votre besoin correspond à SUIVI DE PROJET, deux présences de 1 h 15 maximum pour 850 € HT.";
+   if(m==='CONTINUITÉ PROJET') return "Votre besoin correspond à SUIVI DE PROJET, trois présences de 1 h 15 maximum pour 1 190 € HT.";
   if(m==='ACCÈS B2B') return "Votre besoin correspond à DONNER ACCÈS à 109 € HT : accueil, présence pendant l’opération courte et fermeture, 30 minutes maximum au total." ;
   if(m==='REMISE CLÉ / BADGE B2B') return "Votre besoin correspond à une REMISE CLÉ / BADGE B2B à 109 € HT.";
   if(m==='RÉCUPÉRATION CLÉ / BADGE B2B') return "Votre besoin correspond à une RÉCUPÉRATION CLÉ / BADGE B2B à 109 € HT.";
@@ -1079,7 +1083,7 @@ function showResult(){
  : `<div class="stop"><b>⛔ MISSION NON RÉSERVABLE</b><br>Le parcours commercial s'arrête ici. Aucun paiement ni mission terrain.</div><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button>`}
  </div>`)
 }
-function needsCahier(){return ["PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","CONTINUITÉ PROJET"].includes(S.result.mission)}
+function needsCahier(){return ["PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(S.result.mission)}
 
 function baseMissionName(m){
   if(m==="VOIR PRIORITAIRE RELAIS") return "VOIR RELAIS";
