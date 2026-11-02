@@ -1484,7 +1484,7 @@ function toggleMultiJalon(i){
   const btn=document.getElementById(`add_jalon_${i}`);
   if(block) block.classList.remove("hidden");
   if(btn) btn.classList.add("hidden");
-  if(i===2 && !(S.result?.mission==="SUIVRE"&&S.result?.passages===2)){
+  if(i===2 && !(plannedPassageCount()===2)){
     const b3=document.getElementById("add_jalon_3");
     if(b3) b3.classList.remove("hidden");
   }
@@ -1530,7 +1530,7 @@ function restoreMultiDraftToDom(){
     const btn=document.getElementById(`add_jalon_${i}`);
     if(i>1 && block)block.classList.remove("hidden");
     if(i>1 && btn)btn.classList.add("hidden");
-    if(i===2 && !(S.result?.mission==="SUIVRE"&&S.result?.passages===2) && document.getElementById("add_jalon_3"))document.getElementById("add_jalon_3").classList.remove("hidden");
+    if(i===2 && !(plannedPassageCount()===2) && document.getElementById("add_jalon_3"))document.getElementById("add_jalon_3").classList.remove("hidden");
     const dateEl=document.getElementById(`d${i}`);
     if(dateEl && d.date)dateEl.value=d.date;
     const t=normalizeTime4(d.time||"");
@@ -1793,6 +1793,7 @@ function slot(){
 
  if(multi){
    const isB2B=S.result.contract==="PRÉSENCE ENTREPRISES";
+   const b2bSuivi=isB2B&&["CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(S.result?.mission);
    const pri="+120 € HT";
    const sun="+180 € HT";
    const jalonBlock=(i, hidden)=>`
@@ -1800,23 +1801,20 @@ function slot(){
        <div class="checkIntro">PASSAGE / JALON ${i}${i>1?" — UNIQUEMENT SI DATE CONNUE":""}</div>
        ${multiDateDropdownHtml(`d${i}`)}
        ${multiTimeDropdownHtml(`sl${i}`)}
-       ${isB2B?`<div class="muted">Contraintes B2B détectées automatiquement :</div><label class="check"><input type="checkbox" id="prio24_${i}" disabled><span>Demandé sous 24 h — ${pri}</span></label>`:`<div class="muted">Passage STANDARD, sans majoration.</div>`}
-       ${(isB2B&&nightAllowedForMission(S.result?.mission))?`<label class="check"><input type="checkbox" id="evening_${i}" disabled> <span>Soir 19 h–20 h 59 — ${pri}</span></label>`:""}
-       ${isB2B&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="night_${i}" disabled> <span>Nuit à partir de 21 h — ${sun}</span></label>`:""}
-       ${isB2B?`<label class="check"><input type="checkbox" id="sunholiday_${i}" disabled><span>Dimanche ou jour férié — ${sun}</span></label>`:""}
+       ${b2bSuivi?'<div class="muted">SUIVI B2B : seules les dates standard sont réservables en ligne. Moins de 24 h, soirée, nuit, dimanche ou jour férié : contact direct avec CYRNEA.</div>':'<div class="muted">Passage standard, sans majoration.</div>'}
      </div>`;
 
    draw(`<div class="card"><h1>Créneaux — mission en plusieurs passages / jalons</h1>
-   <div class="neutral"><b>RÈGLE</b>${isB2B?"Le premier jalon est renseigné. Chaque jalon B2B est tarifé selon ses contraintes, sans cumul.":"Le premier passage est renseigné. Les autres sont convenus aux moments utiles, sans majoration automatique."}</div>
+   <div class="neutral"><b>RÈGLE</b>${isB2B?"Le premier jalon est renseigné. Le forfait couvre les passages standards ; tout hors standard se traite directement.":"Le premier passage est renseigné. Les autres sont convenus aux moments utiles, sans majoration automatique."}</div>
 
    ${jalonBlock(1,false)}
 
    <button id="add_jalon_2" class="btn ghost" onclick="toggleMultiJalon(2)">+ AJOUTER LE JALON 2 SI SA DATE EST CONNUE</button>
    ${jalonBlock(2,true)}
 
-   ${(S.result?.mission==="SUIVRE"&&S.result?.passages===2)?"":`<button id="add_jalon_3" class="btn ghost hidden" onclick="toggleMultiJalon(3)">+ AJOUTER LE JALON 3 SI SA DATE EST CONNUE</button>${jalonBlock(3,true)}`}
+   ${(plannedPassageCount()===2)?"":`<button id="add_jalon_3" class="btn ghost hidden" onclick="toggleMultiJalon(3)">+ AJOUTER LE JALON 3 SI SA DATE EST CONNUE</button>${jalonBlock(3,true)}`}
 
-   <div class="notice">${isB2B?"Les autres jalons seront programmés ultérieurement, avec leurs éventuelles majorations.":"Les autres passages restent compris dans le prix choisi et seront convenus ultérieurement."}</div>
+   <div class="notice">${isB2B?"Les autres jalons standards sont à convenir ultérieurement. Hors standard : contact direct, sans paiement forfaitaire automatique.":"Les autres passages restent compris dans le prix choisi et seront convenus ultérieurement."}</div>
    <button class="btn primary" onclick="multiPassagePricing()">VÉRIFIER DISPONIBILITÉ ET TARIF</button>
    </div>`);
    setTimeout(()=>{restoreMultiDraftToDom();startCalendarTicker()},0);
