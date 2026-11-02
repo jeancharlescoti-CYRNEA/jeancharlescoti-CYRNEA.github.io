@@ -1557,7 +1557,7 @@ function multiPassagePricing(){
   // Source de vérité = état PWA sauvegardé à chaque sélection.
   // Le DOM n'est plus la source principale sur Safari.
   const passages=[1,2,3].map(i=>{
-    if(S.result?.mission==="SUIVRE"&&i>(S.result?.passages||2))return null;
+    if(i>plannedPassageCount())return null;
     const block=document.getElementById(`jalon_${i}`);
     const active=i===1 || !!draft[i]?.active || (block && !block.classList.contains("hidden"));
     if(!active)return null;
