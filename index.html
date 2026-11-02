@@ -253,12 +253,13 @@ const B2B_TALLY_MISSION={
   "PRÉSENCE PROJET":"PRÉSENCE PROJET - 490 € HT",
   "PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE PROJET ÉTENDUE - 690 € HT",
   "CONTINUITÉ PROJET":"CONTINUITÉ PROJET - 1190 € HT",
+  "SUIVI DE PROJET - 2 PASSAGES":"SUIVI DE PROJET - 2 PASSAGES - 850 € HT",
   "ACCÈS B2B":"ACCÈS B2B - 109 € HT",
   "REMISE CLÉ / BADGE B2B":"REMISE CLÉ / BADGE B2B - 109 € HT",
   "RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE B2B - 109 € HT",
   "PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE B2B - 169 € HT"
 };
-function b2bCommercialMissionName(name){const labels={"VISITE TERRAIN PILOTÉE":"VISITE DE SITE","PRÉSENCE PROJET":"PRÉSENCE À UNE ÉTAPE CLÉ","PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE ÉTENDUE","ACCÈS B2B":"DONNER ACCÈS","PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE"};return labels[name]||name}
+function b2bCommercialMissionName(name){const labels={"VISITE TERRAIN PILOTÉE":"VISITE DE SITE","PRÉSENCE PROJET":"PRÉSENCE — 1 H 15","PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE — 3 H","SUIVI DE PROJET - 2 PASSAGES":"SUIVI DE PROJET — 2 PASSAGES","CONTINUITÉ PROJET":"SUIVI DE PROJET — 3 PASSAGES","ACCÈS B2B":"DONNER ACCÈS","PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE"};return labels[name]||name}
 function activeMissionKey(st=S){return String(st?.missionId||st?.draftKey||"")}
 function isActiveMissionState(st=S){
  return !!(st && st.result && String(st.result.mission||"").trim() && String(st.result.contract||"").trim() && st.stage!=="ARCHIVE");
@@ -785,9 +786,10 @@ const relaisNeeds=[
 ];
 const b2bNeeds=[
  ["BVISIT","VISITE DE SITE","Observer et documenter un site avant le déplacement de votre équipe ; photographies par drone possibles si le vol est autorisé et réalisable en sécurité.","PRESENCE"],
- ["BPROJECT","PRÉSENCE À UNE ÉTAPE CLÉ","Assister sur place à un rendez-vous ou une étape de votre projet, vous évitant ainsi de déplacer votre équipe.","PRESENCE"],
- ["BEXT","PRÉSENCE ÉTENDUE","Parcourir plusieurs zones d’un même site, échanger avec plusieurs interlocuteurs au cours d’une même mission.","PRESENCE"],
- ["BCONT","CONTINUITÉ PROJET","Documenter et comparer un même projet à trois moments ; drone possible pour visualiser son évolution si chaque vol est autorisé et réalisable en sécurité.","PRESENCE"],
+ ["BPROJECT","PRÉSENCE — 1 H 15","Assister sur place à un rendez-vous ou une étape clé (1 h 15 maximum).","PRESENCE"],
+ ["BEXT","PRÉSENCE — 3 H","Présence factuelle jusqu’à 3 heures pour un même objectif, sans coordination ni expertise.","PRESENCE"],
+ ["BSUIVI2","SUIVI DE PROJET — 2 PASSAGES","Documenter et comparer le même projet à deux moments utiles, 2 × 1 h 15.","PRESENCE"],
+  ["BCONT","SUIVI DE PROJET — 3 PASSAGES","Documenter et comparer le même projet à trois moments utiles, 3 × 1 h 15.","PRESENCE"],
  ["BLOG","Logistique / clé / accès","Accès, clé / badge ou présence logistique ponctuelle à tarif fixe.","STANDARD"],
  ["BOTHER","Autre","Autre besoin professionnel à qualifier.","STANDARD"]
 ];
@@ -830,7 +832,7 @@ function sub(){
 }
 
  if(S.caller==="B2B"){
-   if(["BVISIT","BPROJECT","BEXT","BCONT"].includes(S.need)){S.sub="STD";return classify()}
+   if(["BVISIT","BPROJECT","BEXT","BSUIVI2","BCONT"].includes(S.need)){S.sub="STD";return classify()}
    if(S.need==="BLOG"){
      const l=subs.BLOG;
      return draw(`<div class="card"><h1>Précisez le besoin logistique B2B</h1>
@@ -858,7 +860,8 @@ function classify(){
  let r={status:"À CLARIFIER",mission:"À CLARIFIER",price:"-",cap:"-",contract:"À DÉTERMINER",rest:""};
  if(S.caller==="B2B"){
  let m={BVISIT:["VISITE TERRAIN PILOTÉE","350 € HT","60 min","R1"],BPROJECT:["PRÉSENCE PROJET","490 € HT","75 min","R2"],BEXT:["PRÉSENCE PROJET ÉTENDUE","690 € HT","3 h","R2"],BCONT:["CONTINUITÉ PROJET","1 190 € HT","3 x 75 min","R3"]}[S.need];
- if(m)r={status:"PROPOSER",mission:m[0],price:m[1],cap:m[2],contract:"PRÉSENCE ENTREPRISES",rest:m[3],multi:S.need==="BCONT"};
+ if(m)r={status:"PROPOSER",mission:m[0],price:m[1],cap:m[2],contract:"PRÉSENCE ENTREPRISES",rest:m[3],multi:S.need==="BCONT",passages:S.need==="BCONT"?3:undefined};
+  if(S.need==="BSUIVI2")r={status:"PROPOSER",mission:"SUIVI DE PROJET - 2 PASSAGES",price:"850 € HT",cap:"2 × 1 h 15",contract:"PRÉSENCE ENTREPRISES",rest:"R3",multi:true,passages:2};
  if(S.need==="BLOG"){
    if(S.sub==="ACCESS")r={status:"PROPOSER",mission:"ACCÈS B2B",price:"109 € HT",cap:"30 min",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="KEY_GIVE")r={status:"PROPOSER",mission:"REMISE CLÉ / BADGE B2B",price:"109 € HT",cap:"action unique, cadre court",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
@@ -1052,9 +1055,10 @@ function missionPhoneScript(){
   if(m==='DÉCIDER') return "Votre besoin relève d’une mission DÉCIDER : nous recueillons sur place les éléments factuels convenus pour vous aider à décider vous-même. Le tarif est de 260 € TTC.";
   if(m==='SUIVRE') return "Votre besoin relève de SUIVRE : "+(S.result?.passages===3?"trois observations — 690":"deux observations — 490")+" € TTC, aux étapes convenues.";
   if(m==='VISITE TERRAIN PILOTÉE') return "Votre besoin correspond à VISITE DE SITE à 350 € HT.";
-  if(m==='PRÉSENCE PROJET') return "Votre besoin correspond à PRÉSENCE À UNE ÉTAPE CLÉ à 490 € HT.";
-  if(m==='PRÉSENCE PROJET ÉTENDUE') return "Votre besoin correspond à PRÉSENCE ÉTENDUE à 690 € HT.";
-  if(m==='CONTINUITÉ PROJET') return "Votre besoin correspond à une CONTINUITÉ PROJET, avec trois présences, à 1 190 € HT.";
+  if(m==='PRÉSENCE PROJET') return "Votre besoin correspond à PRÉSENCE — 1 h 15 maximum, à 490 € HT.";
+  if(m==='PRÉSENCE PROJET ÉTENDUE') return "Votre besoin correspond à PRÉSENCE — 3 h maximum, à 690 € HT.";
+  if(m==='SUIVI DE PROJET - 2 PASSAGES') return "Votre besoin correspond à SUIVI DE PROJET, deux présences de 1 h 15 maximum pour 850 € HT.";
+   if(m==='CONTINUITÉ PROJET') return "Votre besoin correspond à SUIVI DE PROJET, trois présences de 1 h 15 maximum pour 1 190 € HT.";
   if(m==='ACCÈS B2B') return "Votre besoin correspond à DONNER ACCÈS à 109 € HT : accueil, présence pendant l’opération courte et fermeture, 30 minutes maximum au total." ;
   if(m==='REMISE CLÉ / BADGE B2B') return "Votre besoin correspond à une REMISE CLÉ / BADGE B2B à 109 € HT.";
   if(m==='RÉCUPÉRATION CLÉ / BADGE B2B') return "Votre besoin correspond à une RÉCUPÉRATION CLÉ / BADGE B2B à 109 € HT.";
@@ -1079,7 +1083,7 @@ function showResult(){
  : `<div class="stop"><b>⛔ MISSION NON RÉSERVABLE</b><br>Le parcours commercial s'arrête ici. Aucun paiement ni mission terrain.</div><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button>`}
  </div>`)
 }
-function needsCahier(){return ["PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","CONTINUITÉ PROJET"].includes(S.result.mission)}
+function needsCahier(){return ["PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(S.result.mission)}
 
 function baseMissionName(m){
   if(m==="VOIR PRIORITAIRE RELAIS") return "VOIR RELAIS";
@@ -1385,7 +1389,7 @@ function nextQuarterInfo(){
 }
 function nightAllowedForMission(mission){
   const m=baseMissionName(String(mission||""));
-  return ["PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","CONTINUITÉ PROJET"].includes(m);
+  return ["PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE"].includes(m);
 }
 function validateFutureSlot(dateStr,timeStr,label="créneau"){
   const normalized=normalizeTime4(timeStr);
@@ -1480,7 +1484,7 @@ function toggleMultiJalon(i){
   const btn=document.getElementById(`add_jalon_${i}`);
   if(block) block.classList.remove("hidden");
   if(btn) btn.classList.add("hidden");
-  if(i===2 && !(S.result?.mission==="SUIVRE"&&S.result?.passages===2)){
+  if(i===2 && !(plannedPassageCount()===2)){
     const b3=document.getElementById("add_jalon_3");
     if(b3) b3.classList.remove("hidden");
   }
@@ -1526,7 +1530,7 @@ function restoreMultiDraftToDom(){
     const btn=document.getElementById(`add_jalon_${i}`);
     if(i>1 && block)block.classList.remove("hidden");
     if(i>1 && btn)btn.classList.add("hidden");
-    if(i===2 && !(S.result?.mission==="SUIVRE"&&S.result?.passages===2) && document.getElementById("add_jalon_3"))document.getElementById("add_jalon_3").classList.remove("hidden");
+    if(i===2 && !(plannedPassageCount()===2) && document.getElementById("add_jalon_3"))document.getElementById("add_jalon_3").classList.remove("hidden");
     const dateEl=document.getElementById(`d${i}`);
     if(dateEl && d.date)dateEl.value=d.date;
     const t=normalizeTime4(d.time||"");
@@ -1553,7 +1557,7 @@ function multiPassagePricing(){
   // Source de vérité = état PWA sauvegardé à chaque sélection.
   // Le DOM n'est plus la source principale sur Safari.
   const passages=[1,2,3].map(i=>{
-    if(S.result?.mission==="SUIVRE"&&i>(S.result?.passages||2))return null;
+    if(i>plannedPassageCount())return null;
     const block=document.getElementById(`jalon_${i}`);
     const active=i===1 || !!draft[i]?.active || (block && !block.classList.contains("hidden"));
     if(!active)return null;
@@ -1606,27 +1610,17 @@ function multiPassagePricing(){
     return showManualMultiReview();
   }
 
-  let base=0, unitPriority=0, unitSunday=0, suffix="";
-  if(m==="SUIVRE"){
-    base=S.result?.passages===3?690:490; unitPriority=0; unitSunday=0; suffix="€ TTC";
-  } else if(m==="CONTINUITÉ PROJET"){
-    base=1190; unitPriority=120; unitSunday=180; suffix="€ HT";
-  } else {
-    return alert("Cette fonction multi-passage ne s'applique pas à cette mission.");
-  }
-
-  let total=base;
-  passages.forEach(p=>{
-    if(m==="SUIVRE"){p.surcharge=0;p.label="Standard";return;}
-    let add=0,label="Standard";
-    if(p.priority){add=unitPriority;label="Prioritaire sous 24 h";}
-    if(p.evening){add=unitPriority;label="Soir 19 h–20 h 59";}
-    if(m==="CONTINUITÉ PROJET" && p.night){add=unitSunday;label="Nuit à partir de 21 h";}
-    if(p.sunday){add=unitSunday;label="Dimanche / jour férié";}
-    p.surcharge=add;
-    p.label=label;
-    total+=add;
-  });
+  const b2bSuivi=["CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(m);
+  let base=0, suffix="";
+  if(m==="SUIVRE"){base=S.result?.passages===3?690:490;suffix="€ TTC";}
+  else if(b2bSuivi){base=m==="CONTINUITÉ PROJET"?1190:850;suffix="€ HT";}
+  else return alert("Cette fonction multi-passage ne s'applique pas à cette mission.");
+  // Pas de majoration appliquée à tort sur l'ensemble du forfait multi-passages.
+  // Toute contrainte hors standard B2B se décide par contact direct.
+  if(b2bSuivi && passages.some(p=>p.evening||p.night||p.sunday))
+    return alert("SUIVI DE PROJET B2B : au moins un passage est hors standard. Contactez CYRNEA directement ; aucun paiement forfaitaire automatique pour ce cas.");
+  const total=base;
+  passages.forEach(p=>{p.surcharge=0;p.label="Standard — inclus dans le forfait";});
 
   S.multiSlots=passages;
   S.date=passages[0].date;
@@ -1634,21 +1628,23 @@ function multiPassagePricing(){
   S.multiDraft=Object.fromEntries(passages.map(p=>[p.index,{active:true,date:p.date,time:p.time}]));
   S.availability={multi:true};
   S.result.price=total.toLocaleString("fr-FR")+" "+suffix;
-  S.result.availabilityLabel=passages.length===1
-    ? "1er passage / jalon connu — suivants à programmer"
-    : `${passages.length} passages / jalons tarifés individuellement`;
+  S.result.availabilityLabel=b2bSuivi
+    ? `Forfait SUIVI — ${passages.length} passage(s) daté(s), confirmation CYRNEA obligatoire`
+    : passages.length===1
+      ? "1er passage / jalon connu — suivants à programmer"
+      : `${passages.length} passages / jalons compris dans la formule`;
   S.acceptedSlot=false;
   save();
   showManualMultiReview();
 }
-function plannedPassageCount(){return S.result?.mission==="SUIVRE"?(S.result?.passages===3?3:2):3;}
+function plannedPassageCount(){if(S.result?.mission==="SUIVRE")return S.result?.passages===3?3:2;return S.result?.mission==="SUIVI DE PROJET - 2 PASSAGES"?2:3;}
 function multiPassageRows(){
   if(!S.result.multi||!Array.isArray(S.multiSlots)) return "";
   let rows=S.multiSlots.map(p=>`
     <div class="row"><b>Passage / jalon ${p.index}</b><span>${esc(p.date)} · ${esc(displayTime4(p.time))} — ${esc(p.label)}${p.surcharge?` (+${p.surcharge} ${S.result.contract==="PRÉSENCE ENTREPRISES"?"€ HT":"€ TTC"})`:""}</span></div>
   `).join("");
   if(S.multiSlots.length<plannedPassageCount()){
-    rows+=`<div class="row"><b>Passages restants</b><span>${S.result?.mission==="SUIVRE"?"Dates à convenir ultérieurement, incluses dans le tarif fixe.":"Dates à programmer, avec majorations éventuelles B2B validées ultérieurement."}</span></div>`;
+    rows+=`<div class="row"><b>Passages restants</b><span>${S.result?.mission==="SUIVRE"?"Dates à convenir ultérieurement, incluses dans le tarif fixe.":"Dates à convenir ultérieurement. Toute exception hors standard B2B passe par contact direct."}</span></div>`;
   }
   return rows;
 }
@@ -1699,11 +1695,10 @@ function availabilityPricing(){
     S.result.availabilityLabel=label;
     return;
   }
-  if(m==="CONTINUITÉ PROJET"){
-    const add=(sunday||night)?180:(priority||evening)?120:0;
-    const label=sunday?"Dimanche / jour férié — jalon concerné":night?"Nuit à partir de 21 h — jalon concerné":priority?"Prioritaire sous 24 h — jalon concerné":evening?"Soir 19 h–20 h 59 — jalon concerné":"Standard";
-    S.result.price=(1190+add).toLocaleString("fr-FR")+" € HT";
-    S.result.availabilityLabel=label;
+  if(m==="CONTINUITÉ PROJET"||m==="SUIVI DE PROJET - 2 PASSAGES"){
+    const base=m==="CONTINUITÉ PROJET"?1190:850;
+    S.result.price=base.toLocaleString("fr-FR")+" € HT";
+    S.result.availabilityLabel=(evening||night||sunday)?"HORS STANDARD — contact direct":priority?"Demande sous 24 h — confirmation humaine obligatoire":"Standard";
   }
 }
 function supportsPriority(){
@@ -1800,30 +1795,26 @@ function slot(){
 
  if(multi){
    const isB2B=S.result.contract==="PRÉSENCE ENTREPRISES";
-   const pri="+120 € HT";
-   const sun="+180 € HT";
+   const b2bSuivi=isB2B&&["CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(S.result?.mission);
    const jalonBlock=(i, hidden)=>`
      <div id="jalon_${i}" class="checkZone${hidden?" hidden":""}">
        <div class="checkIntro">PASSAGE / JALON ${i}${i>1?" — UNIQUEMENT SI DATE CONNUE":""}</div>
        ${multiDateDropdownHtml(`d${i}`)}
        ${multiTimeDropdownHtml(`sl${i}`)}
-       ${isB2B?`<div class="muted">Contraintes B2B détectées automatiquement :</div><label class="check"><input type="checkbox" id="prio24_${i}" disabled><span>Demandé sous 24 h — ${pri}</span></label>`:`<div class="muted">Passage STANDARD, sans majoration.</div>`}
-       ${(isB2B&&nightAllowedForMission(S.result?.mission))?`<label class="check"><input type="checkbox" id="evening_${i}" disabled> <span>Soir 19 h–20 h 59 — ${pri}</span></label>`:""}
-       ${isB2B&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="night_${i}" disabled> <span>Nuit à partir de 21 h — ${sun}</span></label>`:""}
-       ${isB2B?`<label class="check"><input type="checkbox" id="sunholiday_${i}" disabled><span>Dimanche ou jour férié — ${sun}</span></label>`:""}
+       ${b2bSuivi?'<div class="muted">SUIVI B2B : demande possible de 08 h 00 à 18 h 45, du lundi au samedi, y compris à moins de 24 h. CYRNEA confirme personnellement le créneau. Soir, nuit, dimanche ou férié : contact direct.</div>':'<div class="muted">Passage standard, sans majoration.</div>'}
      </div>`;
 
    draw(`<div class="card"><h1>Créneaux — mission en plusieurs passages / jalons</h1>
-   <div class="neutral"><b>RÈGLE</b>${isB2B?"Le premier jalon est renseigné. Chaque jalon B2B est tarifé selon ses contraintes, sans cumul.":"Le premier passage est renseigné. Les autres sont convenus aux moments utiles, sans majoration automatique."}</div>
+   <div class="neutral"><b>RÈGLE</b>${isB2B?"Le premier jalon est renseigné. Le forfait couvre les passages standards ; tout hors standard se traite directement.":"Le premier passage est renseigné. Les autres sont convenus aux moments utiles, sans majoration automatique."}</div>
 
    ${jalonBlock(1,false)}
 
    <button id="add_jalon_2" class="btn ghost" onclick="toggleMultiJalon(2)">+ AJOUTER LE JALON 2 SI SA DATE EST CONNUE</button>
    ${jalonBlock(2,true)}
 
-   ${(S.result?.mission==="SUIVRE"&&S.result?.passages===2)?"":`<button id="add_jalon_3" class="btn ghost hidden" onclick="toggleMultiJalon(3)">+ AJOUTER LE JALON 3 SI SA DATE EST CONNUE</button>${jalonBlock(3,true)}`}
+   ${(plannedPassageCount()===2)?"":`<button id="add_jalon_3" class="btn ghost hidden" onclick="toggleMultiJalon(3)">+ AJOUTER LE JALON 3 SI SA DATE EST CONNUE</button>${jalonBlock(3,true)}`}
 
-   <div class="notice">${isB2B?"Les autres jalons seront programmés ultérieurement, avec leurs éventuelles majorations.":"Les autres passages restent compris dans le prix choisi et seront convenus ultérieurement."}</div>
+   <div class="notice">${isB2B?"Les autres jalons standards sont à convenir ultérieurement. Hors standard : contact direct, sans paiement forfaitaire automatique.":"Les autres passages restent compris dans le prix choisi et seront convenus ultérieurement."}</div>
    <button class="btn primary" onclick="multiPassagePricing()">VÉRIFIER DISPONIBILITÉ ET TARIF</button>
    </div>`);
    setTimeout(()=>{restoreMultiDraftToDom();startCalendarTicker()},0);
@@ -1878,6 +1869,8 @@ function contractRef(){
 }
 function isHorsStandard(){
  if(["RELAIS","PRÉSENCE PROPRIÉTAIRES"].includes(S.result?.contract))return false;
+ if(S.result?.contract==="PRÉSENCE ENTREPRISES" && ["CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(S.result?.mission))
+   return Array.isArray(S.multiSlots) && S.multiSlots.some(p=>p.evening||p.night||p.sunday||Number(p.surcharge||0)>0);
  if(S.result?.isQuote)return true;
  const mission=String(S.result?.mission||"");
  const label=String(S.result?.availabilityLabel||"");
@@ -1896,6 +1889,8 @@ function standardSimplyBookUrl(){
 }
 function tallyAvailabilityMode(){
  if(["RELAIS","PRÉSENCE PROPRIÉTAIRES"].includes(S.result?.contract))return "standard";
+ if(S.result?.contract==="PRÉSENCE ENTREPRISES" && ["CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(S.result?.mission))
+   return "standard";
  if(S.result?.isQuote)return "quote";
  if(Array.isArray(S.multiSlots)&&S.multiSlots.length){
    if(S.multiSlots.some(p=>p?.sunday))return "sunday";
@@ -2000,8 +1995,37 @@ function validateOwnerTariffAndSchedule(){
  }
  return true;
 }
+function validateB2BMultiBeforeGateway(){
+ if(S.result?.contract!=="PRÉSENCE ENTREPRISES")return true;
+ const mission=String(S.result?.mission||"");
+ const two=mission==="SUIVI DE PROJET - 2 PASSAGES",three=mission==="CONTINUITÉ PROJET";
+ if(!two&&!three)return true;
+ if(["PAID_PENDING_CONFIRMATION","PAID_CONFIRMED","REFUNDED"].includes(String(S.paymentStatus||"")))
+   throw Error("Forfait SUIVI B2B déjà payé ou remboursé : ne pas créer de nouveau paiement sur le même dossier.");
+ if(S.result?.status!=="PROPOSER"||S.result?.isQuote||!S.result?.multi)
+   throw Error("Forfait SUIVI B2B non réservable automatiquement : requalifier la commande.");
+ const count=two?2:3,amount=two?850:1190;
+ if((S.result?.passages??count)!==count||parseEuroAmount(S.result.price)!==amount||!String(S.result.price).includes("HT"))
+   throw Error("Prix ou nombre de passages SUIVI B2B incohérent : paiement bloqué.");
+ const slots=Array.isArray(S.multiSlots)?S.multiSlots:[];
+ if(!slots.length||!slots.some(p=>Number(p.index)===1)||slots.length>count)
+   throw Error("Premier passage manquant ou nombre de passages supérieur au forfait.");
+ const seen=new Set();
+ for(const p of slots){
+   const i=Number(p.index);
+   if(!Number.isInteger(i)||i<1||i>count||seen.has(i))throw Error("Jalon SUIVI B2B dupliqué ou invalide.");
+   seen.add(i);
+   const check=validateMissionTimeRules(p.date,p.time,"le passage / jalon "+i);
+   if(!check.ok)throw Error(check.msg);
+   const c=autoConstraints(p.date,p.time);
+   if(c.evening||c.night||c.sunday||Number(p.surcharge||0)>0)
+     throw Error("SUIVI B2B hors standard : contacter CYRNEA pour accord, aucun paiement forfaitaire automatique.");
+ }
+ return true;
+}
 async function registerTallyIntent(){
  validateOwnerTariffAndSchedule();
+ validateB2BMultiBeforeGateway();
  if(!assertVoirContractInvariant())throw new Error("Incohérence VOIR / contrat.");
  const cents=gatewayPaymentCents();
  if(!Number.isInteger(cents)||cents<=0)throw new Error("Montant de paiement invalide.");
@@ -3244,20 +3268,23 @@ function recordPassageSnapshot(){
  });
  S.passageHistory=history;
 }
+function isIncludedMultiFollowUp(){
+ return !!(S.result?.multi&&["SUIVRE","SUIVI DE PROJET - 2 PASSAGES","CONTINUITÉ PROJET"].includes(S.result?.mission));
+}
 function replanExpiredSuivrePassage(){
- if(S.result?.mission!=="SUIVRE")return alert("Non disponible.");
+ if(!isIncludedMultiFollowUp())return alert("Non disponible pour cette mission.");
  const next=Number(S.passage||1)+1;
  S.multiSlots=(S.multiSlots||[]).filter(x=>Number(x.index)!==next);
  const draft=ensureMultiDraftState();delete draft[next];S.multiDraft=draft;
  save();scheduleNextSuivrePassage();
 }
 function scheduleNextSuivrePassage(){
- if(S.result?.mission!=="SUIVRE"||!S.result?.multi)return alert("Programmation réservée à SUIVRE.");
+ if(!isIncludedMultiFollowUp())return alert("Programmation réservée aux formules multi-passages.");
  const next=Number(S.passage||1)+1;
  if(next>plannedPassageCount())return alert("Tous les passages de la formule sont déjà réalisés.");
  if(S.paymentStatus!=="PAID_CONFIRMED"||!["CONFIRMED","CONFIRMED_AFTER_ALTERNATIVE"].includes(S.decisionStatus))
    return alert("La mission initiale doit être payée et confirmée avant un nouveau départ.");
- draw(`<div class="card"><h1>Programmer le passage ${next} — SUIVRE</h1>
+ draw(`<div class="card"><h1>Programmer le passage ${next} — ${S.result?.contract==="PRÉSENCE ENTREPRISES"?"SUIVI DE PROJET":"SUIVRE"}</h1>
    <div class="notice"><b>COMPRIS DANS LA FORMULE</b><br>Aucun nouveau paiement. Le prochain passage est une observation de la même situation et du même objet.</div>
    <div class="field"><label>Date souhaitée</label><input id="suivreNextDate" type="date" min="${todayLocalISO()}" value="${todayLocalISO()}"></div>
    ${timeDropdownHtml("suivreNextTime","")}
@@ -3267,7 +3294,7 @@ function scheduleNextSuivrePassage(){
  </div>`);
 }
 function confirmNextSuivrePassage(){
- if(S.result?.mission!=="SUIVRE"||!S.result?.multi)return alert("Mission incompatible.");
+ if(!isIncludedMultiFollowUp())return alert("Mission incompatible.");
  if(S.paymentStatus!=="PAID_CONFIRMED"||!["CONFIRMED","CONFIRMED_AFTER_ALTERNATIVE"].includes(S.decisionStatus))
    return alert("Mission initiale non confirmée : nouvelle intervention bloquée.");
  const next=Number(S.passage||1)+1;
@@ -3276,9 +3303,14 @@ function confirmNextSuivrePassage(){
  const time=normalizeTime4(getDropdownTime("suivreNextTime"));
  const check=validateMissionTimeRules(date,time,"le passage suivant");
  if(!check.ok)return alert(check.msg);
+ if(S.result?.contract==="PRÉSENCE ENTREPRISES"){
+   const c=autoConstraints(date,time);
+   if(c.evening||c.night||c.sunday)
+     return alert("Passage SUIVI B2B en soirée, nuit, dimanche ou jour férié : accord direct préalable, sans supplément automatique.");
+ }
  const exists=(S.multiSlots||[]).some(p=>Number(p.index)===next);
  if(exists)return alert("Ce passage possède déjà un créneau : ne pas écraser une date enregistrée.");
- if(!confirm("Avez-vous vérifié votre agenda et accepté personnellement ce créneau pour le même dossier SUIVRE ? Aucun paiement supplémentaire ne sera créé."))return;
+ if(!confirm("Avez-vous vérifié votre agenda et accepté personnellement ce créneau pour le même dossier de suivi ? Aucun paiement supplémentaire ne sera créé."))return;
  const p={index:next,date,time,priority:false,evening:false,night:false,sunday:false,surcharge:0,label:"Standard — inclus dans la formule"};
  S.multiSlots=[...(S.multiSlots||[]),p].sort((a,b)=>Number(a.index)-Number(b.index));
  const draft=ensureMultiDraftState();draft[next]={active:true,date,time};S.multiDraft=draft;
@@ -3293,14 +3325,14 @@ function continueMultiAfterRestitution(){
   const p=(S.multiSlots||[]).find(x=>x.index===next);
   if(!p){
     return draw(`<div class="card"><h1>Passage / jalon ${next} à programmer</h1>
-      <div class="warn"><b>⚠️ ARRÊT NORMAL</b><br>Le prochain créneau n’est pas fixé. Aucun passage suivant ne peut être lancé sans date, heure, contrôle d’agenda et éventuelle majoration.</div>
-      <div class="notice">${S.result?.mission==="SUIVRE"?"Le passage restant est inclus dans le tarif de la formule : confirmer sa date sans créer un second paiement.":"Avant un nouveau jalon B2B, vérifier les contraintes et la confirmation humaine."}</div>
-      ${S.result?.mission==="SUIVRE"?`<button class="btn primary" onclick="scheduleNextSuivrePassage()">PROGRAMMER LE PASSAGE ${next} (DÉJÀ INCLUS)</button>`:""}
+      <div class="warn"><b>⚠️ ARRÊT NORMAL</b><br>Le prochain créneau n’est pas fixé. Aucun passage suivant ne peut être lancé sans date, heure, contrôle d’agenda et vérification des conditions applicables.</div>
+      <div class="notice">${isIncludedMultiFollowUp()?"Le passage restant est inclus dans le forfait déjà payé : programmer sa date standard sans créer un second paiement.":"Avant un nouveau jalon, vérifier les contraintes et la confirmation humaine."}</div>
+      ${isIncludedMultiFollowUp()?`<button class="btn primary" onclick="scheduleNextSuivrePassage()">PROGRAMMER LE PASSAGE ${next} (DÉJÀ INCLUS)</button>`:""}
       <button class="btn ghost" onclick="archivePartialMulti()">CONSERVER LA MISSION EN COURS</button>
     </div>`);
   }
   const validation=validateMissionTimeRules(p.date,p.time,"le prochain passage");
- if(!validation.ok)return S.result?.mission==="SUIVRE"?draw(`<div class="card"><h1>Passage à reprogrammer</h1><div class="stop">${esc(validation.msg)}</div><button class="btn primary" onclick="replanExpiredSuivrePassage()">REPROGRAMMER CE PASSAGE</button><button class="btn ghost" onclick="archivePartialMulti()">CONSERVER EN COURS</button></div>`):alert("Prochain passage : "+validation.msg+" Conserver le dossier sans démarrer.");
+ if(!validation.ok)return isIncludedMultiFollowUp()?draw(`<div class="card"><h1>Passage à reprogrammer</h1><div class="stop">${esc(validation.msg)}</div><button class="btn primary" onclick="replanExpiredSuivrePassage()">REPROGRAMMER CE PASSAGE</button><button class="btn ghost" onclick="archivePartialMulti()">CONSERVER EN COURS</button></div>`):alert("Prochain passage : "+validation.msg+" Conserver le dossier sans démarrer.");
   if(!["CONFIRMED","CONFIRMED_AFTER_ALTERNATIVE"].includes(S.decisionStatus))
     return alert("Prochain passage : confirmation humaine de la mission requise.");
   S.passage=next;
