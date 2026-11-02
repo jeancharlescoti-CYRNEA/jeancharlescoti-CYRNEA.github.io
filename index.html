@@ -1991,8 +1991,35 @@ function validateOwnerTariffAndSchedule(){
  }
  return true;
 }
+function validateB2BMultiBeforeGateway(){
+ if(S.result?.contract!=="PRÉSENCE ENTREPRISES")return true;
+ const mission=String(S.result?.mission||"");
+ const two=mission==="SUIVI DE PROJET - 2 PASSAGES",three=mission==="CONTINUITÉ PROJET";
+ if(!two&&!three)return true;
+ if(S.result?.status!=="PROPOSER"||S.result?.isQuote||!S.result?.multi)
+   throw Error("Forfait SUIVI B2B non réservable automatiquement : requalifier la commande.");
+ const count=two?2:3,amount=two?850:1190;
+ if((S.result?.passages??count)!==count||parseEuroAmount(S.result.price)!==amount||!String(S.result.price).includes("HT"))
+   throw Error("Prix ou nombre de passages SUIVI B2B incohérent : paiement bloqué.");
+ const slots=Array.isArray(S.multiSlots)?S.multiSlots:[];
+ if(!slots.length||!slots.some(p=>Number(p.index)===1)||slots.length>count)
+   throw Error("Premier passage manquant ou nombre de passages supérieur au forfait.");
+ const seen=new Set();
+ for(const p of slots){
+   const i=Number(p.index);
+   if(!Number.isInteger(i)||i<1||i>count||seen.has(i))throw Error("Jalon SUIVI B2B dupliqué ou invalide.");
+   seen.add(i);
+   const check=validateMissionTimeRules(p.date,p.time,"le passage / jalon "+i);
+   if(!check.ok)throw Error(check.msg);
+   const c=autoConstraints(p.date,p.time);
+   if(c.priority||c.evening||c.night||c.sunday||Number(p.surcharge||0)>0)
+     throw Error("SUIVI B2B hors standard : contacter CYRNEA pour accord, aucun paiement forfaitaire automatique.");
+ }
+ return true;
+}
 async function registerTallyIntent(){
  validateOwnerTariffAndSchedule();
+ validateB2BMultiBeforeGateway();
  if(!assertVoirContractInvariant())throw new Error("Incohérence VOIR / contrat.");
  const cents=gatewayPaymentCents();
  if(!Number.isInteger(cents)||cents<=0)throw new Error("Montant de paiement invalide.");
