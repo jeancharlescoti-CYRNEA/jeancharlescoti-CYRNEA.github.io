@@ -3262,15 +3262,18 @@ function recordPassageSnapshot(){
  });
  S.passageHistory=history;
 }
+function isIncludedMultiFollowUp(){
+ return !!(S.result?.multi&&["SUIVRE","SUIVI DE PROJET - 2 PASSAGES","CONTINUITÉ PROJET"].includes(S.result?.mission));
+}
 function replanExpiredSuivrePassage(){
- if(S.result?.mission!=="SUIVRE")return alert("Non disponible.");
+ if(!isIncludedMultiFollowUp())return alert("Non disponible pour cette mission.");
  const next=Number(S.passage||1)+1;
  S.multiSlots=(S.multiSlots||[]).filter(x=>Number(x.index)!==next);
  const draft=ensureMultiDraftState();delete draft[next];S.multiDraft=draft;
  save();scheduleNextSuivrePassage();
 }
 function scheduleNextSuivrePassage(){
- if(S.result?.mission!=="SUIVRE"||!S.result?.multi)return alert("Programmation réservée à SUIVRE.");
+ if(!isIncludedMultiFollowUp())return alert("Programmation réservée aux formules multi-passages.");
  const next=Number(S.passage||1)+1;
  if(next>plannedPassageCount())return alert("Tous les passages de la formule sont déjà réalisés.");
  if(S.paymentStatus!=="PAID_CONFIRMED"||!["CONFIRMED","CONFIRMED_AFTER_ALTERNATIVE"].includes(S.decisionStatus))
@@ -3285,7 +3288,7 @@ function scheduleNextSuivrePassage(){
  </div>`);
 }
 function confirmNextSuivrePassage(){
- if(S.result?.mission!=="SUIVRE"||!S.result?.multi)return alert("Mission incompatible.");
+ if(!isIncludedMultiFollowUp())return alert("Mission incompatible.");
  if(S.paymentStatus!=="PAID_CONFIRMED"||!["CONFIRMED","CONFIRMED_AFTER_ALTERNATIVE"].includes(S.decisionStatus))
    return alert("Mission initiale non confirmée : nouvelle intervention bloquée.");
  const next=Number(S.passage||1)+1;
@@ -3294,6 +3297,11 @@ function confirmNextSuivrePassage(){
  const time=normalizeTime4(getDropdownTime("suivreNextTime"));
  const check=validateMissionTimeRules(date,time,"le passage suivant");
  if(!check.ok)return alert(check.msg);
+ if(S.result?.contract==="PRÉSENCE ENTREPRISES"){
+   const c=autoConstraints(date,time);
+   if(c.priority||c.evening||c.night||c.sunday)
+     return alert("Passage SUIVI B2B hors standard : confirmer les conditions directement avec CYRNEA, sans programmation automatique de ce supplément.");
+ }
  const exists=(S.multiSlots||[]).some(p=>Number(p.index)===next);
  if(exists)return alert("Ce passage possède déjà un créneau : ne pas écraser une date enregistrée.");
  if(!confirm("Avez-vous vérifié votre agenda et accepté personnellement ce créneau pour le même dossier SUIVRE ? Aucun paiement supplémentaire ne sera créé."))return;
@@ -3312,13 +3320,13 @@ function continueMultiAfterRestitution(){
   if(!p){
     return draw(`<div class="card"><h1>Passage / jalon ${next} à programmer</h1>
       <div class="warn"><b>⚠️ ARRÊT NORMAL</b><br>Le prochain créneau n’est pas fixé. Aucun passage suivant ne peut être lancé sans date, heure, contrôle d’agenda et éventuelle majoration.</div>
-      <div class="notice">${S.result?.mission==="SUIVRE"?"Le passage restant est inclus dans le tarif de la formule : confirmer sa date sans créer un second paiement.":"Avant un nouveau jalon B2B, vérifier les contraintes et la confirmation humaine."}</div>
-      ${S.result?.mission==="SUIVRE"?`<button class="btn primary" onclick="scheduleNextSuivrePassage()">PROGRAMMER LE PASSAGE ${next} (DÉJÀ INCLUS)</button>`:""}
+      <div class="notice">${isIncludedMultiFollowUp()?"Le passage restant est inclus dans le forfait déjà payé : programmer sa date standard sans créer un second paiement.":"Avant un nouveau jalon, vérifier les contraintes et la confirmation humaine."}</div>
+      ${isIncludedMultiFollowUp()?`<button class="btn primary" onclick="scheduleNextSuivrePassage()">PROGRAMMER LE PASSAGE ${next} (DÉJÀ INCLUS)</button>`:""}
       <button class="btn ghost" onclick="archivePartialMulti()">CONSERVER LA MISSION EN COURS</button>
     </div>`);
   }
   const validation=validateMissionTimeRules(p.date,p.time,"le prochain passage");
- if(!validation.ok)return S.result?.mission==="SUIVRE"?draw(`<div class="card"><h1>Passage à reprogrammer</h1><div class="stop">${esc(validation.msg)}</div><button class="btn primary" onclick="replanExpiredSuivrePassage()">REPROGRAMMER CE PASSAGE</button><button class="btn ghost" onclick="archivePartialMulti()">CONSERVER EN COURS</button></div>`):alert("Prochain passage : "+validation.msg+" Conserver le dossier sans démarrer.");
+ if(!validation.ok)return isIncludedMultiFollowUp()?draw(`<div class="card"><h1>Passage à reprogrammer</h1><div class="stop">${esc(validation.msg)}</div><button class="btn primary" onclick="replanExpiredSuivrePassage()">REPROGRAMMER CE PASSAGE</button><button class="btn ghost" onclick="archivePartialMulti()">CONSERVER EN COURS</button></div>`):alert("Prochain passage : "+validation.msg+" Conserver le dossier sans démarrer.");
   if(!["CONFIRMED","CONFIRMED_AFTER_ALTERNATIVE"].includes(S.decisionStatus))
     return alert("Prochain passage : confirmation humaine de la mission requise.");
   S.passage=next;
