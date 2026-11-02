@@ -1055,8 +1055,8 @@ function missionPhoneScript(){
   if(m==='DÉCIDER') return "Votre besoin relève d’une mission DÉCIDER : nous recueillons sur place les éléments factuels convenus pour vous aider à décider vous-même. Le tarif est de 260 € TTC.";
   if(m==='SUIVRE') return "Votre besoin relève de SUIVRE : "+(S.result?.passages===3?"trois observations — 690":"deux observations — 490")+" € TTC, aux étapes convenues.";
   if(m==='VISITE TERRAIN PILOTÉE') return "Votre besoin correspond à VISITE DE SITE à 350 € HT.";
-  if(m==='PRÉSENCE PROJET') return "Votre besoin correspond à PRÉSENCE À UNE ÉTAPE CLÉ à 490 € HT.";
-  if(m==='PRÉSENCE PROJET ÉTENDUE') return "Votre besoin correspond à PRÉSENCE ÉTENDUE à 690 € HT.";
+  if(m==='PRÉSENCE PROJET') return "Votre besoin correspond à PRÉSENCE — 1 h 15 maximum, à 490 € HT.";
+  if(m==='PRÉSENCE PROJET ÉTENDUE') return "Votre besoin correspond à PRÉSENCE — 3 h maximum, à 690 € HT.";
   if(m==='SUIVI DE PROJET - 2 PASSAGES') return "Votre besoin correspond à SUIVI DE PROJET, deux présences de 1 h 15 maximum pour 850 € HT.";
    if(m==='CONTINUITÉ PROJET') return "Votre besoin correspond à SUIVI DE PROJET, trois présences de 1 h 15 maximum pour 1 190 € HT.";
   if(m==='ACCÈS B2B') return "Votre besoin correspond à DONNER ACCÈS à 109 € HT : accueil, présence pendant l’opération courte et fermeture, 30 minutes maximum au total." ;
@@ -1794,8 +1794,6 @@ function slot(){
  if(multi){
    const isB2B=S.result.contract==="PRÉSENCE ENTREPRISES";
    const b2bSuivi=isB2B&&["CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(S.result?.mission);
-   const pri="+120 € HT";
-   const sun="+180 € HT";
    const jalonBlock=(i, hidden)=>`
      <div id="jalon_${i}" class="checkZone${hidden?" hidden":""}">
        <div class="checkIntro">PASSAGE / JALON ${i}${i>1?" — UNIQUEMENT SI DATE CONNUE":""}</div>
@@ -3280,7 +3278,7 @@ function scheduleNextSuivrePassage(){
  if(next>plannedPassageCount())return alert("Tous les passages de la formule sont déjà réalisés.");
  if(S.paymentStatus!=="PAID_CONFIRMED"||!["CONFIRMED","CONFIRMED_AFTER_ALTERNATIVE"].includes(S.decisionStatus))
    return alert("La mission initiale doit être payée et confirmée avant un nouveau départ.");
- draw(`<div class="card"><h1>Programmer le passage ${next} — SUIVRE</h1>
+ draw(`<div class="card"><h1>Programmer le passage ${next} — ${S.result?.contract==="PRÉSENCE ENTREPRISES"?"SUIVI DE PROJET":"SUIVRE"}</h1>
    <div class="notice"><b>COMPRIS DANS LA FORMULE</b><br>Aucun nouveau paiement. Le prochain passage est une observation de la même situation et du même objet.</div>
    <div class="field"><label>Date souhaitée</label><input id="suivreNextDate" type="date" min="${todayLocalISO()}" value="${todayLocalISO()}"></div>
    ${timeDropdownHtml("suivreNextTime","")}
@@ -3306,7 +3304,7 @@ function confirmNextSuivrePassage(){
  }
  const exists=(S.multiSlots||[]).some(p=>Number(p.index)===next);
  if(exists)return alert("Ce passage possède déjà un créneau : ne pas écraser une date enregistrée.");
- if(!confirm("Avez-vous vérifié votre agenda et accepté personnellement ce créneau pour le même dossier SUIVRE ? Aucun paiement supplémentaire ne sera créé."))return;
+ if(!confirm("Avez-vous vérifié votre agenda et accepté personnellement ce créneau pour le même dossier de suivi ? Aucun paiement supplémentaire ne sera créé."))return;
  const p={index:next,date,time,priority:false,evening:false,night:false,sunday:false,surcharge:0,label:"Standard — inclus dans la formule"};
  S.multiSlots=[...(S.multiSlots||[]),p].sort((a,b)=>Number(a.index)-Number(b.index));
  const draft=ensureMultiDraftState();draft[next]={active:true,date,time};S.multiDraft=draft;
@@ -3321,7 +3319,7 @@ function continueMultiAfterRestitution(){
   const p=(S.multiSlots||[]).find(x=>x.index===next);
   if(!p){
     return draw(`<div class="card"><h1>Passage / jalon ${next} à programmer</h1>
-      <div class="warn"><b>⚠️ ARRÊT NORMAL</b><br>Le prochain créneau n’est pas fixé. Aucun passage suivant ne peut être lancé sans date, heure, contrôle d’agenda et éventuelle majoration.</div>
+      <div class="warn"><b>⚠️ ARRÊT NORMAL</b><br>Le prochain créneau n’est pas fixé. Aucun passage suivant ne peut être lancé sans date, heure, contrôle d’agenda et vérification des conditions applicables.</div>
       <div class="notice">${isIncludedMultiFollowUp()?"Le passage restant est inclus dans le forfait déjà payé : programmer sa date standard sans créer un second paiement.":"Avant un nouveau jalon, vérifier les contraintes et la confirmation humaine."}</div>
       ${isIncludedMultiFollowUp()?`<button class="btn primary" onclick="scheduleNextSuivrePassage()">PROGRAMMER LE PASSAGE ${next} (DÉJÀ INCLUS)</button>`:""}
       <button class="btn ghost" onclick="archivePartialMulti()">CONSERVER LA MISSION EN COURS</button>
