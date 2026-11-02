@@ -1389,7 +1389,7 @@ function nextQuarterInfo(){
 }
 function nightAllowedForMission(mission){
   const m=baseMissionName(String(mission||""));
-  return ["PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","CONTINUITÉ PROJET"].includes(m);
+  return ["PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE"].includes(m);
 }
 function validateFutureSlot(dateStr,timeStr,label="créneau"){
   const normalized=normalizeTime4(timeStr);
@@ -1610,27 +1610,17 @@ function multiPassagePricing(){
     return showManualMultiReview();
   }
 
-  let base=0, unitPriority=0, unitSunday=0, suffix="";
-  if(m==="SUIVRE"){
-    base=S.result?.passages===3?690:490; unitPriority=0; unitSunday=0; suffix="€ TTC";
-  } else if(m==="CONTINUITÉ PROJET"){
-    base=1190; unitPriority=120; unitSunday=180; suffix="€ HT";
-  } else {
-    return alert("Cette fonction multi-passage ne s'applique pas à cette mission.");
-  }
-
-  let total=base;
-  passages.forEach(p=>{
-    if(m==="SUIVRE"){p.surcharge=0;p.label="Standard";return;}
-    let add=0,label="Standard";
-    if(p.priority){add=unitPriority;label="Prioritaire sous 24 h";}
-    if(p.evening){add=unitPriority;label="Soir 19 h–20 h 59";}
-    if(m==="CONTINUITÉ PROJET" && p.night){add=unitSunday;label="Nuit à partir de 21 h";}
-    if(p.sunday){add=unitSunday;label="Dimanche / jour férié";}
-    p.surcharge=add;
-    p.label=label;
-    total+=add;
-  });
+  const b2bSuivi=["CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(m);
+  let base=0, suffix="";
+  if(m==="SUIVRE"){base=S.result?.passages===3?690:490;suffix="€ TTC";}
+  else if(b2bSuivi){base=m==="CONTINUITÉ PROJET"?1190:850;suffix="€ HT";}
+  else return alert("Cette fonction multi-passage ne s'applique pas à cette mission.");
+  // Pas de majoration appliquée à tort sur l'ensemble du forfait multi-passages.
+  // Toute contrainte hors standard B2B se décide par contact direct.
+  if(b2bSuivi && passages.some(p=>p.priority||p.evening||p.night||p.sunday))
+    return alert("SUIVI DE PROJET B2B : au moins un passage est hors standard. Contactez CYRNEA directement ; aucun paiement forfaitaire automatique pour ce cas.");
+  const total=base;
+  passages.forEach(p=>{p.surcharge=0;p.label="Standard — inclus dans le forfait";});
 
   S.multiSlots=passages;
   S.date=passages[0].date;
@@ -1645,14 +1635,14 @@ function multiPassagePricing(){
   save();
   showManualMultiReview();
 }
-function plannedPassageCount(){return S.result?.mission==="SUIVRE"?(S.result?.passages===3?3:2):3;}
+function plannedPassageCount(){if(S.result?.mission==="SUIVRE")return S.result?.passages===3?3:2;return S.result?.mission==="SUIVI DE PROJET - 2 PASSAGES"?2:3;}
 function multiPassageRows(){
   if(!S.result.multi||!Array.isArray(S.multiSlots)) return "";
   let rows=S.multiSlots.map(p=>`
     <div class="row"><b>Passage / jalon ${p.index}</b><span>${esc(p.date)} · ${esc(displayTime4(p.time))} — ${esc(p.label)}${p.surcharge?` (+${p.surcharge} ${S.result.contract==="PRÉSENCE ENTREPRISES"?"€ HT":"€ TTC"})`:""}</span></div>
   `).join("");
   if(S.multiSlots.length<plannedPassageCount()){
-    rows+=`<div class="row"><b>Passages restants</b><span>${S.result?.mission==="SUIVRE"?"Dates à convenir ultérieurement, incluses dans le tarif fixe.":"Dates à programmer, avec majorations éventuelles B2B validées ultérieurement."}</span></div>`;
+    rows+=`<div class="row"><b>Passages restants</b><span>${S.result?.mission==="SUIVRE"?"Dates à convenir ultérieurement, incluses dans le tarif fixe.":"Dates à convenir ultérieurement. Toute exception hors standard B2B passe par contact direct."}</span></div>`;
   }
   return rows;
 }
@@ -1703,11 +1693,10 @@ function availabilityPricing(){
     S.result.availabilityLabel=label;
     return;
   }
-  if(m==="CONTINUITÉ PROJET"){
-    const add=(sunday||night)?180:(priority||evening)?120:0;
-    const label=sunday?"Dimanche / jour férié — jalon concerné":night?"Nuit à partir de 21 h — jalon concerné":priority?"Prioritaire sous 24 h — jalon concerné":evening?"Soir 19 h–20 h 59 — jalon concerné":"Standard";
-    S.result.price=(1190+add).toLocaleString("fr-FR")+" € HT";
-    S.result.availabilityLabel=label;
+  if(m==="CONTINUITÉ PROJET"||m==="SUIVI DE PROJET - 2 PASSAGES"){
+    const base=m==="CONTINUITÉ PROJET"?1190:850;
+    S.result.price=base.toLocaleString("fr-FR")+" € HT";
+    S.result.availabilityLabel=(priority||evening||night||sunday)?"HORS STANDARD — contact direct":"Standard";
   }
 }
 function supportsPriority(){
