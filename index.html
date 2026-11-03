@@ -259,7 +259,7 @@ const B2B_TALLY_MISSION={
   "RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE B2B - 109 € HT",
   "PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE B2B - 169 € HT"
 };
-function b2bCommercialMissionName(name){const labels={"VISITE TERRAIN PILOTÉE":"VISITE DE SITE","PRÉSENCE PROJET":"PRÉSENCE — 1 H 15","PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE — 3 H","SUIVI DE PROJET - 2 PASSAGES":"SUIVI DE PROJET — 2 PASSAGES","CONTINUITÉ PROJET":"SUIVI DE PROJET — 3 PASSAGES","ACCÈS B2B":"DONNER ACCÈS","PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE"};return labels[name]||name}
+function b2bCommercialMissionName(name){const labels={"VISITE TERRAIN PILOTÉE":"VISITE DE SITE","PRÉSENCE PROJET":"PRÉSENCE — 1 H 15","PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE — 3 H","SUIVI DE PROJET - 2 PASSAGES":"SUIVI DE PROJET — 2 PASSAGES","CONTINUITÉ PROJET":"SUIVI DE PROJET — 3 PASSAGES","ACCÈS B2B":"DONNER ACCÈS","REMISE CLÉ / BADGE B2B":"REMISE CLÉ / BADGE","RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE","PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE"};return labels[name]||name}
 function activeMissionKey(st=S){return String(st?.missionId||st?.draftKey||"")}
 function isActiveMissionState(st=S){
  return !!(st && st.result && String(st.result.mission||"").trim() && String(st.result.contract||"").trim() && st.stage!=="ARCHIVE");
@@ -853,7 +853,7 @@ function sub(){
 function zone(){
  const x=String(S.city||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[-_]/g," ").replace(/\s+/g," ").trim();
  // Les autres communes nommées Sainte-Lucie ne font pas partie du secteur.
- return ["porto vecchio","lecci","sotta","san gavino di carbini","zonza","sainte lucie de porto vecchio","sainte lucie de porto vecchio / pinarello","pinarello","fautea","tarco","favone","figa","sari solenzara"].includes(x);
+ return ["porto vecchio","lecci","sotta","san gavino di carbini","zonza","sainte lucie de porto vecchio","sainte lucie de porto vecchio / pinarello","pinarello","fautea","tarco"].includes(x);
 }
 function voir(){return S.universe==="RELAIS"?{status:"PROPOSER",mission:"VOIR RELAIS",price:"260 € TTC",cap:"1 h",contract:"RELAIS",rest:"R1_RELAIS"}:{status:"PROPOSER",mission:"VOIR PRÉSENCE",price:"260 € TTC",cap:"1 h",contract:"PRÉSENCE PROPRIÉTAIRES",rest:"R1"}}
 function classify(){
@@ -1853,8 +1853,18 @@ function standardSimplyBookUrl(){
 }
 function tallyAvailabilityMode(){
  if(["RELAIS","PRÉSENCE PROPRIÉTAIRES"].includes(S.result?.contract))return "standard";
- if(S.result?.contract==="PRÉSENCE ENTREPRISES" && ["CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(S.result?.mission))
-   return "standard";
+ if(S.result?.contract==="PRÉSENCE ENTREPRISES" && ["CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(S.result?.mission)){
+   const slots=Array.isArray(S.multiSlots)&&S.multiSlots.length?S.multiSlots:[{date:S.date,time:S.slot}];
+   // Même qualification que le Gateway V9.3 : forfait fixe, quote uniquement
+   // pour des horaires hors 08 h–18 h 45 ou les dimanches/jours fériés.
+   const particular=slots.some(p=>{
+     const t=normalizeTime4(p?.time||"");
+     if(!/^(?:[01][0-9]|2[0-3]):(?:00|15|30|45)$/.test(t))return false;
+     const mins=Number(t.slice(0,2))*60+Number(t.slice(3));
+     return mins<480||mins>1125||autoConstraints(p.date,t).sunday;
+   });
+   return particular?"quote":"standard";
+ }
  if(b2bExceptionalBaseSlot()||S.result?.isQuote)return "quote";
  if(Array.isArray(S.multiSlots)&&S.multiSlots.length){
    if(S.multiSlots.some(p=>p?.sunday))return "sunday";
@@ -1872,7 +1882,12 @@ function tallyAvailabilityMode(){
 function tallyBaseUrl(){
  const standard=!isHorsStandard();
  if(S.result?.contract==="RELAIS")return TALLY_URLS.RELAIS_STANDARD;
- if(S.result?.contract==="PRÉSENCE ENTREPRISES")return standard?TALLY_URLS.B2B_STANDARD:TALLY_URLS.B2B_HS;
+ if(S.result?.contract==="PRÉSENCE ENTREPRISES"){
+   // Les demandes B2B à prix fixe qualifiées quote suivent le formulaire
+   // STANDARD, comme le Bridge V7.1. Les devis libres restent hors paiement.
+   const fixedQuote=tallyAvailabilityMode()==="quote" && !S.result?.isQuote && S.result?.status==="PROPOSER";
+   return standard||fixedQuote?TALLY_URLS.B2B_STANDARD:TALLY_URLS.B2B_HS;
+ }
  return TALLY_URLS.PRESENCE_STANDARD;
 }
 function tallyMissionValue(){
