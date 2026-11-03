@@ -1579,7 +1579,7 @@ function multiPassagePricing(){
     }
     // Format technique d'échange conservé pour Gateway V9.3.
     // Gateway recalcule lui-même chaque majoration depuis date et heure.
-    p.label="Standard — inclus dans le forfait";
+    p.label=b2bSuivi?"Standard":"Standard — inclus dans le forfait";
   });
 
   S.multiSlots=passages;
