@@ -1354,7 +1354,7 @@ function nextQuarterInfo(){
 }
 function nightAllowedForMission(mission){
   const m=baseMissionName(String(mission||""));
-  return ["PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE"].includes(m);
+  return ["PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","SUIVI DE PROJET - 2 PASSAGES","CONTINUITÉ PROJET"].includes(m);
 }
 function validateFutureSlot(dateStr,timeStr,label="créneau"){
   const normalized=normalizeTime4(timeStr);
@@ -1565,9 +1565,22 @@ function multiPassagePricing(){
   if(m==="SUIVRE"){base=S.result?.passages===3?690:490;suffix="€ TTC";}
   else if(b2bSuivi){base=m==="CONTINUITÉ PROJET"?1190:850;suffix="€ HT";}
   else return alert("Cette fonction multi-passage ne s'applique pas à cette mission.");
-  // Les forfaits multi restent à prix fixe, tous créneaux futurs recevables.
-  const total=base;
-  passages.forEach(p=>{p.surcharge=0;p.label="Standard — inclus dans le forfait";});
+  // SUIVI B2B : supplément par passage connu ; un seul, le plus élevé.
+  // SUIVRE propriétaires reste au forfait fixe (aucune majoration).
+  let total=base;
+  passages.forEach(p=>{
+    if(b2bSuivi){
+      p.surcharge=(p.sunday||p.night)?180:(p.priority||p.evening)?120:0;
+      p.publicLabel=p.sunday?"Dimanche / jour férié":p.night?"Nuit à partir de 21 h":p.evening?"Soir 19 h–20 h 59":p.priority?"Moins de 24 h":"Standard";
+      total+=p.surcharge;
+    }else{
+      p.surcharge=0;
+      p.publicLabel="Standard";
+    }
+    // Format technique d'échange conservé pour Gateway V9.3.
+    // Gateway recalcule lui-même chaque majoration depuis date et heure.
+    p.label="Standard — inclus dans le forfait";
+  });
 
   S.multiSlots=passages;
   S.date=passages[0].date;
@@ -1576,7 +1589,7 @@ function multiPassagePricing(){
   S.availability={multi:true};
   S.result.price=total.toLocaleString("fr-FR")+" "+suffix;
   S.result.availabilityLabel=b2bSuivi
-    ? `Forfait SUIVI — ${passages.length} passage(s) daté(s), confirmation CYRNEA obligatoire`
+    ? `Forfait SUIVI — ${passages.length} passage(s) daté(s), majorations : ${total-base} € HT, confirmation CYRNEA obligatoire`
     : passages.length===1
       ? "1er passage / jalon connu — suivants à programmer"
       : `${passages.length} passages / jalons compris dans la formule`;
@@ -1588,7 +1601,7 @@ function plannedPassageCount(){if(S.result?.mission==="SUIVRE")return S.result?.
 function multiPassageRows(){
   if(!S.result.multi||!Array.isArray(S.multiSlots)) return "";
   let rows=S.multiSlots.map(p=>`
-    <div class="row"><b>Passage / jalon ${p.index}</b><span>${esc(p.date)} · ${esc(displayTime4(p.time))} — ${esc(p.label)}${p.surcharge?` (+${p.surcharge} ${S.result.contract==="PRÉSENCE ENTREPRISES"?"€ HT":"€ TTC"})`:""}</span></div>
+    <div class="row"><b>Passage / jalon ${p.index}</b><span>${esc(p.date)} · ${esc(displayTime4(p.time))} — ${esc(p.publicLabel||p.label)}${p.surcharge?` (+${p.surcharge} ${S.result.contract==="PRÉSENCE ENTREPRISES"?"€ HT":"€ TTC"})`:""}</span></div>
   `).join("");
   if(S.multiSlots.length<plannedPassageCount()){
     rows+=`<div class="row"><b>Passages restants</b><span>${S.result?.mission==="SUIVRE"?"Dates à convenir ultérieurement, incluses dans le tarif fixe.":"Dates à convenir ultérieurement, sans supplément automatique du forfait B2B."}</span></div>`;
@@ -1759,7 +1772,7 @@ function slot(){
        <div class="checkIntro">PASSAGE / JALON ${i}${i>1?" — UNIQUEMENT SI DATE CONNUE":""}</div>
        ${multiDateDropdownHtml(`d${i}`)}
        ${multiTimeDropdownHtml(`sl${i}`)}
-       ${b2bSuivi?'<div class="muted">SUIVI B2B : demande à toute heure, y compris sous 24 h, le soir, la nuit, le dimanche et les jours fériés. Forfait fixe ; confirmation CYRNEA après paiement.</div>':'<div class="muted">Passage standard, sans majoration.</div>'}
+       ${b2bSuivi?'<div class="muted">SUIVI B2B : demande à toute heure. Majorations par passage concerné : +120 € HT sous 24 h / soir, +180 € HT de nuit / dimanche / férié, sans cumul sur un même passage. Confirmation CYRNEA après paiement.</div>':'<div class="muted">Passage standard, sans majoration.</div>'}
      </div>`;
 
    draw(`<div class="card"><h1>Créneaux — mission en plusieurs passages / jalons</h1>
@@ -1855,7 +1868,7 @@ function tallyAvailabilityMode(){
  if(["RELAIS","PRÉSENCE PROPRIÉTAIRES"].includes(S.result?.contract))return "standard";
  if(S.result?.contract==="PRÉSENCE ENTREPRISES" && ["CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(S.result?.mission)){
    const slots=Array.isArray(S.multiSlots)&&S.multiSlots.length?S.multiSlots:[{date:S.date,time:S.slot}];
-   // Même qualification que le Gateway V9.3 : forfait fixe, quote uniquement
+   // Même qualification que le Gateway V9.3 : majorations par passage, quote uniquement
    // pour des horaires hors 08 h–18 h 45 ou les dimanches/jours fériés.
    const particular=slots.some(p=>{
      const t=normalizeTime4(p?.time||"");
@@ -1928,6 +1941,16 @@ function buildTallyUrl(){
  q.set("email_client",S.email||"");
  q.set("telephone_client",S.phone||"");
  q.set("cadre_client",S.caller==="B2B"?"ENTREPRISE / DONNEUR D’ORDRE PROFESSIONNEL":"PROPRIÉTAIRE PARTICULIER");
+ if(S.result?.contract==="PRÉSENCE ENTREPRISES" && ["CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(S.result?.mission)){
+   const base=S.result.mission==="CONTINUITÉ PROJET"?1190:850;
+   const extra=(Array.isArray(S.multiSlots)?S.multiSlots:[]).reduce((sum,p)=>sum+Number(p.surcharge||0),0);
+   q.set("base_ht",base+" €");
+   q.set("supplement_ht",extra+" €");
+   q.set("total_ht",(base+extra)+" €");
+   q.set("tva",((base+extra)*0.2).toFixed(2).replace(".",",")+" €");
+   q.set("total_ttc",((base+extra)*1.2).toFixed(2).replace(".",",")+" €");
+   q.set("disponibilite",extra>0?"Créneau particulier — majorations par jalon, total validé":"Demande standard — forfait de base");
+ }
  q.set("availability_mode",tallyAvailabilityMode());
  if(S.caller==="OWNER")q.set("execution_anticipee_14j",earlyExecutionNeeded()?"oui":"non");
  return tallyBaseUrl()+"?"+q.toString();
@@ -1983,21 +2006,25 @@ function validateB2BMultiBeforeGateway(){
    throw Error("Forfait SUIVI B2B déjà payé ou remboursé : ne pas créer de nouveau paiement sur le même dossier.");
  if(S.result?.status!=="PROPOSER"||S.result?.isQuote||!S.result?.multi)
    throw Error("Forfait SUIVI B2B non réservable automatiquement : requalifier la commande.");
- const count=two?2:3,amount=two?850:1190;
- if((S.result?.passages??count)!==count||parseEuroAmount(S.result.price)!==amount||!String(S.result.price).includes("HT"))
-   throw Error("Prix ou nombre de passages SUIVI B2B incohérent : paiement bloqué.");
+ const count=two?2:3,base=two?850:1190;
  const slots=Array.isArray(S.multiSlots)?S.multiSlots:[];
- if(!slots.length||!slots.some(p=>Number(p.index)===1)||slots.length>count)
+ if(!slots.length||slots.length>count)
    throw Error("Premier passage manquant ou nombre de passages supérieur au forfait.");
- const seen=new Set();
- for(const p of slots){
-   const i=Number(p.index);
-   if(!Number.isInteger(i)||i<1||i>count||seen.has(i))throw Error("Jalon SUIVI B2B dupliqué ou invalide.");
-   seen.add(i);
-   const check=validateMissionTimeRules(p.date,p.time,"le passage / jalon "+i);
+ let total=base;
+ for(let n=0;n<slots.length;n++){
+   const p=slots[n];
+   if(Number(p.index)!==n+1)throw Error("Jalons SUIVI B2B non ordonnés ou dupliqués.");
+   const check=validateMissionTimeRules(p.date,p.time,"le passage / jalon "+p.index);
    if(!check.ok)throw Error(check.msg);
-   if(Number(p.surcharge||0)!==0)throw Error("SUIVI B2B : aucun supplément automatique de jalon.");
+   const cc=autoConstraints(p.date,p.time);
+   const h=Number(normalizeTime4(p.time).slice(0,2));
+   const surcharge=(cc.sunday||h>=21||h<8)?180:(cc.priority||(h>=19&&h<21))?120:0;
+   if(Number(p.surcharge)!==surcharge)
+     throw Error("Majoration d'un jalon SUIVI B2B incohérente : paiement bloqué.");
+   total+=surcharge;
  }
+ if((S.result?.passages??count)!==count||parseEuroAmount(S.result.price)!==total||!String(S.result.price).includes("HT"))
+   throw Error("Prix ou nombre de passages SUIVI B2B incohérent : paiement bloqué.");
  return true;
 }
 async function registerTallyIntent(){
