@@ -1114,32 +1114,9 @@ function normalizeTime4(v){
   return `${pad2(Number(m[1]))}:${m[2]}`;
 }
 function timeDropdownHtml(baseId,onchangeFn="refreshCalendarConstraints()"){
-  const contract=S.result?.contract||"";
-  const isB2B=contract==="PRÉSENCE ENTREPRISES" || (!contract && S.caller==="B2B");
-  const isOwnerPresence=contract==="PRÉSENCE PROPRIÉTAIRES";
-  const isRelais=contract==="RELAIS";
-  const projectNightOpen=isB2B && nightAllowedForMission(S.result?.mission);
-
-  // N'afficher que les heures réellement ouvertes selon l'univers.
-  // RELAIS : 08 h 00–18 h 45.
-  // PRÉSENCE propriétaires : 08 h 00–18 h 45 ; aucun nouveau départ à 19 h.
-  // B2B logistique / VTP : 08 h 00–18 h 45.
-  // B2B Projet / Étendue / Continuité : H24.
-  let hours;
-  let hoursNote;
-  if(projectNightOpen){
-    hours=Array.from({length:24},(_,i)=>pad2(i));
-    hoursNote="Heures ouvertes : H24. Avant 08 h et à partir de 19 h, le créneau bascule en HORS STANDARD.";
-  } else if(isOwnerPresence){
-    hours=Array.from({length:11},(_,i)=>pad2(i+8));
-    hoursNote="Heures ouvertes : départ de 08 h 00 à 18 h 45. Aucun nouveau départ à partir de 19 h, même en soirée.";
-  } else if(isRelais || isB2B){
-    hours=Array.from({length:11},(_,i)=>pad2(i+8));
-    hoursNote="Heures ouvertes : départ de 08 h 00 à 18 h 45. Aucun départ à partir de 19 h.";
-  } else {
-    hours=Array.from({length:11},(_,i)=>pad2(i+8));
-    hoursNote="Heures ouvertes : départ de 08 h 00 à 18 h 45.";
-  }
+ const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES";
+ const hours=Array.from({length:24},(_,i)=>pad2(i));
+ const hoursNote="Demande possible à toute heure, sans confirmation automatique du créneau.";
 
   const minutes=["00","15","30","45"];
   return `<div class="field"><label>Heure</label>
@@ -1204,20 +1181,8 @@ function multiDateDropdownHtml(id){
 }
 
 function multiTimeDropdownHtml(baseId){
-  const contract=S.result?.contract||"";
-  const isB2B=contract==="PRÉSENCE ENTREPRISES" || (!contract && S.caller==="B2B");
-  const isOwnerPresence=contract==="PRÉSENCE PROPRIÉTAIRES";
-  const projectNightOpen=isB2B && nightAllowedForMission(S.result?.mission);
-
-  let startHour=8,endHour=18;
-  let note="Heures ouvertes : départ de 08 h 00 à 18 h 45.";
-  if(projectNightOpen){
-    startHour=0;endHour=23;
-    note="Heures ouvertes : H24. Avant 08 h et à partir de 19 h, le créneau bascule en HORS STANDARD.";
-  }else if(isOwnerPresence){
-    startHour=8;endHour=18;
-    note="Heures ouvertes : départ de 08 h 00 à 18 h 45. Aucun nouveau départ à partir de 19 h.";
-  }
+ const startHour=0,endHour=23;
+ const note="Demande possible à toute heure. Forfait fixe et confirmation humaine.";
 
   const values=[];
   for(let h=startHour;h<=endHour;h++){
@@ -1405,23 +1370,8 @@ function validateFutureSlot(dateStr,timeStr,label="créneau"){
   return {ok:true,dt};
 }
 function validateMissionTimeRules(dateStr,timeStr,label="créneau"){
-  const check=validateFutureSlot(dateStr,timeStr,label);
-  if(!check.ok)return check;
-  const contract=S.result?.contract||"";
-  const isB2B=contract==="PRÉSENCE ENTREPRISES" || (!contract && S.caller==="B2B");
-  const isOwnerPresence=contract==="PRÉSENCE PROPRIÉTAIRES";
-  const projectNightOpen=isB2B && nightAllowedForMission(S.result?.mission);
-  const hour=check.dt.getHours();
-  if(!isB2B && (check.dt.getDay()===0 || isFrenchPublicHoliday(dateStr)))return {ok:false,msg:"Réservation STANDARD : du lundi au samedi, hors jours fériés."};
-
-  if(isOwnerPresence && (hour<8 || hour>=19)){
-    return {ok:false,msg:"PRÉSENCE Propriétaires : dernier départ à 18 h 45, sans nouveau départ à partir de 19 h. Une mission déjà commencée peut se terminer après 19 h sans majoration automatique de soirée."};
-  }
-  if(!isOwnerPresence && !projectNightOpen && (hour<8 || hour>=19)){
-    return {ok:false,msg:"Ce type de mission : départ possible uniquement entre 08 h 00 et 18 h 45. Aucun nouveau départ à partir de 19 h. Une mission déjà commencée peut toutefois se terminer ou être prolongée selon la règle terrain."};
-  }
-
-  return check;
+ // Les horaires futurs sont recevables comme demandes. Confirmation humaine après paiement.
+ return validateFutureSlot(dateStr,timeStr,label);
 }
 function autoConstraints(dateStr,timeStr){
   const dt=localDateTime(dateStr,timeStr);
@@ -1615,10 +1565,7 @@ function multiPassagePricing(){
   if(m==="SUIVRE"){base=S.result?.passages===3?690:490;suffix="€ TTC";}
   else if(b2bSuivi){base=m==="CONTINUITÉ PROJET"?1190:850;suffix="€ HT";}
   else return alert("Cette fonction multi-passage ne s'applique pas à cette mission.");
-  // Pas de majoration appliquée à tort sur l'ensemble du forfait multi-passages.
-  // Toute contrainte hors standard B2B se décide par contact direct.
-  if(b2bSuivi && passages.some(p=>p.evening||p.night||p.sunday))
-    return alert("SUIVI DE PROJET B2B : au moins un passage est hors standard. Contactez CYRNEA directement ; aucun paiement forfaitaire automatique pour ce cas.");
+  // Les forfaits multi restent à prix fixe, tous créneaux futurs recevables.
   const total=base;
   passages.forEach(p=>{p.surcharge=0;p.label="Standard — inclus dans le forfait";});
 
@@ -1644,9 +1591,18 @@ function multiPassageRows(){
     <div class="row"><b>Passage / jalon ${p.index}</b><span>${esc(p.date)} · ${esc(displayTime4(p.time))} — ${esc(p.label)}${p.surcharge?` (+${p.surcharge} ${S.result.contract==="PRÉSENCE ENTREPRISES"?"€ HT":"€ TTC"})`:""}</span></div>
   `).join("");
   if(S.multiSlots.length<plannedPassageCount()){
-    rows+=`<div class="row"><b>Passages restants</b><span>${S.result?.mission==="SUIVRE"?"Dates à convenir ultérieurement, incluses dans le tarif fixe.":"Dates à convenir ultérieurement. Toute exception hors standard B2B passe par contact direct."}</span></div>`;
+    rows+=`<div class="row"><b>Passages restants</b><span>${S.result?.mission==="SUIVRE"?"Dates à convenir ultérieurement, incluses dans le tarif fixe.":"Dates à convenir ultérieurement, sans supplément automatique du forfait B2B."}</span></div>`;
   }
   return rows;
+}
+function b2bExceptionalBaseSlot(){
+ if(S.result?.contract!=="PRÉSENCE ENTREPRISES"||S.result?.multi||S.result?.isQuote)return false;
+ const m=baseMissionName(S.result?.mission||"");
+ if(["PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE"].includes(m))return false;
+ const t=normalizeTime4(S.slot||"");
+ if(!/^(?:[01][0-9]|2[0-3]):(?:00|15|30|45)$/.test(t))return false;
+ const mins=Number(t.slice(0,2))*60+Number(t.slice(3));
+ return mins<480||mins>1125;
 }
 function availabilityPricing(){
   if(!assertVoirContractInvariant())return;
@@ -1668,10 +1624,11 @@ function availabilityPricing(){
   if(m==="LOGISTIQUE / ACCÈS B2B" || String(S.result.price).includes("À CHIFFRER")) return;
 
   if(["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","PRÉSENCE LOGISTIQUE B2B"].includes(m)){
-    const base=(m==="PRÉSENCE LOGISTIQUE B2B")?169:109;
-    const add=sunday?60:priority?40:0;
+    const base=m==="PRÉSENCE LOGISTIQUE B2B"?169:109;
+    const special=b2bExceptionalBaseSlot();
+    const add=special?0:sunday?60:priority?40:0;
     S.result.price=(base+add)+" € HT";
-    S.result.availabilityLabel=sunday?"Dimanche / jour férié":priority?"Prioritaire sous 24 h":"Standard";
+    S.result.availabilityLabel=special?"Créneau particulier — tarif de base, sous confirmation CYRNEA":sunday?"Dimanche / jour férié":priority?"Prioritaire sous 24 h":"Standard";
     return;
   }
 
@@ -1689,8 +1646,9 @@ function availabilityPricing(){
     "PRÉSENCE PROJET ÉTENDUE":690
   };
   if(b2bBase[m]!=null){
-    const add=(sunday||night)?180:(priority||evening)?120:0;
-    const label=sunday?"Dimanche / jour férié":night?"Nuit à partir de 21 h":priority?"Prioritaire sous 24 h":evening?"Soir 19 h–20 h 59":"Standard";
+    const special=b2bExceptionalBaseSlot();
+    const add=special?0:(sunday||night)?180:(priority||evening)?120:0;
+    const label=special?"Créneau particulier — tarif de base, sous confirmation CYRNEA":sunday?"Dimanche / jour férié":night?"Nuit à partir de 21 h":priority?"Prioritaire sous 24 h":evening?"Soir 19 h–20 h 59":"Standard";
     S.result.price=(b2bBase[m]+add)+" € HT";
     S.result.availabilityLabel=label;
     return;
@@ -1698,7 +1656,7 @@ function availabilityPricing(){
   if(m==="CONTINUITÉ PROJET"||m==="SUIVI DE PROJET - 2 PASSAGES"){
     const base=m==="CONTINUITÉ PROJET"?1190:850;
     S.result.price=base.toLocaleString("fr-FR")+" € HT";
-    S.result.availabilityLabel=(evening||night||sunday)?"HORS STANDARD — contact direct":priority?"Demande sous 24 h — confirmation humaine obligatoire":"Standard";
+    S.result.availabilityLabel=(evening||night||sunday)?"Créneau particulier — tarif fixe, sous confirmation CYRNEA":priority?"Demande sous 24 h — confirmation humaine obligatoire":"Standard";
   }
 }
 function supportsPriority(){
@@ -1731,7 +1689,7 @@ function showManualSlotReview(){
     <div class="todo"><b>À FAIRE</b>Regarder le créneau et le tarif. La confirmation du client intervient après vérification du paiement.</div>
     <div class="toolbar">
       <button class="btn ghost" onclick="slot()">MODIFIER LE CRÉNEAU</button>
-      <button class="btn primary" onclick="manualConfirmSlot()">JE CONFIRME CE CRÉNEAU</button>
+      <button class="btn primary" onclick="manualConfirmSlot()">J'AI VÉRIFIÉ L'AGENDA</button>
     </div>
   </div>`);
 }
@@ -1759,7 +1717,7 @@ function showManualMultiReview(){
     <div class="todo"><b>À FAIRE</b>Vérifier les dates, heures et le tarif. Confirmer seulement si vous acceptez réellement ces créneaux.</div>
     <div class="toolbar">
       <button class="btn ghost" onclick="slot()">MODIFIER LES CRÉNEAUX</button>
-      <button class="btn primary" onclick="manualConfirmMultiSlots()">JE CONFIRME CES CRÉNEAUX</button>
+      <button class="btn primary" onclick="manualConfirmMultiSlots()">J'AI VÉRIFIÉ LES CRÉNEAUX</button>
     </div>
   </div>`);
 }
@@ -1801,11 +1759,11 @@ function slot(){
        <div class="checkIntro">PASSAGE / JALON ${i}${i>1?" — UNIQUEMENT SI DATE CONNUE":""}</div>
        ${multiDateDropdownHtml(`d${i}`)}
        ${multiTimeDropdownHtml(`sl${i}`)}
-       ${b2bSuivi?'<div class="muted">SUIVI B2B : demande possible de 08 h 00 à 18 h 45, du lundi au samedi, y compris à moins de 24 h. CYRNEA confirme personnellement le créneau. Soir, nuit, dimanche ou férié : contact direct.</div>':'<div class="muted">Passage standard, sans majoration.</div>'}
+       ${b2bSuivi?'<div class="muted">SUIVI B2B : demande à toute heure, y compris sous 24 h, le soir, la nuit, le dimanche et les jours fériés. Forfait fixe ; confirmation CYRNEA après paiement.</div>':'<div class="muted">Passage standard, sans majoration.</div>'}
      </div>`;
 
    draw(`<div class="card"><h1>Créneaux — mission en plusieurs passages / jalons</h1>
-   <div class="neutral"><b>RÈGLE</b>${isB2B?"Le premier jalon est renseigné. Le forfait couvre les passages standards ; tout hors standard se traite directement.":"Le premier passage est renseigné. Les autres sont convenus aux moments utiles, sans majoration automatique."}</div>
+   <div class="neutral"><b>RÈGLE</b>${isB2B?"Le premier jalon est renseigné. Le forfait couvre tous les créneaux souhaités, sous confirmation après paiement.":"Le premier passage est renseigné. Les autres sont convenus aux moments utiles, sans majoration automatique."}</div>
 
    ${jalonBlock(1,false)}
 
@@ -1814,7 +1772,7 @@ function slot(){
 
    ${(plannedPassageCount()===2)?"":`<button id="add_jalon_3" class="btn ghost hidden" onclick="toggleMultiJalon(3)">+ AJOUTER LE JALON 3 SI SA DATE EST CONNUE</button>${jalonBlock(3,true)}`}
 
-   <div class="notice">${isB2B?"Les autres jalons standards sont à convenir ultérieurement. Hors standard : contact direct, sans paiement forfaitaire automatique.":"Les autres passages restent compris dans le prix choisi et seront convenus ultérieurement."}</div>
+   <div class="notice">${isB2B?"Les autres jalons sont à convenir ultérieurement, sans supplément automatique du forfait.":"Les autres passages restent compris dans le prix choisi et seront convenus ultérieurement."}</div>
    <button class="btn primary" onclick="multiPassagePricing()">VÉRIFIER DISPONIBILITÉ ET TARIF</button>
    </div>`);
    setTimeout(()=>{restoreMultiDraftToDom();startCalendarTicker()},0);
@@ -1830,11 +1788,11 @@ function slot(){
  ${(S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission))?`<label class="check"><input type="checkbox" id="evening" disabled> <span>Soir 19 h–20 h 59 — détecté automatiquement.</span></label>`:""}
  ${S.result?.contract==="PRÉSENCE ENTREPRISES"&&nightAllowedForMission(S.result?.mission)?`<label class="check"><input type="checkbox" id="night" disabled> <span>Nuit à partir de 21 h — détectée automatiquement.</span></label>`:""}
  <label class="check"><input type="checkbox" id="sunholiday" disabled> <span>Dimanche ou jour férié — détecté automatiquement.</span></label>
- <div class="muted">Les contraintes ne se cumulent pas : le tarif correspondant à la contrainte la plus élevée s’applique. Pour la logistique B2B simple : sous 24 h = +40 € et dimanche/jour férié = +60 €. Aucun nouveau départ ordinaire à partir de 19 h.</div>
+ <div class="muted">Les majorations B2B existantes ne se cumulent pas. Le Gateway vérifie le montant avant paiement ; hors plage tarifaire, seule la base fixe est encaissable, sous confirmation CYRNEA.</div>
  </div>`:
- `<div class="neutral">Réservation STANDARD du lundi au samedi, de 08 h 00 à 18 h 45, sans majoration automatique.</div>`}
+ `<div class="neutral">Demande possible à toute heure, à tarif fixe sans majoration automatique ; confirmation après paiement.</div>`}
 
- <div class="notice">${S.result?.contract==="PRÉSENCE ENTREPRISES"?"Les contraintes B2B sont tarifées selon le créneau.":"Réservation STANDARD à tarif fixe, sans majoration."} La demande est transmise à Tally puis reste soumise à confirmation humaine.</div>
+ <div class="notice">${S.result?.contract==="PRÉSENCE ENTREPRISES"?"Les contraintes B2B sont tarifées selon le créneau.":"Demande à tarif fixe, sans majoration automatique."} La demande est transmise à Tally puis reste soumise à confirmation humaine.</div>
  <button class="btn primary" onclick="confirmSlot()">VÉRIFIER DISPONIBILITÉ ET TARIF</button>
  </div>`);
  setTimeout(startCalendarTicker,0);
@@ -1875,9 +1833,9 @@ function contractUrl(){
 }
 function isHorsStandard(){
  if(["RELAIS","PRÉSENCE PROPRIÉTAIRES"].includes(S.result?.contract))return false;
- if(S.result?.contract==="PRÉSENCE ENTREPRISES" && ["CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(S.result?.mission))
-   return Array.isArray(S.multiSlots) && S.multiSlots.some(p=>p.evening||p.night||p.sunday||Number(p.surcharge||0)>0);
- if(S.result?.isQuote)return true;
+ if(S.result?.contract==="PRÉSENCE ENTREPRISES" && ["CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(S.result?.mission))return false;
+  if(b2bExceptionalBaseSlot())return true;
+  if(S.result?.isQuote)return true;
  const mission=String(S.result?.mission||"");
  const label=String(S.result?.availabilityLabel||"");
  if(mission.includes("PRIORITAIRE") || /Prioritaire|Soir|Nuit|Dimanche|jour férié/i.test(label))return true;
@@ -1897,7 +1855,7 @@ function tallyAvailabilityMode(){
  if(["RELAIS","PRÉSENCE PROPRIÉTAIRES"].includes(S.result?.contract))return "standard";
  if(S.result?.contract==="PRÉSENCE ENTREPRISES" && ["CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(S.result?.mission))
    return "standard";
- if(S.result?.isQuote)return "quote";
+ if(b2bExceptionalBaseSlot()||S.result?.isQuote)return "quote";
  if(Array.isArray(S.multiSlots)&&S.multiSlots.length){
    if(S.multiSlots.some(p=>p?.sunday))return "sunday";
    if(S.multiSlots.some(p=>p?.night))return "night";
@@ -2023,9 +1981,7 @@ function validateB2BMultiBeforeGateway(){
    seen.add(i);
    const check=validateMissionTimeRules(p.date,p.time,"le passage / jalon "+i);
    if(!check.ok)throw Error(check.msg);
-   const c=autoConstraints(p.date,p.time);
-   if(c.evening||c.night||c.sunday||Number(p.surcharge||0)>0)
-     throw Error("SUIVI B2B hors standard : contacter CYRNEA pour accord, aucun paiement forfaitaire automatique.");
+   if(Number(p.surcharge||0)!==0)throw Error("SUIVI B2B : aucun supplément automatique de jalon.");
  }
  return true;
 }
@@ -3294,7 +3250,7 @@ function scheduleNextSuivrePassage(){
    <div class="notice"><b>COMPRIS DANS LA FORMULE</b><br>Aucun nouveau paiement. Le prochain passage est une observation de la même situation et du même objet.</div>
    <div class="field"><label>Date souhaitée</label><input id="suivreNextDate" type="date" min="${todayLocalISO()}" value="${todayLocalISO()}"></div>
    ${timeDropdownHtml("suivreNextTime","")}
-   <div class="warn"><b>AGENDA</b><br>Contrôler personnellement la disponibilité avant validation. Pas de départ le dimanche, un jour férié, ni en dehors de 08 h 00–18 h 45.</div>
+   <div class="warn"><b>AGENDA</b><br>Contrôler personnellement la disponibilité avant validation. Tout horaire futur peut être demandé ; contrôler l'agenda et confirmer personnellement.</div>
    <button class="btn primary" onclick="confirmNextSuivrePassage()">CONFIRMER CE PASSAGE — SANS NOUVEAU PAIEMENT</button>
    <button class="btn ghost" onclick="restitution()">RETOUR</button>
  </div>`);
@@ -3309,11 +3265,7 @@ function confirmNextSuivrePassage(){
  const time=normalizeTime4(getDropdownTime("suivreNextTime"));
  const check=validateMissionTimeRules(date,time,"le passage suivant");
  if(!check.ok)return alert(check.msg);
- if(S.result?.contract==="PRÉSENCE ENTREPRISES"){
-   const c=autoConstraints(date,time);
-   if(c.evening||c.night||c.sunday)
-     return alert("Passage SUIVI B2B en soirée, nuit, dimanche ou jour férié : accord direct préalable, sans supplément automatique.");
- }
+ // Le passage déjà payé peut être convenu à toute heure, après accord personnel.
  const exists=(S.multiSlots||[]).some(p=>Number(p.index)===next);
  if(exists)return alert("Ce passage possède déjà un créneau : ne pas écraser une date enregistrée.");
  if(!confirm("Avez-vous vérifié votre agenda et accepté personnellement ce créneau pour le même dossier de suivi ? Aucun paiement supplémentaire ne sera créé."))return;
@@ -3332,7 +3284,7 @@ function continueMultiAfterRestitution(){
   if(!p){
     return draw(`<div class="card"><h1>Passage / jalon ${next} à programmer</h1>
       <div class="warn"><b>⚠️ ARRÊT NORMAL</b><br>Le prochain créneau n’est pas fixé. Aucun passage suivant ne peut être lancé sans date, heure, contrôle d’agenda et vérification des conditions applicables.</div>
-      <div class="notice">${isIncludedMultiFollowUp()?"Le passage restant est inclus dans le forfait déjà payé : programmer sa date standard sans créer un second paiement.":"Avant un nouveau jalon, vérifier les contraintes et la confirmation humaine."}</div>
+      <div class="notice">${isIncludedMultiFollowUp()?"Le passage restant est inclus dans le forfait déjà payé : programmer sa date sans nouveau paiement.":"Avant un nouveau jalon, vérifier les contraintes et la confirmation humaine."}</div>
       ${isIncludedMultiFollowUp()?`<button class="btn primary" onclick="scheduleNextSuivrePassage()">PROGRAMMER LE PASSAGE ${next} (DÉJÀ INCLUS)</button>`:""}
       <button class="btn ghost" onclick="archivePartialMulti()">CONSERVER LA MISSION EN COURS</button>
     </div>`);
