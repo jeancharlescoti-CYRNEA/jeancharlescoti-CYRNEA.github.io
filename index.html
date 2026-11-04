@@ -2640,7 +2640,7 @@ function clientDocSuggestions(){
   if(m==="VISITE TERRAIN PILOTÉE") return ["Brief / plan / photo de repère","Consignes d’accès ou de sécurité du site"];
   if(m==="PRÉSENCE PROJET") return ["Cahier des charges / ordre du jour","Document(s) à montrer, remettre ou vérifier","Consignes du site"];
   if(m==="PRÉSENCE PROJET ÉTENDUE") return ["Cahier des charges / ordre du jour","Plan / documents utiles aux différentes zones","Consignes du site"];
-  if(m==="CONTINUITÉ PROJET") return ["Cahier des charges commun","Photos / repères de référence","Plan ou document de comparaison"];
+  if(m==="CONTINUITÉ PROJET" || m==="SUIVI DE PROJET - 2 PASSAGES") return ["Brief / périmètre de suivi","Photos / repères comparables","Plan ou document de référence"];
   if(["ACCÈS B2B","PRÉSENCE LOGISTIQUE B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B"].includes(m))
     return ["Bon d’intervention / bon de livraison si disponible","Consigne d’accès / référence utile"];
   return ["Document ou photo réellement utile à la mission, uniquement si nécessaire"];
@@ -2652,6 +2652,25 @@ function clientDocsPreview(){
     ${docs.map((x,i)=>`<div class="row"><b>${i+1}</b><span>${esc(x)}</span></div>`).join("")}
     <div class="muted">Ce sont des pièces possibles, pas une liste obligatoire. Si rien n’est utile : AUCUN DOCUMENT.</div>
   </div>`;
+}
+
+
+/* Dossier B2B : traçabilité des pièces. La PWA ne copie pas les fichiers de Tally. */
+function b2bPrepEvidenceHtml(){
+ if(S.result?.contract!=="PRÉSENCE ENTREPRISES")return "";
+ const prep=S.prep||{};
+ const note=String(prep.note||"").trim();
+ const ref=GATEWAY_REF_RE.test(String(S.tallyReference||""))?S.tallyReference:"";
+ let docs="Documents non renseignés dans la PWA";
+ if(prep.docsChoice==="TALLY")docs="Fichiers déjà transmis dans Tally — consulter la soumission d'origine";
+ else if(prep.docsChoice==="OUI"){
+  const items=Array.isArray(prep.docs)?prep.docs:[];
+  docs=items.length?items.join(" • "):"Fichiers à vérifier dans le stockage habituel";
+ }else if(prep.docsChoice==="AUCUN")docs="Aucun document complémentaire utile";
+ return '<div class="row"><b>Brief / questions</b><span>'+esc(note||"Consulter le brief client dans Tally")+'</span></div>'
+  +'<div class="row"><b>Documents</b><span>'+esc(docs)+'</span></div>'
+  +(ref?'<div class="row"><b>Référence paiement / Tally</b><span>'+esc(ref)+'</span></div>':'')
+  +'<div class="muted">Les pièces reçues dans Tally ne sont pas importées automatiquement dans la PWA. Vérifiez la soumission client d’origine avant de partir.</div>';
 }
 
 function preparationMission(){
@@ -2677,15 +2696,15 @@ function preparationMission(){
   <label class="choice"><input type="radio" name="contactChoice" value="AUCUN" onchange="toggleContactChoice()"> NON — aucun contact</label>
  </div>
  <div class="field hidden" id="contactDetailsWrap"><label>Nom + téléphone du contact</label><input id="contact" placeholder="Nom — téléphone"></div>
- <div class="field"><label>Localisation / lien Plans ou Maps</label><input id="map" placeholder="Coller le lien si utile"></div>
+ <div class="field"><label>Localisation / lien Plans ou Maps (facultatif)</label><input id="map" placeholder="Coller le lien si utile"></div>
  `:`<div class="guideTitle">ÉTAPE 3</div><div class="bigQuestion">Y a-t-il un contact sur place ?</div><div class="field"><label>Contact sur place — facultatif</label><input id="contact" placeholder="Nom — téléphone si utile"></div>`}
  <div class="guideTitle">ÉTAPE 4</div><div class="bigQuestion">Faut-il emporter ou consulter un document ?</div>
  ${clientDocsPreview()}
- <div class="choices"><label class="choice"><input type="radio" name="docsChoice" value="OUI" onchange="toggleDocsChoice()"> OUI — ajouter un document / une photo</label><label class="choice"><input type="radio" name="docsChoice" value="AUCUN" onchange="toggleDocsChoice()"> NON — aucun document utile</label></div>
+ <div class="choices">${b2b?'<label class="choice"><input type="radio" name="docsChoice" value="TALLY" onchange="toggleDocsChoice()"> DÉJÀ TRANSMIS DANS TALLY</label>':""}<label class="choice"><input type="radio" name="docsChoice" value="OUI" onchange="toggleDocsChoice()"> OUI — ajouter un document / une photo</label><label class="choice"><input type="radio" name="docsChoice" value="AUCUN" onchange="toggleDocsChoice()"> NON — aucun document utile</label></div>
  <div class="field hidden" id="docsUploadWrap"><label>Ajouter les fichiers</label><input id="docs" type="file" multiple></div>
- <div class="guideTitle">ÉTAPE 5</div><div class="bigQuestion">Une précision exceptionnelle ?</div>
- <button class="btn ghost" onclick="document.getElementById('prepExtra').classList.toggle('hidden')">AJOUTER UNE PRÉCISION</button>
- <div class="field hidden" id="prepExtra"><label>Précision courte</label><input id="note" maxlength="140"></div>
+ <div class="guideTitle">ÉTAPE 5</div><div class="bigQuestion">${b2b?"Compléter le brief reçu dans Tally (si nécessaire) ?":"Une précision exceptionnelle ?"}</div>
+ <button class="btn ghost" onclick="document.getElementById('prepExtra').classList.toggle('hidden')">${b2b?"AJOUTER UN COMPLÉMENT FACULTATIF":"AJOUTER UNE PRÉCISION"}</button>
+ <div class="field hidden" id="prepExtra">${b2b?'<label>Points à documenter, questions ou liens utiles (facultatif)</label><textarea id="note" maxlength="4000" placeholder="Reporter uniquement les éléments utiles de la demande Tally."></textarea>':'<label>Précision courte</label><input id="note" maxlength="140">'}</div>
  <div class="operatorOnly">Avant de valider : vérifiez adresse, accès, contact éventuel et documents utiles.</div>
  <button class="btn primary" onclick="collectPreparation()">MISSION PRÉPARÉE</button>
  </div>`);
@@ -2701,7 +2720,7 @@ function collectPreparation(){
  const contact=(document.getElementById('contact')?.value||"").trim();
  if(b2b && contactChoice==="CONTACT" && !contact)return alert("Renseignez le nom + téléphone du contact.");
  const map=(document.getElementById('map')?.value||"").trim();
- if(b2b && !map)return alert("B2B : localisation / lien Plans ou Maps obligatoire.");
+ // L’adresse exacte reste obligatoire, le lien cartographique est facultatif.
 
  const files=[...(document.getElementById('docs')?.files||[])].map(f=>f.name);
  if(docsChoice==="OUI" && !files.length)return alert("Ajoutez au moins un document / une photo, ou choisissez AUCUN DOCUMENT.");
@@ -2779,7 +2798,7 @@ function docPack(){
   else if(m==="SUIVRE"){support="Situation commune + repères comparables (sans surveillance)";rest=(S.result?.passages===3?"3":"2")+" observations factuelles"}
   else if(m==="PRÉSENCE PROJET"){support="Cahier des charges validé";rest="R2 B2B"}
   else if(m==="PRÉSENCE PROJET ÉTENDUE"){support="Objectif unique + brief validé";rest="R2 B2B"}
-  else if(m==="CONTINUITÉ PROJET"){support="Cahier des charges commun aux 3 jalons";rest="R3 B2B"}
+  else if(m==="CONTINUITÉ PROJET" || m==="SUIVI DE PROJET - 2 PASSAGES"){support="Brief et repères communs";rest=m==="CONTINUITÉ PROJET"?"R3 B2B":"R2 B2B"}
   else if(m==="VISITE TERRAIN PILOTÉE"){support="Brief / objectif validé";rest="R1 B2B"}
   else if(m.includes("APRÈS INTEMPÉRIE")){support="Sécurité / électricité";rest="R0-C"}
   else if(m.includes("VOIR")){support="Périmètre d’observation";rest="R1"}
@@ -2811,6 +2830,7 @@ function ready(){
  <div class="row"><b>Accès</b><span>${esc(S.prep.access||"-")} — ${esc(S.prep.mode||"-")}</span></div>
  ${isOwnerAccessMission()?`<div class="row"><b>Accès convenu</b><span>${esc(S.accessPlan?.mode||"-")}${S.accessPlan?.returnMode?" — restitution : "+esc(S.accessPlan.returnMode)+" — "+esc(S.accessPlan.returnDetail||""):""}</span></div>`:""}
  <div class="row"><b>Contact</b><span>${esc(S.prep.contact||"AUCUN")}</span></div>
+ ${b2bPrepEvidenceHtml()}
  <div class="row"><b>Restitution</b><span>${esc(p.rest)}</span></div>
  </div>
  ${S.paymentStatus==="REFUNDED"?`<button class="btn primary" onclick="if(!keysFullyReturned())return alert('Clés toujours à rendre.');S.finalStatus='MISSION ANNULÉE — REMBOURSÉE';save();archive()">ARCHIVER LE DOSSIER REMBOURSÉ APRÈS RESTITUTION</button>`:`<button class="btn primary" onclick="startTerrainFromReady()">TOUT EST PRÊT → OUVRIR LA MISSION</button>`}
@@ -2856,11 +2876,10 @@ function showMissionDoc(kind){
       <div class="row"><b>Plafond</b><span>${esc(S.result.cap)}</span></div>
       <div class="row"><b>Adresse</b><span>${esc(S.prep.addr||"-")}</span></div>
       <div class="row"><b>Accès</b><span>${esc(S.prep.access||"-")} — ${esc(S.prep.mode||"-")}</span></div>
-      <div class="row"><b>Contact</b><span>${esc(S.prep.contact||"AUCUN")}</span></div>`;
+      <div class="row"><b>Contact</b><span>${esc(S.prep.contact||"AUCUN")}</span></div>${b2bPrepEvidenceHtml()}`;
   } else if(kind==="support"){
     body=`<div class="row"><b>Document de cadrage</b><span>${esc(p.support)}</span></div>
-      <div class="row"><b>Pièces client</b><span>${S.prep.docsChoice==="OUI"?esc((S.prep.docs||[]).join(" • ")):"AUCUN DOCUMENT"}</span></div>
-      <div class="notice">Les noms des pièces sont repris dans le dossier mission. Ouvrez le fichier correspondant depuis votre stockage habituel si nécessaire.</div>`;
+      ${S.result?.contract==="PRÉSENCE ENTREPRISES"?b2bPrepEvidenceHtml():`<div class="row"><b>Pièces client</b><span>${S.prep.docsChoice==="OUI"?esc((S.prep.docs||[]).join(" • ")):"AUCUN DOCUMENT"}</span></div><div class="notice">Les noms des pièces sont repris dans le dossier mission. Ouvrez le fichier correspondant depuis votre stockage habituel si nécessaire.</div>`}`;
   } else {
     body=`<div class="row"><b>Modèle</b><span>${esc(p.rest)}</span></div>
       <div class="row"><b>Faits / actions terrain</b><span>${esc(S.facts||"Pas encore renseignés")}</span></div>
@@ -2910,8 +2929,8 @@ function terrainFactOptions(){
     return ["Présence au rendez-vous / jalon","Questions prévues posées","Éléments factuels documentés","Aucune décision prise pour le client"];
   if(m==="PRÉSENCE PROJET ÉTENDUE")
     return ["Zones prévues parcourues","Interlocuteurs prévus rencontrés","Objectif unique respecté","Éléments factuels documentés"];
-  if(m==="CONTINUITÉ PROJET")
-    return ["Même périmètre / repères suivis","Évolution documentée","Comparaison avec passage précédent possible"];
+  if(m==="CONTINUITÉ PROJET" || m==="SUIVI DE PROJET - 2 PASSAGES")
+     return ["Même périmètre / repères suivis","Évolution documentée","Comparaison avec passage précédent possible"];
   return ["Objet prévu exécuté","Éléments utiles documentés","Aucun élargissement de mission"];
 }
 function toggleIncidentOther(){
