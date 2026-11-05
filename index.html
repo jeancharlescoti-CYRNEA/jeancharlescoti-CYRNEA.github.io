@@ -2879,7 +2879,7 @@ function showMissionDoc(kind){
       <div class="row"><b>Contact</b><span>${esc(S.prep.contact||"AUCUN")}</span></div>${b2bPrepEvidenceHtml()}`;
   } else if(kind==="support"){
     body=`<div class="row"><b>Document de cadrage</b><span>${esc(p.support)}</span></div>
-      ${S.result?.contract==="PRÉSENCE ENTREPRISES"?b2bPrepEvidenceHtml():`<div class="row"><b>Pièces client</b><span>${S.prep.docsChoice==="OUI"?esc((S.prep.docs||[]).join(" • ")):"AUCUN DOCUMENT"}</span></div><div class="notice">Les noms des pièces sont repris dans le dossier mission. Ouvrez le fichier correspondant depuis votre stockage habituel si nécessaire.</div>`}`;
+      ${S.result?.contract==="PRÉSENCE ENTREPRISES"?b2bPrepEvidenceHtml():`<div class="row"><b>Pièces client</b><span>${S.prep.docsChoice==="OUI"?esc((S.prep.docs||[]).join(" • ")):S.prep.docsChoice==="TALLY"?"Documents déjà transmis dans Tally":"AUCUN DOCUMENT"}</span></div><div class="notice">Les noms des pièces sont repris dans le dossier mission. Ouvrez le fichier correspondant depuis votre stockage habituel si nécessaire.</div>`}`;
   } else {
     body=`<div class="row"><b>Modèle</b><span>${esc(p.rest)}</span></div>
       <div class="row"><b>Faits / actions terrain</b><span>${esc(S.facts||"Pas encore renseignés")}</span></div>
