@@ -9,7 +9,8 @@ function official(ref,contract){
  if(!m||!['RELAIS','PRÉSENCE PROPRIÉTAIRES','PRÉSENCE ENTREPRISES'].includes(contract))return '';
  return (contract==='RELAIS'?'RP':'CP')+'-'+m[1].slice(0,4)+'-'+(BigInt('0x'+m[2])%1000000000000n).toString().padStart(12,'0');
 }
-function matching(d){return d?.ok===true&&d.payment_reference===S.tallyReference&&d.contract===S.result?.contract&&d.official_reference===official(d.payment_reference,d.contract)}
+function baseMission(v){return String(v||'').toUpperCase().replace(/\s+-\s+[\d\s\u00a0\u202f]+€\s*(?:HT|TTC)?$/u,'').replace(/\s+/g,' ').trim()}
+function matching(d){return d?.ok===true&&d.payment_reference===S.tallyReference&&d.contract===S.result?.contract&&d.official_reference===official(d.payment_reference,d.contract)&&baseMission(d.mission)===baseMission(S.result?.mission)}
 function html(){
  const d=S.h2Dossier;
  if(!matching(d))return '<div class="muted">Préparation H2 à rapprocher du dossier PWA.</div>';
@@ -60,6 +61,7 @@ async function read(ref,contract){
   const d=await r.json().catch(()=>null);
   if(!r.ok||!d?.ok)throw Error(d?.error||'H2 HTTP '+r.status);
   if(d.payment_reference!==ref||d.contract!==contract||d.official_reference!==official(ref,contract))throw Error('Référence ou contrat H2 incohérent');
+  if(baseMission(d.mission)!==baseMission(S.result?.mission))throw Error('La mission payée ne correspond pas au dossier PWA');
   return d;
  }finally{clearTimeout(t)}
 }
