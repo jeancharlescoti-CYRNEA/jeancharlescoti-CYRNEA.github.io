@@ -84,6 +84,8 @@ async function attach(){
  if(input===null)return;
  const ref=String(input).trim().toUpperCase(),contract=S.result.contract;
  if(!official(ref,contract))return alert('Référence de paiement invalide.');
+ if(S.tallyIntentReady && S.tallyReference && S.tallyReference!==ref)
+  return alert('Cette fiche possède déjà une commande PWA sécurisée. Ne remplacez pas sa référence de paiement.');
  for(const [k,v] of Object.entries(loadActiveMissionMap()))if(v?.tallyReference===ref&&k!==activeMissionKey(S))return alert('Commande déjà associée au dossier PWA '+k+'. Ouvrez-le.');
  try{
   const d=await read(ref,contract);
