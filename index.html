@@ -309,6 +309,7 @@ function activeMissionStatus(st){
  return st.stage||"MISSION EN COURS";
 }
 function getSyncKey(){return String(localStorage.getItem(SYNC_KEY_STORAGE)||"").trim()}
+function syncKeyTag(){const k=getSyncKey();if(!k)return "ABSENTE";let h=2166136261;for(let i=0;i<k.length;i++){h^=k.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(16).padStart(8,"0").toUpperCase()}
 function getMailSendKey(){return String(localStorage.getItem(MAIL_KEY_STORAGE)||"").trim()}
 function loadDeletedIds(){
  try{
@@ -398,7 +399,7 @@ async function syncCentralMissions(options={}){
 
  // Une requête plus récente ne doit jamais être écrasée par une réponse ancienne.
  if(requestSeq!==CYRNEA_SYNC_LATEST_REQUEST)
-   return {ok:true,stale:true,received:Number(data.received||0),count:Object.keys(loadActiveMissionMap()).length};
+   return {ok:true,stale:true,received:Number(data.received||0),count:Object.keys(loadActiveMissionMap()).length,remoteCount:Object.keys(serverMap).length,uploaded:body.missions.length,confirmed:0};
 
  // Relire l'état local APRES le réseau : des dossiers peuvent avoir changé,
  // été ajoutés ou supprimés pendant les 12 secondes d'attente.
@@ -436,7 +437,10 @@ async function syncCentralMissions(options={}){
  return {
    ok:true,
    received:Number(data.received||0),
-   count:Object.keys(finalMap).length
+   count:Object.keys(finalMap).length,
+   remoteCount:Object.keys(serverMap).length,
+   uploaded:body.missions.length,
+   confirmed:body.missions.filter(st=>!!serverMap[activeMissionKey(st)]).length
  };
 }
 async function configureCloudSync(){
@@ -447,7 +451,7 @@ async function configureCloudSync(){
  localStorage.setItem(SYNC_KEY_STORAGE,key);
  try{
    const result=await syncCentralMissions();
-   alert("Synchronisation CYRNEA activée — "+String(result.count)+" mission(s) centrale(s).");
+   alert("Synchronisation CYRNEA — clé "+syncKeyTag()+" · serveur : "+result.remoteCount+" dossier(s) · appareil : "+result.count+" dossier(s).");
    home(false);
  }catch(e){
    alert("SYNCHRO IMPOSSIBLE — clé conservée. "+String(e?.message||e));
@@ -459,7 +463,7 @@ async function manualCloudSync(){
    persistActiveSnapshot(S);
    const result=await syncCentralMissions({forceUploadAll:true});
    home(false);
-   alert("Synchronisation terminée — "+String(result.received)+" modification(s) envoyée(s), "+String(result.count)+" dossier(s) central(aux).");
+   alert("Synchronisation terminée — clé "+syncKeyTag()+" · serveur : "+result.remoteCount+" dossier(s) · appareil : "+result.count+" dossier(s) · envoyés : "+result.uploaded+" · confirmés par retour : "+result.confirmed+".");
  }catch(e){
    alert("Synchronisation impossible — "+(e?.name==="AbortError"?"le serveur ne répond pas":String(e?.message||e)));
  }
