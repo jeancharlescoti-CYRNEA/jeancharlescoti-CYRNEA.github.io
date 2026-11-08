@@ -358,7 +358,7 @@ async function syncCentralMissions(options={}){
  const body={
    key,
    missions:Object.entries(localMapBefore)
-     .filter(([id,st])=>dirtyBefore.has(id)&&isStoredMissionState(st)&&!deletedBefore.has(id))
+     .filter(([id,st])=>(options.forceUploadAll||dirtyBefore.has(id))&&isStoredMissionState(st)&&!deletedBefore.has(id))
      .map(([id,st])=>JSON.parse(JSON.stringify(st))),
    deleted_ids:[...deletedBefore]
  };
@@ -457,7 +457,7 @@ async function manualCloudSync(){
  if(!getSyncKey())return configureCloudSync();
  try{
    persistActiveSnapshot(S);
-   const result=await syncCentralMissions();
+   const result=await syncCentralMissions({forceUploadAll:true});
    home(false);
    alert("Synchronisation terminée — "+String(result.received)+" modification(s) envoyée(s), "+String(result.count)+" dossier(s) central(aux).");
  }catch(e){
