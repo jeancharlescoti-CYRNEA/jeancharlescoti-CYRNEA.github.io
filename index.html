@@ -2106,21 +2106,22 @@ async function shareClientTallyLink(){
  const url=String(input?.value||"");
  if(!S.tallyIntentReady||!/^https:\/\/tally\.so\/r\//.test(url))return alert("Lien non prêt. Préparez d’abord la référence sécurisée.");
  let smsUrl=url;
- let operatorKey=sessionStorage.getItem("cyrnea_short_link_operator_key")||"";
+ let operatorKey=localStorage.getItem("cyrnea_short_link_operator_key")||"";
  if(!operatorKey){
-  const entered=window.prompt("Clé opérateur pour les liens SMS courts (une seule fois par session) :");
+  const entered=window.prompt("Clé opérateur SMS (enregistrée sur cet appareil) :");
   if(entered===null)return;
   operatorKey=entered.trim();
   if(!operatorKey)return alert("Clé manquante. Aucun SMS préparé.");
+  localStorage.setItem("cyrnea_short_link_operator_key",operatorKey);
  }
  try{
   const response=await fetch(PAYMENT_GATEWAY_URL+"/short-link",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+operatorKey.trim()},body:JSON.stringify({url})});
   const data=await response.json().catch(()=>({}));
   if(!response.ok||typeof data.shortUrl!=="string"||!data.shortUrl.startsWith("https://cyrnea-liens-courts.jeancharles-coti.workers.dev/r/")||!new URL(data.shortUrl).pathname.match(/^\/r\/[a-f0-9]{24}$/))throw Error(data.error||"Réponse invalide");
   smsUrl=data.shortUrl;
-  sessionStorage.setItem("cyrnea_short_link_operator_key",operatorKey);
+
  }catch(error){
-  sessionStorage.removeItem("cyrnea_short_link_operator_key");
+  if(String(error?.message||"")==="unauthorized"||String(error?.message||"")==="invalid_operator_key")localStorage.removeItem("cyrnea_short_link_operator_key");
   if(!window.confirm("Lien court indisponible ("+String(error?.message||error)+"). Utiliser le lien Tally complet pour le SMS ?"))return;
  }
  const brand=S.result?.contract==="RELAIS"?"CYRNEA RELAIS":"CYRNEA PRÉSENCE";
