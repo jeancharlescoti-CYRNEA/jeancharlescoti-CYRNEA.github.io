@@ -2099,6 +2099,7 @@ async function prepareClientTallyLink(){
   if(!/^https:\/\/tally\.so\/r\//.test(url))throw new Error("Adresse Tally invalide.");
   box.innerHTML='<div class="notice"><b>LIEN CLIENT SÉCURISÉ</b><p>La référence est enregistrée. Le client complètera lui-même Tally et validera ses déclarations. Le paiement ne confirme pas automatiquement la mission.</p>'
    +'<div class="field"><label>Adresse Tally complète (pour contrôle seulement)</label><input id="clientTallyUrl" readonly value="'+esc(url)+'" onclick="this.select()"></div>'
+   +'<div class="toolbar"><button class="btn" style="background:#ed9200;color:#fff;font-weight:800" onclick="openTallyForTest()">OUVRIR TALLY — TEST</button></div>'
    +'<div class="toolbar"><button class="btn primary" onclick="shareClientTallyLink()">PARTAGER PAR MESSAGES</button><button class="btn ghost" onclick="previewClientTallyEmail()">PRÉVISUALISER L’E-MAIL PROFESSIONNEL</button><button class="btn ghost" onclick="copyClientTallyLink()">COPIER LE LIEN</button></div>'
    +'<div id="clientMailPreview"></div><div class="muted">L’e-mail sera expédié depuis votre adresse professionnelle uniquement après votre confirmation. Aucun paiement n’est déclenché par l’envoi.</div></div>';
  }catch(err){
@@ -2106,6 +2107,12 @@ async function prepareClientTallyLink(){
  }finally{
   if(btn && btn.isConnected){btn.disabled=false;btn.textContent="PRÉPARER LE LIEN TALLY CLIENT";}
  }
+}
+function openTallyForTest(){
+ const url=String(document.getElementById("clientTallyUrl")?.value||"");
+ if(!S.tallyIntentReady||!/^https:\\/\\/tally\\.so\\/r\\//.test(url))return alert("Préparez d’abord le lien Tally sécurisé.");
+ if(!confirm("TEST VISUEL UNIQUEMENT : ouvrir le formulaire Tally réel pour vérifier les champs. Ne pas soumettre le formulaire et ne pas payer."))return;
+ window.open(url,"_blank","noopener,noreferrer");
 }
 async function shareClientTallyLink(){
  const input=document.getElementById("clientTallyUrl");
