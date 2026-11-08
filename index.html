@@ -2108,10 +2108,43 @@ function shareClientTallyLink(){
  const brand=S.result?.contract==="RELAIS"?"CYRNEA RELAIS":"CYRNEA PRÉSENCE";
  const message="Bonjour,\n\nVoici votre lien sécurisé "+brand+" pour compléter votre demande et consulter les conditions de service :\n\n"+url+"\n\nLe créneau reste soumis à confirmation de CYRNEA, même après règlement.";
  const phone=String(S.phone||"").replace(/[^+\d]/g,"");
- // iOS utilise « &body= » ; macOS et les autres gestionnaires SMS utilisent « ?body= ».
  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
- const sms="sms:"+phone+(ios?"&":"?")+"body="+encodeURIComponent(message);
- window.location.href=sms;
+ if(ios){
+   // iOS : essai de préremplissage natif. Le client vérifie avant d'envoyer.
+   window.location.href="sms:"+phone+"&body="+encodeURIComponent(message);
+   return;
+ }
+ // macOS : Messages ignore parfois le destinataire et le corps des liens sms:.
+ // Ne pas ouvrir une conversation vide : fournir le contenu intégral à copier.
+ let panel=document.getElementById("clientSmsPreview");
+ if(!panel){
+   panel=document.createElement("div");
+   panel.id="clientSmsPreview";
+   const toolbar=input.closest(".notice")?.querySelector(".toolbar");
+   (toolbar||input).insertAdjacentElement("afterend",panel);
+ }
+ panel.innerHTML='<div class="neutral"><h3>SMS CLIENT — PRÊT À COPIER</h3>'
+   +'<p class="muted">Sur Mac, copiez le texte ci-dessous puis collez-le dans Messages. Aucun SMS n’est envoyé automatiquement.</p>'
+   +'<div class="field"><label>Numéro du client</label><input id="clientSmsPhone" readonly value="'+esc(phone)+'" onclick="this.select()"></div>'
+   +(phone?'':'<div class="warn">Numéro du client non renseigné : choisissez le destinataire dans Messages.</div>')
+   +'<div class="field"><label>Message complet avec lien sécurisé</label><textarea id="clientSmsText" readonly rows="9" style="width:100%;min-height:170px"></textarea></div>'
+   +'<div class="toolbar"><button class="btn primary" onclick="copyClientSmsText()">COPIER LE SMS COMPLET</button>'
+   +'<button class="btn ghost" onclick="openClientMessages()">OUVRIR MESSAGES</button></div></div>';
+ document.getElementById("clientSmsText").value=message;
+ panel.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+async function copyClientSmsText(){
+ const field=document.getElementById("clientSmsText");
+ if(!field)return;
+ try{
+   if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(field.value);
+   else{field.focus();field.select();if(!document.execCommand("copy"))throw Error("Copie refusée");}
+   alert("SMS complet copié. Collez-le dans Messages, puis vérifiez le destinataire avant l’envoi.");
+ }catch(e){field.focus();field.select();alert("Copie automatique indisponible. Utilisez Cmd+C sur le texte sélectionné.");}
+}
+function openClientMessages(){
+ const phone=String(document.getElementById("clientSmsPhone")?.value||"");
+ window.location.href="sms:"+phone;
 }
 /* Courriel client : clé d’envoi distincte de la synchronisation des dossiers. */
 function clientMailIdentity(contract){
