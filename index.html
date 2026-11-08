@@ -361,7 +361,8 @@ async function syncCentralMissions(options={}){
    missions:Object.entries(localMapBefore)
      .filter(([id,st])=>(options.forceUploadAll||dirtyBefore.has(id))&&isStoredMissionState(st)&&!deletedBefore.has(id))
      .map(([id,st])=>JSON.parse(JSON.stringify(st))),
-   deleted_ids:[...deletedBefore]
+   deleted_ids:[...deletedBefore],
+   recover_local:options.forceUploadAll===true
  };
 
  const controller=new AbortController();
