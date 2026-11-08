@@ -2110,7 +2110,7 @@ async function prepareClientTallyLink(){
 }
 function openTallyForTest(){
  const url=String(document.getElementById("clientTallyUrl")?.value||"");
- if(!S.tallyIntentReady||!/^https:\\/\\/tally\\.so\\/r\\//.test(url))return alert("Préparez d’abord le lien Tally sécurisé.");
+ if(!S.tallyIntentReady||!url.startsWith("https://tally.so/r/"))return alert("Préparez d’abord le lien Tally sécurisé.");
  if(!confirm("TEST VISUEL UNIQUEMENT : ouvrir le formulaire Tally réel pour vérifier les champs. Ne pas soumettre le formulaire et ne pas payer."))return;
  window.open(url,"_blank","noopener,noreferrer");
 }
