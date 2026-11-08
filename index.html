@@ -2101,12 +2101,24 @@ async function prepareClientTallyLink(){
   if(btn && btn.isConnected){btn.disabled=false;btn.textContent="PRÉPARER LE LIEN TALLY CLIENT";}
  }
 }
-function shareClientTallyLink(){
+async function shareClientTallyLink(){
  const input=document.getElementById("clientTallyUrl");
  const url=String(input?.value||"");
  if(!S.tallyIntentReady||!/^https:\/\/tally\.so\/r\//.test(url))return alert("Lien non prêt. Préparez d’abord la référence sécurisée.");
+ let smsUrl=url;
+ const operatorKey=window.prompt("Clé opérateur pour le lien SMS court (Annuler : aucun SMS) :");
+ if(operatorKey===null)return;
+ if(!operatorKey.trim())return alert("Clé manquante. Aucun SMS préparé.");
+ try{
+  const response=await fetch(PAYMENT_GATEWAY_URL+"/short-link",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+operatorKey.trim()},body:JSON.stringify({url})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||typeof data.shortUrl!=="string"||!/^https:\\/\\/cyrnea-liens-courts\\.jeancharles-coti\\.workers\\.dev\\/r\\/[a-f0-9]{24}$/.test(data.shortUrl))throw Error(data.error||"Réponse invalide");
+  smsUrl=data.shortUrl;
+ }catch(error){
+  if(!window.confirm("Lien court indisponible ("+String(error?.message||error)+"). Utiliser le lien Tally complet pour le SMS ?"))return;
+ }
  const brand=S.result?.contract==="RELAIS"?"CYRNEA RELAIS":"CYRNEA PRÉSENCE";
- const message="Bonjour,\n\nVoici votre lien sécurisé "+brand+" pour compléter votre demande et consulter les conditions de service :\n\n"+url+"\n\nLe créneau reste soumis à confirmation de CYRNEA, même après règlement.";
+ const message="Bonjour,\n\nVoici votre lien sécurisé "+brand+" pour compléter votre demande et consulter les conditions de service :\n\n"+smsUrl+"\n\nLe créneau reste soumis à confirmation de CYRNEA, même après règlement.";
  const phone=String(S.phone||"").replace(/[^+\d]/g,"");
  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
  if(ios){
