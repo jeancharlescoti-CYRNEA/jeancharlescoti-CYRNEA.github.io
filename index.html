@@ -468,46 +468,6 @@ function resetMissionScreenAfterAuthority(){
  S={stage:"ACCUEIL",mode:"FULL",draftKey:key(),history:["ACCUEIL"],result:null,prep:{},multiSlots:[],availability:{}};
  REACHED_STAGES=new Set(["ACCUEIL"]);
 }
-async function reconcileFromThisDevice(){
- if(!getSyncKey())return alert("Clé de synchronisation absente.");
- const keep=loadActiveMissionMap();
- const kept=Object.entries(keep).filter(([id,st])=>isStoredMissionState(st));
- if(!confirm("Cet appareil contient "+kept.length+" dossier(s). En faire la liste de référence et supprimer les autres dossiers du serveur ?"))return;
- try{
-  const before=await centralMissionRequest();
-  const keepIds=new Set(kept.map(([id])=>id));
-  const remove=before.missions.map(st=>String(st.id||activeMissionKey(st)||"")).filter(id=>id&&!keepIds.has(id));
-  if(!confirm("CONFIRMATION FINALE : conserver "+kept.length+" dossier(s) de cet appareil et supprimer "+remove.length+" dossier(s) du serveur. Continuer ?"))return;
-  const result=await centralMissionRequest({
-   missions:kept.map(([,st])=>JSON.parse(JSON.stringify(st))),
-   deleted_ids:remove,recover_local:true
-  });
-  const resultIds=new Set(result.missions.map(st=>String(st.id||activeMissionKey(st)||"")));
-  if(resultIds.size!==keepIds.size||[...keepIds].some(id=>!resultIds.has(id)))
-   throw new Error("Le serveur ne correspond pas encore à la liste attendue. Aucune donnée locale effacée.");
-  writeDeletedIds([]);writeDirtyIds([]);
-  alert("SERVEUR VÉRIFIÉ : "+resultIds.size+" dossier(s). Sur l'iPhone, choisir REMPLACER PAR LA LISTE CENTRALE, et non SYNCHRONISER MAINTENANT.");
- }catch(e){alert("Réconciliation non validée : "+String(e?.message||e))}
-}
-async function replaceWithCentralList(){
- if(!getSyncKey())return alert("Clé de synchronisation absente.");
- if(!confirm("Remplacer les missions de cet appareil par la liste centrale ? Les dossiers uniquement présents ici disparaîtront de cet appareil."))return;
- try{
-  const data=await centralMissionRequest();
-  const map={};
-  for(const st of data.missions){
-   const id=String(st.id||activeMissionKey(st)||"");
-   if(!id)continue;
-   const copy=JSON.parse(JSON.stringify(st));
-   delete copy.id;delete copy._serverUpdatedAt;
-   map[id]=copy;
-  }
-  writeActiveMissionMap(map);writeDeletedIds([]);writeDirtyIds([]);
-  resetMissionScreenAfterAuthority();
-  home(false);
-  alert("Liste centrale appliquée : "+Object.keys(map).length+" dossier(s) sur cet appareil.");
- }catch(e){alert("Remplacement impossible : "+String(e?.message||e))}
-}
 async function purgeAllTestMissions(){
  if(!getSyncKey())return alert("Clé de synchronisation absente.");
  if(!confirm("SUPPRIMER TOUS LES DOSSIERS, y compris les archives, sur le serveur et cet appareil ?"))return;
@@ -545,7 +505,7 @@ async function manualCloudSync(){
  if(!getSyncKey())return configureCloudSync();
  try{
    persistActiveSnapshot(S);
-   const result=await syncCentralMissions({forceUploadAll:true});
+   const result=await syncCentralMissions();
    home(false);
    alert("Synchronisation terminée — clé "+syncKeyTag()+" · serveur : "+result.remoteCount+" dossier(s) · appareil : "+result.count+" dossier(s) · envoyés : "+result.uploaded+" · confirmés par retour : "+result.confirmed+".");
  }catch(e){
@@ -617,8 +577,6 @@ function home(remember=true){
 
  <div class="toolbar" style="margin-top:10px"><button class="btn primary" onclick="configureCloudSync()">ACTIVER LA SYNCHRO MAC ↔ IPHONE</button><button class="btn ghost" onclick="manualCloudSync()">SYNCHRONISER MAINTENANT</button></div>
  <div class="toolbar" style="margin-top:10px">
- <button class="btn ghost" onclick="reconcileFromThisDevice()">CONSERVER LES MISSIONS DE CET APPAREIL SUR LE SERVEUR</button>
- <button class="btn ghost" onclick="replaceWithCentralList()">REMPLACER PAR LA LISTE CENTRALE</button>
  <button class="btn danger" onclick="purgeAllTestMissions()">VIDER TOUTES LES MISSIONS (TESTS)</button>
  </div>
  <div class="operatorOnly">Les dossiers non terminés ou avec paiement restant dû restent actifs jusqu’à leur clôture définitive. Les dossiers clôturés restent consultables dans MISSIONS ARCHIVÉES.</div>
