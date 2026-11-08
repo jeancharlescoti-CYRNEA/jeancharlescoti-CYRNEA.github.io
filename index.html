@@ -2101,19 +2101,17 @@ async function prepareClientTallyLink(){
   if(btn && btn.isConnected){btn.disabled=false;btn.textContent="PRÉPARER LE LIEN TALLY CLIENT";}
  }
 }
-async function shareClientTallyLink(){
+function shareClientTallyLink(){
  const input=document.getElementById("clientTallyUrl");
  const url=String(input?.value||"");
  if(!S.tallyIntentReady||!/^https:\/\/tally\.so\/r\//.test(url))return alert("Lien non prêt. Préparez d’abord la référence sécurisée.");
- const message="Bonjour, voici votre lien CYRNEA pour compléter personnellement votre demande et consulter les conditions de service. Le règlement éventuel ne confirme pas automatiquement le créneau, qui reste soumis à notre confirmation.";
- if(typeof navigator.share!=="function"){
-   return alert("Le partage natif est indisponible sur ce navigateur. Utilisez COPIER LE LIEN ou ouvrez la PWA sur votre iPhone.");
- }
- try{
-   await navigator.share({title:"CYRNEA — demande sécurisée",text:message,url:url});
- }catch(err){
-   if(err?.name!=="AbortError")alert("Partage non effectué : "+String(err?.message||err)+". Le lien reste disponible dans la PWA.");
- }
+ const brand=S.result?.contract==="RELAIS"?"CYRNEA RELAIS":"CYRNEA PRÉSENCE";
+ const message="Bonjour,\n\nVoici votre lien sécurisé "+brand+" pour compléter votre demande et consulter les conditions de service :\n\n"+url+"\n\nLe créneau reste soumis à confirmation de CYRNEA, même après règlement.";
+ const phone=String(S.phone||"").replace(/[^+\d]/g,"");
+ // iOS utilise « &body= » ; macOS et les autres gestionnaires SMS utilisent « ?body= ».
+ const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+ const sms="sms:"+phone+(ios?"&":"?")+"body="+encodeURIComponent(message);
+ window.location.href=sms;
 }
 /* Courriel client : clé d’envoi distincte de la synchronisation des dossiers. */
 function clientMailIdentity(contract){
