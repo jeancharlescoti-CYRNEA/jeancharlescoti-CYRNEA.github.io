@@ -2112,7 +2112,7 @@ async function shareClientTallyLink(){
  try{
   const response=await fetch(PAYMENT_GATEWAY_URL+"/short-link",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+operatorKey.trim()},body:JSON.stringify({url})});
   const data=await response.json().catch(()=>({}));
-  if(!response.ok||typeof data.shortUrl!=="string"||!/^https:\\/\\/cyrnea-liens-courts\\.jeancharles-coti\\.workers\\.dev\\/r\\/[a-f0-9]{24}$/.test(data.shortUrl))throw Error(data.error||"Réponse invalide");
+  if(!response.ok||typeof data.shortUrl!=="string"||!data.shortUrl.startsWith("https://cyrnea-liens-courts.jeancharles-coti.workers.dev/r/")||!new URL(data.shortUrl).pathname.match(/^\/r\/[a-f0-9]{24}$/))throw Error(data.error||"Réponse invalide");
   smsUrl=data.shortUrl;
  }catch(error){
   if(!window.confirm("Lien court indisponible ("+String(error?.message||error)+"). Utiliser le lien Tally complet pour le SMS ?"))return;
