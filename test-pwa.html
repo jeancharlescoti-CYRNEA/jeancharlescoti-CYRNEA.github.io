@@ -2494,7 +2494,7 @@ function bookingHandoff(){
  <div class="toolbar">${route==="TALLY"?`<button id="tallyClientSend" class="btn primary" onclick="alert(&quot;MODE TEST : aucun lien créé&quot;)">LIEN TALLY DÉSACTIVÉ</button>`:`<button class="btn primary" onclick="alert(&quot;MODE TEST : SimplyBook désactivé&quot;)">OUVRIR SIMPLYBOOK — RÉSERVER / PAYER</button><button class="btn ghost" onclick="settings()">RÉGLAGES DU LIEN</button>`}</div>
  ${route==="TALLY"?'<div id="tallyClientShare"></div>':""}
  <div class="checkZone"><div class="checkIntro">APRÈS LE PAIEMENT ${route==="TALLY"?"TALLY":"SIMPLYBOOK"}</div>
- <button class="btn primary" onclick="markBooked()">${route==="TALLY"?"PAIEMENT REÇU → DÉCIDER":"RÉSERVATION SIMPLYBOOK CONFIRMÉE → ENREGISTRER LE CRÉNEAU RÉEL"}</button>
+ <button class="btn primary" onclick="markBooked()">${route==="TALLY"?"SIMULER LE PAIEMENT → DÉCIDER":"RÉSERVATION SIMPLYBOOK CONFIRMÉE → ENREGISTRER LE CRÉNEAU RÉEL"}</button>
  </div>
  </div>`);
 }
@@ -2592,9 +2592,9 @@ function postPaymentDecision(){
    <div class="row"><b>Référence</b><span>${esc(S.tallyReference||"-")}</span></div>
    <div class="toolbar"><button class="btn primary" onclick="alert(&quot;MODE TEST : aucune action réelle&quot;)">ACTIONS EXTERNES DÉSACTIVÉES</button></div>
    <div class="checkZone"><div class="checkIntro">APRÈS AVOIR EFFECTUÉ L’ACTION</div>
-     <button class="btn primary" onclick="decisionConfirmed()">J’AI CONFIRMÉ LA MISSION DANS CYRNEA</button>
+     <button class="btn primary" onclick="decisionConfirmed()">SIMULER LA CONFIRMATION (TEST)</button>
      <button class="btn ghost" onclick="decisionAlternative()" style="margin-top:8px">J’AI PROPOSÉ UNE ALTERNATIVE</button>
-     <button class="btn danger" onclick="alert(&quot;MODE TEST : remboursement désactivé&quot;)" style="margin-top:8px">J’AI REMBOURSÉ — ANNULER LE DOSSIER</button>
+     <button class="btn danger" onclick="alert(&quot;MODE TEST : remboursement désactivé&quot;)" style="margin-top:8px">REMBOURSEMENT DÉSACTIVÉ EN TEST</button>
    </div>
  </div>`);
 }
