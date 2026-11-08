@@ -342,6 +342,7 @@ function missionSyncSnapshot(st){
  delete x._serverUpdatedAt;
  return JSON.stringify(x);
 }
+let CYRNEA_SYNC_LATEST_REQUEST=0;
 async function syncCentralMissions(options={}){
  const requestSeq=++CYRNEA_SYNC_LATEST_REQUEST;
  const key=getSyncKey();
