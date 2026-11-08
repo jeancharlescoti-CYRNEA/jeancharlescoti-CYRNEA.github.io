@@ -444,6 +444,89 @@ async function syncCentralMissions(options={}){
    confirmed:body.missions.filter(st=>!!serverMap[activeMissionKey(st)]).length
  };
 }
+
+async function centralMissionRequest(payload={}){
+ const controller=new AbortController();
+ const timeout=setTimeout(()=>controller.abort(),12000);
+ try{
+  const response=await fetch(MISSIONS_API_URL+"/sync",{
+   method:"POST",headers:{"Content-Type":"text/plain;charset=UTF-8"},
+   cache:"no-store",credentials:"omit",signal:controller.signal,
+   body:JSON.stringify({key:getSyncKey(),missions:[],deleted_ids:[],...payload})
+  });
+  const data=await response.json();
+  if(!response.ok||!data?.ok||!Array.isArray(data.missions))
+   throw new Error(String(data?.error||"Réponse centrale invalide"));
+  return data;
+ }finally{clearTimeout(timeout)}
+}
+function resetMissionScreenAfterAuthority(){
+ localStorage.removeItem(STATE_KEY);
+ localStorage.removeItem(LEGACY_STATE_KEY);
+ localStorage.removeItem(STAGE_VIEWS_KEY);
+ STAGE_VIEWS={};NAV=[];LAST_VIEW=null;
+ S={stage:"ACCUEIL",mode:"FULL",draftKey:key(),history:["ACCUEIL"],result:null,prep:{},multiSlots:[],availability:{}};
+ REACHED_STAGES=new Set(["ACCUEIL"]);
+}
+async function reconcileFromThisDevice(){
+ if(!getSyncKey())return alert("Clé de synchronisation absente.");
+ const keep=loadActiveMissionMap();
+ const kept=Object.entries(keep).filter(([id,st])=>isStoredMissionState(st));
+ if(!confirm("Cet appareil contient "+kept.length+" dossier(s). En faire la liste de référence et supprimer les autres dossiers du serveur ?"))return;
+ try{
+  const before=await centralMissionRequest();
+  const keepIds=new Set(kept.map(([id])=>id));
+  const remove=before.missions.map(st=>String(st.id||activeMissionKey(st)||"")).filter(id=>id&&!keepIds.has(id));
+  if(!confirm("CONFIRMATION FINALE : conserver "+kept.length+" dossier(s) de cet appareil et supprimer "+remove.length+" dossier(s) du serveur. Continuer ?"))return;
+  const result=await centralMissionRequest({
+   missions:kept.map(([,st])=>JSON.parse(JSON.stringify(st))),
+   deleted_ids:remove,recover_local:true
+  });
+  const resultIds=new Set(result.missions.map(st=>String(st.id||activeMissionKey(st)||"")));
+  if(resultIds.size!==keepIds.size||[...keepIds].some(id=>!resultIds.has(id)))
+   throw new Error("Le serveur ne correspond pas encore à la liste attendue. Aucune donnée locale effacée.");
+  writeDeletedIds([]);writeDirtyIds([]);
+  alert("SERVEUR VÉRIFIÉ : "+resultIds.size+" dossier(s). Sur l'iPhone, choisir REMPLACER PAR LA LISTE CENTRALE, et non SYNCHRONISER MAINTENANT.");
+ }catch(e){alert("Réconciliation non validée : "+String(e?.message||e))}
+}
+async function replaceWithCentralList(){
+ if(!getSyncKey())return alert("Clé de synchronisation absente.");
+ if(!confirm("Remplacer les missions de cet appareil par la liste centrale ? Les dossiers uniquement présents ici disparaîtront de cet appareil."))return;
+ try{
+  const data=await centralMissionRequest();
+  const map={};
+  for(const st of data.missions){
+   const id=String(st.id||activeMissionKey(st)||"");
+   if(!id)continue;
+   const copy=JSON.parse(JSON.stringify(st));
+   delete copy.id;delete copy._serverUpdatedAt;
+   map[id]=copy;
+  }
+  writeActiveMissionMap(map);writeDeletedIds([]);writeDirtyIds([]);
+  resetMissionScreenAfterAuthority();
+  home(false);
+  alert("Liste centrale appliquée : "+Object.keys(map).length+" dossier(s) sur cet appareil.");
+ }catch(e){alert("Remplacement impossible : "+String(e?.message||e))}
+}
+async function purgeAllTestMissions(){
+ if(!getSyncKey())return alert("Clé de synchronisation absente.");
+ if(!confirm("SUPPRIMER TOUS LES DOSSIERS, y compris les archives, sur le serveur et cet appareil ?"))return;
+ if(prompt("Confirmation irréversible : saisissez SUPPRIMER","")!=="SUPPRIMER")return;
+ try{
+  const before=await centralMissionRequest();
+  const ids=[...new Set([
+   ...Object.keys(loadActiveMissionMap()),
+   ...before.missions.map(st=>String(st.id||activeMissionKey(st)||"")),
+   ...loadDeletedIds()
+  ])].filter(Boolean);
+  const after=await centralMissionRequest({deleted_ids:ids});
+  if(after.missions.length!==0)throw new Error("Le serveur contient encore "+after.missions.length+" dossier(s). Suppression locale annulée.");
+  writeActiveMissionMap({});writeDeletedIds([]);writeDirtyIds([]);
+  resetMissionScreenAfterAuthority();
+  home(false);
+  alert("SUPPRESSION CONFIRMÉE : serveur 0 dossier, cet appareil 0 dossier. Sur l'autre appareil, choisir REMPLACER PAR LA LISTE CENTRALE.");
+ }catch(e){alert("Suppression non confirmée : "+String(e?.message||e))}
+}
 async function configureCloudSync(){
  const entered=prompt("Clé de synchronisation CYRNEA",getSyncKey());
  if(entered===null)return;
@@ -533,6 +616,11 @@ function home(remember=true){
  <div style="margin-top:12px"><button type="button" class="choice" style="width:100%;display:block;cursor:pointer" onclick="openChangeRequests()"><span class="missionName">MODIFICATIONS DEMANDÉES AVANT PAIEMENT</span><span class="missionGoal">Demandes clients à requalifier, distinctes des missions confirmées.</span></button></div>
 
  <div class="toolbar" style="margin-top:10px"><button class="btn primary" onclick="configureCloudSync()">ACTIVER LA SYNCHRO MAC ↔ IPHONE</button><button class="btn ghost" onclick="manualCloudSync()">SYNCHRONISER MAINTENANT</button></div>
+ <div class="toolbar" style="margin-top:10px">
+ <button class="btn ghost" onclick="reconcileFromThisDevice()">CONSERVER LES MISSIONS DE CET APPAREIL SUR LE SERVEUR</button>
+ <button class="btn ghost" onclick="replaceWithCentralList()">REMPLACER PAR LA LISTE CENTRALE</button>
+ <button class="btn danger" onclick="purgeAllTestMissions()">VIDER TOUTES LES MISSIONS (TESTS)</button>
+ </div>
  <div class="operatorOnly">Les dossiers non terminés ou avec paiement restant dû restent actifs jusqu’à leur clôture définitive. Les dossiers clôturés restent consultables dans MISSIONS ARCHIVÉES.</div>
  </div>`,remember);
 }
