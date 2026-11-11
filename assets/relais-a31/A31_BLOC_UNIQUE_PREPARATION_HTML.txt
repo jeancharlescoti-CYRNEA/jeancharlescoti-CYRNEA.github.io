@@ -1,0 +1,387 @@
+<!-- RELAIS PROPRIÉTAIRE — PAGE INTEMPÉRIES A31 — IDENTITÉ RELAIS AJOUTÉE — 21/10/2026 -->
+<!-- Article à intégrer dans le gabarit Wmaker normal, sans changement du CSS global. -->
+<!-- WMAKER : désactiver les commentaires dans l’onglet SOCIAL de l’article n°31 ; cette fonction n’appartient pas au HTML. -->
+<!-- L'article immobilier d'origine reste inchangé ; aucun CSS global n'est modifié. -->
+<!-- SECOURS AMP A31 : lien visible uniquement si le CSS de l'article est absent ou non appliqué. -->
+<div class="ci-amp-secours">
+  <p><strong>ACCÉDER À LA PAGE COMPLÈTE</strong></p>
+  <p>Pour consulter les missions, les tarifs et réserver, ouvrez la version normale du site.</p>
+  <p><a href="https://www.relaisproprietaire.fr/Intemperies-en-Corse-comment-proteger-et-faire-verifier-votre-residence-secondaire-a-distance_a31.html">OUVRIR L'ARTICLE COMPLET →</a></p>
+</div>
+
+
+<link rel="stylesheet" href="https://jeancharlescoti-cyrnea.github.io/assets/relais-a31/urgence-20261111.css">
+<article class="ci-intemperies-article" aria-label="Intervenir avant ou après une intempérie en Corse">
+  <div class="ci-relais-brandbar">
+    <a class="ci-relais-brandlink" href="https://www.relaisproprietaire.fr/" aria-label="Retour à l’accueil RELAIS PROPRIÉTAIRE">
+      <img class="ci-relais-logo" src="https://www.relaisproprietaire.fr/docs/relais-proprietaire-logo-1536x1024-optimise.webp" alt="RELAIS PROPRIÉTAIRE" width="620" height="413" loading="eager">
+    </a>
+  </div>
+  <header class="ci-meteo-intro">
+    <h1 class="ci-meteo-title">Intempéries en Corse : comment protéger et faire vérifier votre résidence secondaire à distance ?</h1>
+<br>
+    <p class="ci-meteo-lead">Vous êtes sur le continent ? Avant ou après une intempérie, CYRNEA intervient personnellement dans le secteur de Porto-Vecchio pour effectuer les actions simples ou les observations convenues, sans que vous ayez à vous déplacer.</p>
+  </header>
+<br><div style="text-align:center;">
+  Missions ponctuelles, SANS ABONNEMENT.
+
+</div>  <div class="ci-relais-zone-contact" aria-label="Secteur d’intervention et contact RELAIS">
+    <h2 class="ci-relais-zone-title"><br>Interventions en Corse, dans le bassin de Porto-Vecchio</h2>
+    <p class="ci-relais-zone">Porto-Vecchio et communes limitrophes • Lecci • Sainte-Lucie-de-Porto-Vecchio / Pinarello • Tarco<br>Déplacement inclus dans les tarifs.</p>
+    <div class="ci-relais-phone-wrap">
+      <a class="ci-relais-phone-card" href="tel:+33495707553" aria-label="Appeler RELAIS PROPRIÉTAIRE au 04 95 70 75 53">
+        <span class="ci-relais-phone-label">NOUS CONTACTER</span>
+        <span class="ci-relais-phone-number">04 95 70 75 53</span>
+      </a>
+    </div>
+  </div>
+
+  <hr class="ci-meteo-line">
+
+  <section aria-labelledby="ci-meteo-avant">
+    <h2 class="ci-meteo-section-title" id="ci-meteo-avant"><span class="ci-meteo-orange">AVANT</span> UNE INTEMPÉRIE — Anticipation et prévention</h2>
+    <p class="ci-meteo-section-lead">Une alerte météo est annoncée et vous êtes loin de votre résidence secondaire ?</p>
+    <div class="ci-meteo-card ci-meteo-before">
+      <p class="ci-meteo-brand">RELAIS PROPRIÉTAIRE</p>
+      <h3 class="ci-meteo-card-title">Prévention avant une intempérie</h3>
+      <p class="ci-meteo-price">149 € <span class="ci-meteo-tax">TTC</span></p>
+      <p class="ci-meteo-pitch">Vous êtes sur le continent et ne pouvez pas vous déplacer pour préparer votre résidence ? RELAIS PROPRIÉTAIRE réalise les actions simples convenues avec vous.</p>
+      <p class="ci-meteo-card-desc">Fermer les accès désignés et mettre à l’abri les éléments légers prévus, selon vos consignes. Jusqu’à 1 heure.</p>
+        <p class="ci-meteo-example"><strong>Exemples :</strong> fermer les volets et accès désignés, mettre à l'abri plusieurs éléments légers exposés, effectuer les actions de précaution convenues et confirmer leur réalisation.</p>
+      <a class="ci-meteo-cta" href="#ci-meteo-reservation" data-cyrnea-reserve="avant">RÉSERVER CETTE MISSION <span aria-hidden="true">→</span></a>
+    </div>
+  </section>
+
+  <hr class="ci-meteo-line">
+
+  <section aria-labelledby="ci-meteo-apres">
+    <h2 class="ci-meteo-section-title" id="ci-meteo-apres"><span class="ci-meteo-orange">APRÈS</span> UNE INTEMPÉRIE</h2>
+    <p class="ci-meteo-section-lead">Comment faire vérifier l’état de ma maison après une tempête à Porto-Vecchio et ses environs lorsque je suis à distance ?</p>
+    <div class="ci-meteo-grid">
+      <div class="ci-meteo-card ci-meteo-after">
+        <p class="ci-meteo-brand">RELAIS PROPRIÉTAIRE</p>
+        <h3 class="ci-meteo-card-title">Vérifications pratiques après une intempérie</h3>
+        <p class="ci-meteo-price">109 € <span class="ci-meteo-tax">TTC</span></p>
+        <p class="ci-meteo-pitch">Votre maison est restée fermée et vous souhaitez qu’une personne effectue quelques vérifications pratiques à votre place ?</p>
+        <p class="ci-meteo-card-desc">RELAIS PROPRIÉTAIRE vérifie les points simples convenus à l’avance, réalise uniquement les actions matérielles prévues, puis vous confirme leur exécution. Jusqu’à 30 minutes.</p>
+        <p class="ci-meteo-example"><strong>Exemples :</strong> vérifier portail et volets, repérer un mobilier renversé ou un accès resté ouvert.</p>
+        <div class="ci-meteo-grow"></div>
+        <a class="ci-meteo-cta" href="#ci-meteo-reservation" data-cyrnea-reserve="apres">RÉSERVER CETTE MISSION <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="ci-meteo-card ci-meteo-after">
+        <p class="ci-meteo-brand">CYRNEA PRÉSENCE</p>
+        <h3 class="ci-meteo-card-title">VOIR — Observation ciblée et documentée après une intempérie</h3>
+        <p class="ci-meteo-price">260 € <span class="ci-meteo-tax">TTC</span></p>
+        <p class="ci-meteo-pitch">Vous êtes loin et souhaitez savoir ce qui est réellement visible dans votre résidence après une intempérie ?</p>
+        <p class="ci-meteo-card-desc ci-meteo-observation">Observation des éléments visibles, photos et restitution factuelle. Jusqu’à 1 heure.</p>
+        <p class="ci-meteo-drone-line">Vues aériennes possibles par drone, sous réserve des conditions météorologiques, de sécurité et de la réglementation applicable.</p>
+        <p class="ci-meteo-example"><strong>Exemples :</strong> photographier une façade, une terrasse, observer une toiture par drone si possible.</p>
+        <div class="ci-meteo-grow"></div>
+        <div class="ci-meteo-option">
+          <a class="ci-meteo-cta" href="#ci-meteo-reservation" data-cyrnea-reserve="voir">RÉSERVER CETTE MISSION <span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- Choix de créneau : la passerelle existante construit la référence et l'URL Tally. -->
+  <section id="ci-meteo-reservation" class="ci-meteo-reservation" aria-labelledby="ci-reserve-heading" aria-hidden="true" hidden>
+    <button class="ci-reserve-close" type="button" id="ci-reserve-close">Fermer</button>
+    <h2 class="ci-reserve-heading" id="ci-reserve-heading">Réserver cette mission</h2>
+    <p class="ci-reserve-choice" id="ci-reserve-choice"></p>
+    <p class="ci-reserve-note">Choisissez votre date et votre heure de début, du lundi au samedi. La disponibilité, les conditions d'accès et le tarif de la mission seront vérifiés avant le paiement dans Tally.</p>
+    <form id="ci-reserve-form">
+      <div class="ci-reserve-grid">
+        <label class="ci-reserve-field ci-reserve-field-date">Date souhaitée<input id="ci-reserve-date" type="date" required></label>
+        <label class="ci-reserve-field">Heures<select id="ci-reserve-hour" required><option value="">— Heure —</option><option value="08">08 h</option><option value="09">09 h</option><option value="10">10 h</option><option value="11">11 h</option><option value="12">12 h</option><option value="13">13 h</option><option value="14">14 h</option><option value="15">15 h</option><option value="16">16 h</option><option value="17">17 h</option><option value="18">18 h</option></select></label>
+        <label class="ci-reserve-field">Minutes<select id="ci-reserve-minute" required><option value="">— Minutes —</option><option value="00">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option></select></label>
+      </div>
+      <button class="ci-reserve-submit" type="submit" id="ci-reserve-submit">CONTINUER VERS TALLY</button>
+      <p class="ci-reserve-message" id="ci-reserve-message" role="status" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <p class="ci-meteo-conditions"><strong>Missions SANS ABONNEMENT</strong>, sous réserve de disponibilité, d'accès et de conditions de sécurité compatibles. Ces missions ne se substituent ni à une expertise ni à un diagnostic technique.</p>
+
+
+  <!-- BLOCS RELAIS : étapes et paiements officiels, présentation, FAQ INTEMPÉRIES, coordonnées. -->
+  
+  
+  <section class="relais-steps">
+  
+    <div class="relais-steps-title">
+      VOTRE MISSION EN 3 ÉTAPES
+    </div>
+  
+    <div class="relais-steps-grid">
+  
+      <div class="relais-step">
+        <span class="relais-step-n">1</span>
+        <strong>IDENTIFIEZ VOTRE BESOIN</strong>
+  
+        <p class="relais-step-desktop">
+          Quelques choix suffisent pour connaître la mission, son tarif et sa durée maximale.
+        </p>
+  
+        <p class="relais-step-mobile">
+          Mission, tarif et durée affichés.
+        </p>
+      </div>
+  
+      <div class="relais-step">
+        <span class="relais-step-n">2</span>
+        <strong>RÉSERVEZ</strong>
+  
+        <p class="relais-step-desktop">
+          Vous choisissez votre créneau, consultez les conditions et réglez votre demande. RELAIS confirme ensuite la disponibilité ou vous rembourse intégralement.
+        </p>
+  
+        <p class="relais-step-mobile">
+          Créneau et paiement. RELAIS confirme ou rembourse intégralement.
+        </p>
+      </div>
+  
+      <div class="relais-step">
+        <span class="relais-step-n">3</span>
+        <strong>RELAIS INTERVIENT</strong>
+  
+        <p class="relais-step-desktop">
+          Une fois la mission confirmée, RELAIS intervient personnellement. Vous recevez une confirmation d’exécution ou, pour VOIR, la restitution factuelle prévue. La mission est ensuite clôturée.
+        </p>
+  
+        <p class="relais-step-mobile">
+          Après confirmation : intervention, restitution et clôture.
+        </p>
+      </div>
+  
+    </div>
+  
+    <div class="relais-tarif-note">
+      <strong>Tarif fixe de la mission, déplacement local compris, sans abonnement et sans majoration automatique.</strong>
+    </div>
+  
+    <div class="relais-payment">
+  
+      <div class="relais-payment-title">
+  
+        <svg class="relais-payment-lock"
+             viewBox="0 0 24 24"
+             aria-hidden="true"
+             focusable="false">
+          <path
+            fill="currentColor"
+            d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2Zm-7-2a2 2 0 1 1 4 0v2h-4V6Zm3 9.73V18h-2v-2.27a2 2 0 1 1 2 0Z">
+          </path>
+        </svg>
+  
+        <span>PAIEMENT SÉCURISÉ</span>
+      </div>
+  
+      <div class="relais-payment-brands"
+           aria-label="Moyens de paiement acceptés">
+  
+        <!-- CB OFFICIEL -->
+        <div class="relais-payment-logo-box">
+          <img
+            class="relais-payment-logo relais-logo-cb"
+            alt="CB"
+            src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHZpZXdCb3g9IjAgMCAxMi42NyA5LjAyIj48ZGVmcz48c3R5bGU+LmNscy0xe2ZpbGw6I2ZmZjt9PC9zdHlsZT48L2RlZnM+PGcgaWQ9IkNhbHF1ZV8zIj48cmVjdCBjbGFzcz0iY2xzLTEiIHg9Ii0uMDQiIHk9Ii0uMDMiIHdpZHRoPSIxMi43OSIgaGVpZ2h0PSI5LjExIi8+PGltYWdlIHdpZHRoPSI1MSIgaGVpZ2h0PSIzNSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLjE5IC4zMykgc2NhbGUoLjI0KSIgeGxpbms6aHJlZj0iZGF0YTppbWFnZS9wbmc7YmFzZTY0LGlWQk9SdzBLR2dvQUFBQU5TVWhFVWdBQUFEQUFBQUFnQ0FZQUFBQlUxUHNjQUFBQUNYQklXWE1BQUM0akFBQXVJd0Y0cFQ5MkFBQUo1VWxFUVZSWWhkV1liWllidTQyR0h3QmtsZFFmYnZ0ZTI1bkpyR0VXTWF1YlBXWUQrWlBrZHJ0YlVsV1JBUEtEcGJic09Bc0l6OUZSRjFWZEJZRHZCMGk1LzcvL1QxV2ptbUg3SjgxUUs0UUlWTU5VMFdxc3RSQ2lSRFd5Rm5TdTNNMlZZc2JYUStGK01qNGZKMzZmbGNtVVA5OFZubWJoNnd5ZkRpQm0vQ1lMQjErWmx6ZnE4a1l0aFh6NUEzMzlCL255akwvK0E4bkVuLzhnejJmOGRDSmVUK0JKZjFuSTUwYi9XOFBQenYrZS9pTEtQb0xFTS9ISTZ4U2l3cy9EN2VjNTRXajZ3NHdKVEFhcngzN0wrSjhhR3kxQTM3N3RkeWJ4OWdwdEpUT3ZVOFJsQWFDZlR0Zmd5TTEvZXUrNHY2Z29Jc0w0SG44RGhJQ29vU0xrVGN3aUFxYUVDRG9ld0tFSWMxRWVpdUR1V0FvendZR2dCcFFRYU01VUdvZmxoSHRnNTFjeU9uRTVvZWRYY2wySjFzaHRKZGVGT0ovSUZPSjhnZTc0MnZIbkRkWWtiOUlvaUlCOHowcEZTRlVVSllIYzUwSVZSTWhNSkJNUktFVXhWU0xCUFlnVW5nd3F5ZG9UVWVFaFY4UUxhbzFzQWVGa0p1bDlCTG8yb2dlNnJmanJDN2x1MEJyaGU1RWo4ZFhKbG9BUTNvbWxrL3ZxRmhHQlBUZ1ZKVTFIMkFvcE9WWkdkYnhVUUZWSUVhd2E3b0VLSEhSOEhrem9rUmpCeHlMVTZFU0hTVGZVaE1pZ2I0MTYrVVlxK09XRW5FL2s2UlZlL282cUVOdEdYaGI4dkpKdmI2QkN1Sk92SFQ5MzRzWEgzQlZDQ09oZWZWR0JUTkFDYWtneTRKTkpxT0FpZUNhWVlBR0hXWmxVV0NQNVZJV2V5ZStXek1EbXdyMDQ2UW51Mk9xa0dobEJSSkRQei9ENmJienpmRUlTK3NzMzh2eUdBcjV0NEpCdkMvbmNRUVhPQ1FxeHhYY093UGpOMU41SitZNTNsUjFHdHdRVmJ1bWtBbzg3c1crcFBKTWt3bEU3UFVBa09iUlg5UFNOTUVFdjU3R3E1ek9LN0NRT0pKTlkyaWdrNEtmOWJhYzJ5cndHY2hOVEthcjdxMlZBUmNmUHN1ZGlLdThxa2lLa0thbDZuYUxJSVBKY1pGU0RwRWh3SlBoc0hmWEF3c25MaVY2VjhJRG5aMnpkMExhaTYwSXNGMmdOUE1udVpOdklaY05QQzF3Y1ZvZFRFczBCSWJQZmtKaWhQS2FDNTZpb3FKR1N5TFV5Wm5TN0pnZWFpWmh5cUlXeUo5SThtVFI1S0ZEU1I0S1JxSFI2QkpsSlhNNERsanVub205a0g5V1d0cEhuRTdJTjJQMmdOV3RBNUh2Wk00U1VHeEtyQ0M2S3FvQWFaTDdMcDZyU2RwMVh3RTB4VStZaWRIZUtGQ2FGUjRPUEJUeGdzdHo1RTlBM0pCTjhSYjJScnk4a1RnakV1cUhMaWw5TzZOc0xDT2pXaUhVamxrYitkVVBXUUJibzNaRXRJWGRJN1JhanlJQ09aSURLeUZ5L1Myc0laQ2Jkakswb2VDQnFSQ2IzVTZIS1VKNUp3RFA1b001QmR3aEdvTzZZZDNKWjZOMEpJTTVuNHVVWlA1L3hoTndhZ1pDbmhiNnVCTU80cENwc1NiK2EyTHZaeFMyRXhoQXpyc213RzdUcFNGUkVDQUZMeUdyWHpEbkl5UFZCeDdOdFgyTVZPTko0eW9YcUd4STVIdFF1U0c4UThSNVFyc3NlMDc1cW1iQjl4L2dWTjdMbEQ5ZlhvVEF3dVlNZkVVRk1oN3lKRW1xRUtqWVlUZEZDS2NKeE1oNVVtSFNvMVZGeTUwTlMwNWxsZUFScVRINUJzNkc5VTlwR2VoL0Jlb2Zla0cxQnVwTVpBNFBkeVZjblc0d0N4bFVMeC9WdENscXR2RmQ5Qkc4Z3ZMY1VJdUFxN3lRV0hWWHlESnhra3VSQms0UG16b1ZrbHNUa3BxZEtRZDBSQmt5MU83cWVrZDRoZ2hTQjdzUzZrUjVrSkJSSWQyaTNvaTN2Mkk5M0R1d1FRUVNzREVmZTFjYUwwYzJJWWxRU1ZjVlVPRmJqeTFSNW1vMmlRcEdrS0h4U0p4enV0WTgrQ1pqYmhSUkZ3aWw5UTVhRmNua0ZVVEk2dEEwdUszNjZqQURkWVhHNGRQSVVRL2tpaVV5Q0lLK0YyVTFIc3hpcUJiR3l3MlprbXNYUVRMb3BtdENLVVlvUndHekRkUUdPbWp6cStJNkVUOFVSaE9OVnEwV1l0ek9sYnlPUnZoR2l3OERXWmZSWHJRK2VMUXQ1Q1ZBbDE5eGxid1F0dHk1NU04cnRSV1NnT1hxaEVNRnRFTFlmS3BxSkFuTWRwdmRmaDRMc3VQOVFCd2RNUnl1dEVremgzUHNldU9wUXBHM1pxK2FqVHBtd2JvT2FPWlJMZW80azRCMHVrQU5XNzFlM0NRaTd1dzdvaUE0bDhsMy8wd3hRN282RjQxUjRMTXJITXZqeVcxVytUSU5nYzFIK2V3NGtvQUptZ3ZaRURNcDZvZVFnckxVVkNSL1JoWVAzbmRURDdMTEh3UDBseUF3a1J2QXBPY3hzVHlCMktLbHFHY0h2YmJXYTB2ZlBsUXZmUi9MejhCd3VMaktxLzFTQ3V2dkE4RDhabGZVWURZc09Qa2hia2IwbEZwV1J4TnFSZGFpT3BFRFAwVjdzd2VmdG90eENTR1cwcEZvS1N4M1lSNVdtQmxQbGVDeVFjTFRDWFJHbW92elBzVENSM0pma29HTUhWa3d3VWU0OENCVk1vUGc2dHFqUkVkL1F2c0p5R2pnUEgwcTBOWFJwZzdETlI5ZlpIRzFPS05CK0xGemNLRnlKYXRqZVRib05mTGVwMEt0QlFLbURQUjhPTTU5bTQ2NElqMFhwQ0U5VmVKaVNSM0VlcWlLNzlvc0ljNnlJak9mVjlZeTJSbHBCdDBGaTJWNmg5NUZJYjhNei91amtXeEs3VklNTVNQMWk3ZCs3VVdWdk52ZDJPa1QyN2FJUVUwRVN2aHdQUkk2Vk9oYmxXQXRWb1ZweUtNcWRKci9QeVowSzBjQWttYjB4YmE5b094Rm1JSUd0WnpDR0g4Qnc0cTB4ak9lNzArYm1TSE55aDkrdEI5OVdmMEJJUmdQblpyVGRnVldGWGdwVE5ZNVRZVExoMDJ4VVUrYWkvRFliQWt3RjVwTE1ac3dIRUljUHVWRWowU0tVTGtpZHNNc0xaSWZvWkcvSTNwMW1CT0o5ckVSTCtOYjN5aWVra2ptSS9LL011MGxBVE1oOW13Z1FOc3hyTGtiNTZRVGl2aGgzWmF6VXd5UThUY0xEbk15cVZJdlJHZ0JGazFxVWFzSzFxOUhNNFRGV0NFYmdHYU14RUJQaWJ5dHBnNnpTazVRZzhlOHQ5QytxUDFZQWFHYTRDRGxYb2hZa2sxS1VxUlMrM2xVZTVrSm1NbGRqTm5pNm0vaHlVTnlkcncvRzJwdzZCUSs2MGJmS2c3L2lxcWdhVTEvd2FrZzAwaDNwQzdsZWh1TzNkYlFPbDIzc2h5OU90QTdJMEgzNUVlKy9YQUZxSVhSZ0RWVkNsTHVEY1ppbXZacmpLWi92Sng2cjhuRTI1aktnOXFkalFWVjRPc1R3RUZNKzBCQlQ1bTBabmxJVWZUc1IwYUVvY1dwanI3R3VvL3YxSFNLNzA4bzErSi9HcjZvUFVFTEdpVVRZd1BYZFBDQmlLbnljRlMzRzU3c0pNcGxNY0lHdjk0WElaQzVDTGNtZFFvM09NVGFLZ3BKbzJ5aSswVDJRRVJhNXJxZ3FrVHQwR0Z0SVh2cTdTVUdDSlBrdml2L2p1SUo3dEJLcXVDbGlpaVU4SGc4OHpvWElZRElsUmZoeUxCeXE4bUV1MUtKOFBob2xuY01VVENJY0hLcURPY3pSaVZyUnZtQVp3K0hjQ2Q5Z1c4YkdmVjJSR01sRlVmTFN5ZFgzMEFMSnNaMzlkL0I1bDlHMm43TEJUUkVBSVpucUQ2MFNoMXFvQXNXVVdvVFBSME5UbUNRNWJCdDFDKzVZMlRJeGIwaUNwUlBiZ3FTajJ3YmVpZGUzNFJFOTZPY0dheWUvK1lCUnk3R2xIUlQrUVVaL0NTRmdxSkFxZFNvY0QvTklvQmhXQzNmek9MQWxneTkzaGVaT0xUWlVwaVJQRTJ6Tk9PUm9IWXJKV1A1ME5EYjZka0dxd2JhU3hmQ0xvOFdRdHd0dDZXaFJ2TWZZWjdSNDMvUDZIdmsxZUUzNUpRKzBWOE4xZEtCMWw4M0gyU2lsRUxrZnF3Qy9QMHdnd205M0U4TFl3T251R1IrbXBCWmhzcUVjaGNCcUdaSm9RcDdlQnQ3YkN1VDdrWXdZY0hHa3cvY0QySnRqSGE1WXozOUw0di80OFUrNWR2UmRvdDBDR3dBQUFBQkpSVTVFcmtKZ2dnPT0iLz48L2c+PGcgaWQ9IkxvZ29fQ0JfMTAwIj48cGF0aCBjbGFzcz0iY2xzLTEiIGQ9Ik0xMS4xMSwzLjQ1YzAtLjE0LS4wMy0uMjctLjA4LS40LS4wNS0uMTItLjEzLS4yMy0uMjMtLjMzLS4xMS0uMTEtLjIzLS4xOC0uMzYtLjIyLS4xMy0uMDQtLjMxLS4wNi0uNTQtLjA2aC0zLjA1djIuMDNoMy4wNWMuMjMsMCwuNDEtLjAyLjU0LS4wNi4xMy0uMDQuMjUtLjEyLjM2LS4yMi4xLS4xLjE4LS4yMS4yMy0uMzMuMDUtLjEzLjA4LS4yNi4wOC0uNCIvPjxwYXRoIGNsYXNzPSJjbHMtMSIgZD0iTTExLjExLDUuNzVjMC0uMTQtLjAzLS4yNy0uMDgtLjQtLjA1LS4xMi0uMTMtLjIzLS4yMy0uMzMtLjExLS4xMS0uMjMtLjE4LS4zNi0uMjItLjEzLS4wNC0uMzEtLjA2LS41NC0uMDZoLTMuMDV2Mi4wNGgzLjA1Yy4yMywwLC40MS0uMDIuNTQtLjA2LjEzLS4wNC4yNS0uMTIuMzYtLjIyLjEtLjEuMTgtLjIxLjIzLS4zMy4wNS0uMTMuMDgtLjI3LjA4LS40Ii8+PHBhdGggY2xhc3M9ImNscy0xIiBkPSJNNi41OSw0LjQ2Yy0uMDYtMS4zMS0xLTIuMTYtMi40OS0yLjE2cy0yLjQ5LjkxLTIuNDksMi4zLDEsMi4zLDIuNDksMi4zLDIuNDMtLjg1LDIuNDktMi4xN2gtMi40MXYtLjI3aDIuNDFaIi8+PC9nPjxnIGlkPSJMb2dvX0NCXzEwMC0yIj48cGF0aCBjbGFzcz0iY2xzLTEiIGQ9Ik0xMS44Niw4LjJzLS4xLjA3LS4xNy4wNy0uMTItLjAyLS4xNy0uMDdjLS4wNS0uMDUtLjA3LS4xLS4wNy0uMTdzLjAyLS4xMi4wNy0uMTcuMS0uMDcuMTctLjA3LjEyLjAyLjE3LjA3Yy4wNS4wNS4wNy4xLjA3LjE3cy0uMDIuMTItLjA3LjE3Wk0xMS41NSw3Ljg5cy0uMDYuMDktLjA2LjE0LjAyLjEuMDYuMTRjLjA0LjA0LjA5LjA2LjE0LjA2cy4xLS4wMi4xNC0uMDYuMDYtLjA5LjA2LS4xNC0uMDItLjEtLjA2LS4xNGMtLjA0LS4wNC0uMDktLjA2LS4xNC0uMDZzLS4xLjAyLS4xNC4wNlpNMTEuNjksNy45cy4wNiwwLC4wNywwYy4wMy4wMS4wNC4wMy4wNC4wNywwLC4wMiwwLC4wNC0uMDMuMDUsMCwwLS4wMiwwLS4wNC4wMS4wMiwwLC4wMy4wMS4wNC4wMywwLC4wMS4wMS4wMy4wMS4wNHYuMDJzMCwuMDEsMCwuMDJjMCwwLDAsLjAxLDAsLjAxaDBzLS4wNCwwLS4wNCwwYzAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwaDB2LS4wM3MwLS4wNS0uMDItLjA2YzAsMC0uMDMsMC0uMDUsMGgtLjA0di4xaC0uMDV2LS4yNmguMDlaTTExLjc0LDcuOTRzLS4wMywwLS4wNSwwaC0uMDR2LjA5aC4wNHMuMDMsMCwuMDQsMGMuMDIsMCwuMDMtLjAyLjAzLS4wNCwwLS4wMiwwLS4wMy0uMDItLjA0WiIvPjwvZz48L3N2Zz4=">
+        </div>
+  
+        <!-- VISA OFFICIEL -->
+        <div class="relais-payment-logo-box">
+          <img
+            class="relais-payment-logo relais-logo-visa"
+            alt="Visa"
+            src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNzguMDc1IDE2OS4zNzQiPgogIDxkZWZzPgogICAgPHN0eWxlPgogICAgICAuY2xzLTEgewogICAgICAgIGZpbGw6IG5vbmU7CiAgICAgIH0KCiAgICAgIC5jbHMtMiB7CiAgICAgICAgZmlsbDogIzE0MzRjYjsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHRpdGxlPlZCTV9ibHVSR0JfMjAyNTwvdGl0bGU+CiAgPGcgaWQ9IkxheWVyXzIiIGRhdGEtbmFtZT0iTGF5ZXIgMiI+CiAgICA8ZyBpZD0iVmlzYV9CcmFuZF9NYXJrIiBkYXRhLW5hbWU9IlZpc2EgQnJhbmQgTWFyayI+CiAgICAgIDxnPgogICAgICAgIDxyZWN0IGNsYXNzPSJjbHMtMSIgd2lkdGg9IjI3OC4wNzUiIGhlaWdodD0iMTY5LjM3NCIvPgogICAgICAgIDxyZWN0IGNsYXNzPSJjbHMtMSIgeD0iMzAuMDAyIiB5PSIzMC4wMDIiIHdpZHRoPSIyMTguMDcxIiBoZWlnaHQ9IjEwOS4zNyIvPgogICAgICAgIDxwYXRoIGNsYXNzPSJjbHMtMiIgZD0iTTEyMC4wMDgyLDYwLjAwNCw5OS4zMTcxNSwxMDkuMzdIODUuODE4NTlMNzUuNjM2MTUsNjkuOTcyNWMtLjYxODQ5LTIuNDI1NTMtMS4xNTQzNy0zLjMxNTg0LTMuMDMzOTItNC4zMzU4YTUzLjQwMjkyLDUzLjQwMjkyLDAsMCwwLTEyLjU5ODMtNC4yMDEwOWwuMzAwOC0xLjQzMTYxSDgyLjAzNjE2QTUuOTUwMTIsNS45NTAxMiwwLDAsMSw4Ny45MjUsNjUuMDM2NUw5My4zMDMsOTMuNjAzODEsMTA2LjU5NDMsNjAuMDA0Wm01Mi44OTQsMzMuMjQ3MjFjLjA1NzE0LTEzLjAyNzM1LTE4LjAxNTUyLTEzLjc0NjktMTcuODkxMTQtMTkuNTY3ODUuMDQtMS43Njk4NiwxLjcyNTYtMy42NTIsNS40MTY4Ni00LjEzNDNhMjQuMTA3ODEsMjQuMTA3ODEsMCwwLDEsMTIuNTksMi4yMDc5M2wyLjI0NDM2LTEwLjQ2Njg0YTM0LjMxMDMsMzQuMzEwMywwLDAsMC0xMS45NDg0My0yLjE4OWMtMTIuNjIxNDksMC0yMS41MDcsNi43MTA5LTIxLjU3ODE0LDE2LjMxNzgtLjA4NDI5LDcuMTEsNi4zNDA3NCwxMS4wNzIsMTEuMTgxNjksMTMuNDM2MDgsNC45NzMxNiwyLjQxOSw2LjY0MTYxLDMuOTcxLDYuNjIzLDYuMTM0MjYtLjAzNzE3LDMuMzE0LTMuOTY4NDksNC43NzQ1MS03LjY0NDA5LDQuODMyYTI2LjcxMjUzLDI2LjcxMjUzLDAsMCwxLTEzLjExNi0zLjExOTNsLTIuMzEyMTksMTAuODE4MDVjMi45ODEsMS4zNjksOC40ODkzMywyLjU2MzM2LDE0LjIwMTM0LDIuNjIxOSwxMy40MTY3NiwwLDIyLjE5MTIyLTYuNjI0NzgsMjIuMjMyNjQtMTYuODkwNzhNMjA2LjIzNTc3LDEwOS4zN0gyMTguMDQ3bC0xMC4zMS00OS4zNjZIMTk2LjgzNjgyYTUuODEyLDUuODEyLDAsMCwwLTUuNDM2MTcsMy42MjA1OEwxNzIuMjM4MzcsMTA5LjM3SDE4NS42NDUxbDIuNjY0NDktNy4zNzUwNWgxNi4zODI4NVpNMTkxLjk4NTE5LDkxLjg3ODU4bDYuNzIzLTE4LjUzNTY3LDMuODY5OTMsMTguNTM1NjdaTTEzOC4yNTYyNSw2MC4wMDQsMTI3LjY5NjE5LDEwOS4zN0gxMTQuOTI0bDEwLjU2NDMtNDkuMzY2WiIvPgogICAgICA8L2c+CiAgICA8L2c+CiAgPC9nPgo8L3N2Zz4K">
+        </div>
+  
+        <!-- MASTERCARD OFFICIEL -->
+        <div class="relais-payment-logo-box">
+          <img
+            class="relais-payment-logo relais-logo-mastercard"
+            alt="Mastercard"
+            src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDI3LjkuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCAxNTIuNCAxMDgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDE1Mi40IDEwODsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOm5vbmU7fQoJLnN0MXtmaWxsOiNGRjVGMDA7fQoJLnN0MntmaWxsOiNFQjAwMUI7fQoJLnN0M3tmaWxsOiNGNzlFMUI7fQo8L3N0eWxlPgo8Zz4KCTxyZWN0IHk9IjAiIGNsYXNzPSJzdDAiIHdpZHRoPSIxNTIuNCIgaGVpZ2h0PSIxMDgiLz4KCTxnPgoJCTxyZWN0IHg9IjYwLjQiIHk9IjI1LjciIGNsYXNzPSJzdDEiIHdpZHRoPSIzMS41IiBoZWlnaHQ9IjU2LjYiLz4KCQk8cGF0aCBjbGFzcz0ic3QyIiBkPSJNNjIuNCw1NGMwLTExLDUuMS0yMS41LDEzLjctMjguM2MtMTUuNi0xMi4zLTM4LjMtOS42LTUwLjYsNi4xQzEzLjMsNDcuNCwxNiw3MCwzMS43LDgyLjMKCQkJYzEzLjEsMTAuMywzMS40LDEwLjMsNDQuNSwwQzY3LjUsNzUuNSw2Mi40LDY1LDYyLjQsNTR6Ii8+CgkJPHBhdGggY2xhc3M9InN0MyIgZD0iTTEzNC40LDU0YzAsMTkuOS0xNi4xLDM2LTM2LDM2Yy04LjEsMC0xNS45LTIuNy0yMi4yLTcuN2MxNS42LTEyLjMsMTguMy0zNC45LDYtNTAuNmMtMS44LTIuMi0zLjgtNC4zLTYtNgoJCQljMTUuNi0xMi4zLDM4LjMtOS42LDUwLjUsNi4xQzEzMS43LDM4LjEsMTM0LjQsNDUuOSwxMzQuNCw1NHoiLz4KCTwvZz4KPC9nPgo8L3N2Zz4K">
+        </div>
+  
+        <!-- PAYPAL OFFICIEL -->
+        <div class="relais-payment-logo-box">
+          <img
+            class="relais-payment-logo relais-logo-paypal"
+            src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg"
+            alt="PayPal">
+        </div>
+  
+      </div>
+  
+      <div class="relais-payment-secure"
+           aria-label="Prestataires de paiement sécurisé">
+  
+        <a href="https://stripe.com/"
+           target="_blank"
+           rel="noopener noreferrer"
+           aria-label="Paiement traité par Stripe">
+  
+          <img
+            class="relais-stripe-badge"
+            src="https://images.stripeassets.com/fzn2n1nzq965/4M6d6BSWzlgsrJx8rdZb0I/733f37ef69b5ca1d3d33e127184f4ce4/Powered_by_Stripe.svg?q=80&w=1082"
+            alt="Powered by Stripe">
+        </a>
+  
+        <a href="https://www.paypal.com/"
+           target="_blank"
+           rel="noopener noreferrer"
+           aria-label="Paiement sécurisé par PayPal">
+  
+          <img
+            class="relais-paypal-badge"
+            src="https://www.paypalobjects.com/webstatic/mktg/logo/bdg_secured_by_pp_2line.png"
+            alt="Secured by PayPal">
+        </a>
+  
+      </div>
+  
+      <p class="relais-payment-note">
+        Paiement traité de manière sécurisée par Stripe ou PayPal.
+      </p>
+  
+    </div>
+  
+  </section>
+
+  
+
+  <section class="relais-personal">
+  
+    <div class="relais-personal-title">
+      UNE INTERVENTION PERSONNELLEMENT RÉALISÉE
+    </div>
+  
+    <p class="relais-personal-text">
+      Votre mission est réalisée personnellement sur place par <strong>un professionnel de l’immobilier disposant de plus de 20 ans d’expérience</strong>.
+      RELAIS PROPRIÉTAIRE ne fonctionne pas comme une plateforme d’intervenants anonymes et ne sous-traite pas la mission.
+      <br><br>
+      La mission RELAIS reste strictement limitée à l’objet convenu et n’est utilisée pour aucune prospection commerciale.
+    </p>
+  
+  </section>
+
+  <section class="relais-faq" aria-label="Questions fréquentes — intempéries et missions sur place">
+    <details class="relais-faq-group">
+      <summary>FAQ — AVANT DE RÉSERVER</summary>
+      <div class="relais-faq-group-content">
+        <div class="relais-faq-list">
+          <details class="relais-faq-item">
+            <summary>Mon bien est à Porto-Vecchio, Lecci, Sainte-Lucie, Pinarello ou Tarco : intervenez-vous ?</summary>
+            <div class="relais-faq-answer">
+              <p>Les missions sont proposées dans le bassin de Porto-Vecchio : Porto-Vecchio et communes limitrophes, Lecci, Sainte-Lucie-de-Porto-Vecchio, Pinarello et Tarco. Le déplacement local est inclus dans les tarifs affichés. La faisabilité dépend de l’adresse exacte, de l’accès et des conditions de sécurité.</p>
+            </div>
+          </details>
+          <details class="relais-faq-item">
+            <summary>Après une intempérie, que comprend la vérification pratique RELAIS à 109 € TTC ?</summary>
+            <div class="relais-faq-answer">
+              <p>RELAIS effectue uniquement les vérifications pratiques et actions matérielles simples définies à l’avance avec vous, sur les éléments accessibles sans danger. La mission dure 30 minutes maximum. Vous recevez une confirmation de ce qui a été effectué. Il ne s’agit ni d’une inspection générale du bien, ni d’un diagnostic technique.</p>
+            </div>
+          </details>
+          <details class="relais-faq-item">
+            <summary>Je souhaite des photos après une tempête : dois-je choisir RELAIS ou VOIR ?</summary>
+            <div class="relais-faq-answer">
+              <p>Pour observer des éléments visibles, les photographier lorsque cela est utile et recevoir une restitution factuelle, choisissez <strong>VOIR — CYRNEA PRÉSENCE, 260 € TTC</strong> (jusqu’à 1 heure). La mission RELAIS à 109 € TTC concerne des vérifications pratiques convenues, sans reportage photographique systématique.</p>
+            </div>
+          </details>
+          <details class="relais-faq-item">
+            <summary>Avant une intempérie annoncée, que pouvez-vous faire pour ma résidence ?</summary>
+            <div class="relais-faq-answer">
+              <p>La mission de prévention RELAIS à <strong>149 € TTC</strong> prévoit jusqu’à une heure pour fermer les accès désignés et mettre à l’abri les éléments légers définis avec vous, selon vos consignes. RELAIS n’effectue ni travaux de protection, ni réparation, ni mise en sécurité technique.</p>
+            </div>
+          </details>
+          <details class="relais-faq-item">
+            <summary>Pouvez-vous rechercher des infiltrations cachées, contrôler la toiture ou expertiser un sinistre ?</summary>
+            <div class="relais-faq-answer">
+              <p>Non. Les missions portent uniquement sur des éléments visibles et accessibles sans danger. Elles n’incluent ni démontage, ni sondage, ni essai technique, ni expertise, ni diagnostic, ni contrôle de conformité, ni recherche ou garantie d’absence de vices cachés. Pour VOIR, des prises de vue par drone peuvent être envisagées si elles sont utiles et autorisées par la météo, les règles applicables et les conditions de sécurité.</p>
+            </div>
+          </details>
+          <details class="relais-faq-item">
+            <summary>Pouvez-vous intervenir pendant une tempête ou immédiatement après ?</summary>
+            <div class="relais-faq-answer">
+              <p>Une intervention n’est envisageable que lorsque les conditions météorologiques, l’accès et la sécurité le permettent. Elle est toujours soumise à la disponibilité de RELAIS ou PRÉSENCE et à confirmation personnelle. Il ne s’agit pas d’un service d’urgence ou de dépannage.</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </details>
+    <details class="relais-faq-group">
+      <summary>FAQ — QUESTIONS PRATIQUES</summary>
+      <div class="relais-faq-group-content">
+        <div class="relais-faq-list">
+          <details class="relais-faq-item">
+            <summary>Comment se déroule la demande et à quel moment ma mission est-elle confirmée ?</summary>
+            <div class="relais-faq-answer">
+              <p>Vous sélectionnez la mission, la date et l’heure souhaitées, puis vous consultez les conditions et le montant applicable avant de régler votre demande. <strong>Le paiement n’est pas une confirmation définitive de l’intervention.</strong> La disponibilité est confirmée personnellement ; si aucune solution ne vous convient, le règlement est intégralement remboursé.</p>
+            </div>
+          </details>
+          <details class="relais-faq-item">
+            <summary>Comment organiser l’accès si je suis sur le continent ?</summary>
+            <div class="relais-faq-answer">
+              <p>Avant la confirmation, nous convenons d’un accès simple : remise directe des clés, récupération auprès de la personne désignée ou envoi postal préalable. Si les clés sont à expédier depuis le continent, prévoyez leur délai d’acheminement avant de réserver. <a href="https://www.laposte.fr/envoyer/envoyer-cles" target="_blank" rel="noopener noreferrer">Conseils d’envoi des clés par La Poste</a>.</p>
+            </div>
+          </details>
+          <details class="relais-faq-item">
+            <summary>Le retour des clés est-il compris dans le tarif ?</summary>
+            <div class="relais-faq-answer">
+              <p>Oui. Si les clés ont été détenues temporairement pour la mission, leur retour postal standard est inclus lorsqu’il est nécessaire. L’envoi initial des clés à RELAIS reste à la charge du client. Les modalités exactes de remise et de retour sont définies ensemble.</p>
+            </div>
+          </details>
+          <details class="relais-faq-item">
+            <summary>Quels éléments faut-il communiquer avant l’intervention ?</summary>
+            <div class="relais-faq-answer">
+              <p>L’adresse du bien, votre demande précise, les points à vérifier ou à observer, les consignes utiles, les conditions d’accès et les informations permettant de confirmer votre qualité à autoriser l’intervention. L’opération ne porte que sur les éléments convenus au préalable.</p>
+            </div>
+          </details>
+          <details class="relais-faq-item">
+            <summary>Que vais-je recevoir après la mission ?</summary>
+            <div class="relais-faq-answer">
+              <p>Pour une mission <strong>RELAIS</strong>, une confirmation des vérifications pratiques ou actions convenues et effectivement réalisées. Pour <strong>VOIR</strong>, une restitution factuelle des éléments visibles observés, accompagnée de photos ou vidéos lorsqu’elles sont utiles et réalisables. Ces documents ne constituent pas un rapport d’expertise ni un diagnostic.</p>
+            </div>
+          </details>
+          <details class="relais-faq-item">
+            <summary>Y a-t-il des majorations ou un abonnement ?</summary>
+            <div class="relais-faq-answer">
+              <p>Non. Chaque mission possède un tarif fixe, déplacement local compris, sans abonnement ni majoration automatique. La réservation en ligne est proposée sur les créneaux disponibles du lundi au samedi, après vérification des conditions d’accès et de sécurité. RELAIS ne se substitue pas à une conciergerie assurant une gestion régulière du bien.</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <section class="relais-address">
+  
+    <div class="relais-address-box">
+  
+      <div class="relais-address-brand">
+        RELAIS PROPRIÉTAIRE
+      </div>
+  
+      <p class="relais-address-place">
+        Route d’Arca<br>
+        20137 PORTO-VECCHIO
+      </p>
+  
+      <p class="relais-address-service">
+        Interventions sur rendez-vous, directement sur les lieux de mission
+      </p>
+  
+      <p class="relais-address-email">
+        ✉ <a href="mailto:contact@relaisproprietaire.fr">contact@relaisproprietaire.fr</a>
+      </p>
+  
+    </div>
+  
+  </section>
+
+  <nav class="ci-meteo-site-nav ci-meteo-site-nav-bottom" aria-label="Découvrir les autres missions RELAIS"><a class="ci-relais-missions-btn" href="https://www.relaisproprietaire.fr/#relais-home">DÉCOUVRIR LES AUTRES MISSIONS DE RELAIS</a></nav>
+</article>
+<!-- FIN ARTICLE RELAIS PROPRIÉTAIRE : réservations et gabarit RELAIS inchangés -->
+<script src="https://jeancharlescoti-cyrnea.github.io/assets/relais-a31/urgence-20261111.js"></script>
