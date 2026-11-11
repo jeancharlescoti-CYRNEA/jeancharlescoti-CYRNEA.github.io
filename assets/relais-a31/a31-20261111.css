@@ -1,0 +1,986 @@
+
+
+/* EN-TÊTE IDENTIQUE AUX DIMENSIONS DE LA HOME : logo 620 px PC / 340 px mobile.
+   Blanc limité au bandeau du logo ; le reste de la page conserve son fond gris.
+   Aucun sélecteur ne s'applique au site entier. */
+.ci-intemperies-article .ci-relais-brandbar{
+  width:calc(100% + 44px);box-sizing:border-box;background:#fff;text-align:center;
+  margin:-60px -22px 58px;padding:0;
+}
+.ci-intemperies-article .ci-relais-brandlink{
+  display:block;width:100%;max-width:620px;margin:0 auto;
+  text-decoration:none!important;cursor:pointer;pointer-events:auto!important;
+}
+.ci-intemperies-article .ci-relais-logo{
+  display:block;width:100%;max-width:620px;height:auto;margin:0 auto;
+  pointer-events:auto!important;
+}
+@media(max-width:600px){
+  /* Centrage mobile sans marge négative ni décalage fixe ; desktop inchangé. */
+  .ci-intemperies-article .ci-relais-brandbar{
+    width:100%!important;max-width:100%!important;
+    margin:-10px auto 43px!important;padding:0!important;
+    display:flex!important;justify-content:center!important;align-items:center!important;
+  }
+  .ci-intemperies-article .ci-relais-brandlink{
+    display:block!important;flex:0 1 340px;
+    width:100%!important;max-width:340px!important;margin:0 auto!important;
+  }
+  .ci-intemperies-article .ci-relais-logo{
+    display:block!important;width:100%!important;max-width:340px!important;
+    margin:0 auto!important;
+  }
+}
+
+
+/* Zone et contact : structure et présentation de l’accueil RELAIS, limités à cet article. */
+.ci-intemperies-article .ci-relais-zone-contact{
+  max-width:900px;margin:27px auto 0;text-align:center;
+  font-family:Arial,Helvetica,sans-serif;
+}
+.ci-intemperies-article .ci-relais-zone-title{
+  margin:0 0 7px;font-size:16px;line-height:1.35;font-weight:700;color:#222;
+}
+.ci-intemperies-article .ci-relais-zone{
+  display:block;width:100%;max-width:100%;margin:0 auto;padding:0;
+  font-size:13px;line-height:1.45;color:#666;text-align:center;
+}
+.ci-intemperies-article .ci-relais-phone-wrap{
+  max-width:500px;margin:17px auto 0;
+}
+.ci-intemperies-article .ci-relais-phone-card,
+.ci-intemperies-article .ci-relais-phone-card:link,
+.ci-intemperies-article .ci-relais-phone-card:visited{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  box-sizing:border-box;width:100%;height:130px;min-height:130px;
+  padding:18px 20px 19px;border:1px solid #d8c7b5;border-radius:6px;
+  background:#fff;text-align:center;text-decoration:none!important;
+  box-shadow:0 2px 6px rgba(111,81,58,.06);cursor:pointer;
+  transition:background .16s,box-shadow .16s,transform .16s,border-color .16s;
+}
+.ci-intemperies-article .ci-relais-phone-label{
+  display:block;margin:0 0 7px;color:#9a7657;font-size:13.5px;
+  line-height:1.2;font-weight:800;letter-spacing:.55px;text-transform:uppercase;
+}
+.ci-intemperies-article .ci-relais-phone-number{
+  display:block;color:#3d332c;font-size:25px;line-height:1.2;
+  font-weight:800;letter-spacing:.3px;
+}
+.ci-intemperies-article .ci-relais-phone-card:hover{
+  background:#fcfaf7;border-color:#cdb89f;
+  box-shadow:0 4px 10px rgba(111,81,58,.09);transform:translateY(-1px);
+}
+.ci-intemperies-article .ci-relais-phone-card:active{
+  transform:translateY(0);box-shadow:0 1px 4px rgba(111,81,58,.06);
+}
+/* Bouton noir identique aux liens « Retour aux autres missions » des articles RELAIS. */
+.ci-intemperies-article .ci-meteo-site-nav-bottom{text-align:center;margin:24px 0 0;}
+.ci-intemperies-article .ci-meteo-site-nav-bottom .ci-relais-missions-btn,
+.ci-intemperies-article .ci-meteo-site-nav-bottom .ci-relais-missions-btn:link,
+.ci-intemperies-article .ci-meteo-site-nav-bottom .ci-relais-missions-btn:visited{
+  display:inline-block;padding:13px 22px;border-radius:4px;
+  background:#303437;color:#fff!important;text-decoration:none!important;
+  font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:800;
+  letter-spacing:.45px;text-transform:uppercase;
+}
+.ci-intemperies-article .ci-meteo-site-nav-bottom .ci-relais-missions-btn:hover,
+.ci-intemperies-article .ci-meteo-site-nav-bottom .ci-relais-missions-btn:focus-visible{
+  background:#202427;color:#fff!important;
+}
+@media(max-width:600px){
+  .ci-intemperies-article .ci-relais-zone-contact{margin-top:21px;}
+  .ci-intemperies-article .ci-relais-zone-title{font-size:17px;}
+  .ci-intemperies-article .ci-relais-zone{font-size:16px;line-height:1.4;}
+  .ci-intemperies-article .ci-relais-phone-wrap{max-width:none;margin:14px auto 0;}
+  .ci-intemperies-article .ci-relais-phone-card,
+  .ci-intemperies-article .ci-relais-phone-card:link,
+  .ci-intemperies-article .ci-relais-phone-card:visited{height:auto;min-height:0;padding:12px 10px 13px;}
+  .ci-intemperies-article .ci-relais-phone-label{margin-bottom:6px;font-size:11px;}
+  .ci-intemperies-article .ci-relais-phone-number{font-size:20px;}
+}
+
+/* Liens de retour visibles : maintien de la navigation dans le site RELAIS. */
+.ci-intemperies-article .ci-meteo-site-nav{text-align:left;font:600 12px/1.6 Arial,Helvetica,sans-serif}
+.ci-intemperies-article .ci-meteo-site-nav a,
+.ci-intemperies-article .ci-meteo-site-nav a:visited{color:#80644c!important;text-decoration:underline;text-underline-offset:3px}
+.ci-intemperies-article .ci-meteo-site-nav a:hover{color:#303030!important}
+.ci-intemperies-article .ci-meteo-site-nav-bottom{text-align:center;margin:24px 0 0}
+.ci-intemperies-article,.ci-intemperies-article *{box-sizing:border-box}
+.ci-intemperies-article{
+  width:100%;max-width:900px;margin:0 auto;padding:0 22px 43px;
+  background:transparent;color:#303030;font-family:Arial,Helvetica,sans-serif;
+  font-size:15px;line-height:1.65;
+}
+.ci-intemperies-article h1,.ci-intemperies-article h2,.ci-intemperies-article h3,.ci-intemperies-article p{margin:0;padding:0}
+.ci-intemperies-article .ci-meteo-intro{text-align:center;max-width:870px;margin:0 auto}
+.ci-intemperies-article .ci-meteo-eyebrow{
+  margin:0 0 13px;color:#ba821d;font-size:11px;font-weight:700;letter-spacing:1.25px;line-height:1.35;
+}
+/* H1 : mêmes Arial, graisse et dimensions que le titre de la HOME RELAIS. */
+.ci-intemperies-article h1.ci-meteo-title{
+  max-width:850px;margin:0 auto 19px;color:#222;
+  font-family:Arial,Helvetica,sans-serif!important;
+  font-size:27px!important;font-weight:700!important;line-height:1.3!important;
+  letter-spacing:normal!important;
+}
+.ci-intemperies-article .ci-meteo-lead{max-width:790px;margin:0 auto;color:#555;font-size:15px;line-height:1.75}
+.ci-intemperies-article .ci-meteo-line{height:1px;border:0;background:#e4e4e1;margin:33px 0 30px}
+.ci-intemperies-article .ci-meteo-section-title{
+  margin:0 auto 10px;text-align:center;font-family:Georgia,'Times New Roman',serif;
+  font-weight:400;font-size:28px;line-height:1.3;color:#343434;
+}
+.ci-intemperies-article .ci-meteo-orange{color:#d89516;font-weight:400}
+.ci-intemperies-article .ci-meteo-section-lead{
+  max-width:760px;margin:0 auto 23px;text-align:center;font-size:14.5px;line-height:1.65;color:#5c5c5c;
+}
+.ci-intemperies-article .ci-meteo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:stretch}
+.ci-intemperies-article .ci-meteo-card{
+  position:relative;min-width:0;display:flex;flex-direction:column;
+  background:#f8f8f7;border:1px solid #e0dfdc;border-left:3px solid #d89516;
+  padding:25px 27px 24px;min-height:305px;
+}
+.ci-intemperies-article .ci-meteo-brand{
+  color:#ba821d;font-size:11px;line-height:1.4;letter-spacing:1.15px;font-weight:700;margin:0 0 10px;
+}
+.ci-intemperies-article .ci-meteo-price{
+  color:#303030;font-family:Georgia,'Times New Roman',serif;font-size:32px;line-height:1.17;font-weight:400;margin:0 0 14px;
+}
+.ci-intemperies-article .ci-meteo-tax{font-family:Arial,Helvetica,sans-serif;font-weight:700;font-size:11px;letter-spacing:.5px}
+.ci-intemperies-article .ci-meteo-card-title{
+  margin:0 0 10px;color:#303030;font-weight:700;font-size:16px;line-height:1.45;
+}
+.ci-intemperies-article .ci-meteo-card-desc{color:#555;font-size:14px;line-height:1.65;margin:0 0 14px}
+/* Espacement RÉEL entre deux paragraphes, indépendant des marges Wmaker. */
+.ci-intemperies-article .ci-meteo-observation{margin:0!important}
+.ci-intemperies-article .ci-meteo-drone-line{
+ display:block!important;margin:0 0 14px!important;padding:20px 0 0!important;
+ color:#555;font-size:14px;line-height:1.65;
+}
+.ci-intemperies-article .ci-meteo-grow{flex:1 1 auto;min-height:13px}
+.ci-intemperies-article .ci-meteo-cta,.ci-intemperies-article .ci-meteo-cta:link,.ci-intemperies-article .ci-meteo-cta:visited{
+  display:flex;min-height:44px;align-items:center;justify-content:center;gap:8px;
+  padding:12px 15px;background:#d89516;border:1px solid #d89516;border-radius:0;
+  text-decoration:none!important;color:#fff!important;text-align:center;font-size:12px;font-weight:700;
+  line-height:1.35;letter-spacing:.45px;transition:background .18s ease,border-color .18s ease;
+}
+.ci-intemperies-article .ci-meteo-cta:hover,.ci-intemperies-article .ci-meteo-cta:focus-visible{background:#c58410;border-color:#c58410}
+.ci-intemperies-article .ci-meteo-cta:focus-visible{outline:2px solid #303030;outline-offset:3px}
+.ci-intemperies-article .ci-meteo-before{
+  min-height:0;padding:25px 29px 24px;
+}
+.ci-intemperies-article .ci-meteo-before-head{
+  display:flex;justify-content:space-between;align-items:start;gap:14px;flex-wrap:wrap;margin:0 0 12px;
+}
+.ci-intemperies-article .ci-meteo-before-head .ci-meteo-brand{margin:0 0 5px}
+.ci-intemperies-article .ci-meteo-before-head .ci-meteo-price{margin:0;white-space:nowrap;font-size:29px}
+.ci-intemperies-article .ci-meteo-before .ci-meteo-card-title{margin-bottom:8px}
+.ci-intemperies-article .ci-meteo-before .ci-meteo-card-desc{margin:0 0 19px}
+.ci-intemperies-article .ci-meteo-before .ci-meteo-cta{width:100%;max-width:465px;margin:0 auto}
+.ci-intemperies-article .ci-meteo-conditions{
+  max-width:795px;margin:26px auto 0;color:#686868;text-align:center;font-size:12.5px;line-height:1.65;
+}
+@media(max-width:720px){
+  .ci-intemperies-article{padding:0 16px 32px;font-size:14px}
+  .ci-intemperies-article .ci-meteo-eyebrow{font-size:10px;margin-bottom:12px}
+  .ci-intemperies-article h1.ci-meteo-title{
+    font-family:Arial,Helvetica,sans-serif!important;
+    font-size:20px!important;font-weight:700!important;
+    line-height:1.3!important;margin-bottom:15px;
+  }
+  .ci-intemperies-article .ci-meteo-lead{font-size:14px;line-height:1.7}
+  .ci-intemperies-article .ci-meteo-line{margin:29px 0 26px}
+  .ci-intemperies-article .ci-meteo-section-title{font-size:24px;line-height:1.3}
+  .ci-intemperies-article .ci-meteo-section-lead{font-size:14px;margin-bottom:19px}
+  .ci-intemperies-article .ci-meteo-grid{grid-template-columns:minmax(0,1fr);gap:13px}
+  .ci-intemperies-article .ci-meteo-card{min-height:0;padding:22px 19px 21px}
+  .ci-intemperies-article .ci-meteo-price{font-size:30px}
+  .ci-intemperies-article .ci-meteo-brand{font-size:10.5px}
+  .ci-intemperies-article .ci-meteo-card-title{font-size:15px}
+  .ci-intemperies-article .ci-meteo-card-desc{font-size:13.5px}
+  .ci-intemperies-article .ci-meteo-drone-line{padding-top:18px!important;font-size:13.5px}
+  .ci-intemperies-article .ci-meteo-grow{min-height:8px}
+  .ci-intemperies-article .ci-meteo-before-head .ci-meteo-price{font-size:28px}
+  .ci-intemperies-article .ci-meteo-conditions{font-size:12px;margin-top:22px}
+}
+@media(prefers-reduced-motion:reduce){.ci-intemperies-article .ci-meteo-cta{transition:none}}
+
+/* V9 — présentation des offres : ordre AVANT, centrage,
+   alignements des deux cartes APRÈS, une seule mission VOIR. */
+.ci-intemperies-article .ci-meteo-before { text-align:center;align-items:center;padding:27px 30px 29px; }
+.ci-intemperies-article .ci-meteo-before .ci-meteo-brand { margin:0 0 9px; }
+.ci-intemperies-article .ci-meteo-before .ci-meteo-card-title { margin:0 auto 9px;font-size:17px; }
+.ci-intemperies-article .ci-meteo-before .ci-meteo-price { font-size:32px;margin:0 auto 16px; }
+.ci-intemperies-article .ci-meteo-before .ci-meteo-pitch { max-width:760px; }
+.ci-intemperies-article .ci-meteo-before .ci-meteo-card-desc { max-width:760px;margin:0 auto 19px; }
+.ci-intemperies-article .ci-meteo-before .ci-meteo-cta { width:100%;max-width:465px;margin:5px auto 0; }
+.ci-intemperies-article .ci-meteo-after {text-align:center;align-items:stretch;}
+.ci-intemperies-article .ci-meteo-after .ci-meteo-brand { margin-bottom:10px; }
+.ci-intemperies-article .ci-meteo-after .ci-meteo-card-title { min-height:69px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;max-width:390px; }
+.ci-intemperies-article .ci-meteo-after .ci-meteo-price {margin:0 0 16px;}
+.ci-intemperies-article .ci-meteo-pitch {color:#454545;font-size:14px;font-weight:600;line-height:1.6;margin:0 0 14px;}
+.ci-intemperies-article .ci-meteo-after .ci-meteo-pitch { min-height:90px; }
+.ci-intemperies-article .ci-meteo-after .ci-meteo-card-desc {margin:0 0 14px;}
+.ci-intemperies-article .ci-meteo-after .ci-meteo-drone-line {margin:0 0 15px!important;padding-top:20px!important;}
+.ci-intemperies-article .ci-meteo-after .ci-meteo-cta {width:100%;margin:4px 0 0;}
+.ci-intemperies-article .ci-meteo-after .ci-meteo-option {margin-top:0;}
+.ci-intemperies-article .ci-meteo-after .ci-meteo-option .ci-meteo-cta {margin-top:4px;}
+@media(max-width:720px){
+ .ci-intemperies-article .ci-meteo-before {padding:23px 19px 24px;}
+ .ci-intemperies-article .ci-meteo-after .ci-meteo-card-title {min-height:0;margin-bottom:10px;}
+ .ci-intemperies-article .ci-meteo-after .ci-meteo-pitch {min-height:0;}
+ .ci-intemperies-article .ci-meteo-pitch {font-size:13.5px;}
+}
+
+
+/* V10 : bloc de réservation, CSS strictement limité à cet article. */
+.ci-intemperies-article .ci-meteo-reservation {display:none; margin:32px auto 6px;padding:25px 26px 26px;max-width:100%;background:#f1eeea;border:1px solid #dedcd8;border-left:3px solid #d89516;scroll-margin-top:28px}
+.ci-intemperies-article .ci-meteo-reservation.is-open {display:block}
+.ci-intemperies-article .ci-reserve-heading {font:400 24px/1.3 Georgia,'Times New Roman',serif;color:#303030;text-align:center;margin:0 0 6px}
+.ci-intemperies-article .ci-reserve-choice {font:700 14px/1.5 Arial,sans-serif;color:#5a5148;text-align:center;margin:0 0 8px}
+.ci-intemperies-article .ci-reserve-note {font:400 13px/1.6 Arial,sans-serif;color:#606060;text-align:center;margin:0 0 20px}
+.ci-intemperies-article .ci-reserve-grid {display:grid;grid-template-columns:minmax(0,1.6fr) repeat(2,minmax(0,.8fr));gap:12px;align-items:end}
+.ci-intemperies-article .ci-reserve-field {display:block;font:700 12px/1.4 Arial,sans-serif;color:#555}
+.ci-intemperies-article .ci-reserve-field input,.ci-intemperies-article .ci-reserve-field select{display:block;box-sizing:border-box;width:100%;height:43px;background:#fff;color:#303030;border:1px solid #cbc9c5;border-radius:0;padding:8px 10px;font:400 14px Arial,sans-serif;margin-top:6px}
+.ci-intemperies-article .ci-reserve-submit {display:block;width:100%;max-width:430px;margin:18px auto 0;padding:14px 18px;background:#303437;color:#fff;border:1px solid #303437;font:700 12px/1.4 Arial,sans-serif;letter-spacing:.45px;cursor:pointer}
+.ci-intemperies-article .ci-reserve-submit:hover,.ci-intemperies-article .ci-reserve-submit:focus-visible{background:#202427;border-color:#202427}
+.ci-intemperies-article .ci-reserve-submit:disabled {opacity:.7;cursor:wait}
+.ci-intemperies-article .ci-reserve-message {min-height:20px;max-width:650px;margin:12px auto 0;text-align:center;font:600 13px/1.5 Arial,sans-serif;color:#734c24}
+.ci-intemperies-article .ci-reserve-close {display:block;float:right;border:0;background:none;color:#777;cursor:pointer;font:700 12px Arial,sans-serif;text-decoration:underline}
+@media(max-width:720px){.ci-intemperies-article .ci-meteo-reservation{padding:22px 17px}.ci-intemperies-article .ci-reserve-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.ci-intemperies-article .ci-reserve-field-date{grid-column:1/-1}.ci-intemperies-article .ci-reserve-heading{font-size:21px}}
+
+/* V13 — Champs date et menus déroulants heure/minutes adaptés à Safari mobile.
+   Styles strictement limités à cet article : aucun CSS global modifié. */
+@media(max-width:760px){
+  body.ui-mobile-viewport .ci-intemperies-article .ci-reserve-grid,
+  body.ui-mobile-viewport .ci-intemperies-article .ci-reserve-field{
+    min-width:0!important;
+    max-width:100%!important;
+    width:100%!important;
+  }
+  body.ui-mobile-viewport .ci-intemperies-article #ci-reserve-date,
+  body.ui-mobile-viewport .ci-intemperies-article #ci-reserve-hour,
+  body.ui-mobile-viewport .ci-intemperies-article #ci-reserve-minute{
+    display:block!important;
+    box-sizing:border-box!important;
+    min-width:0!important;
+    max-width:100%!important;
+    width:100%!important;
+    height:45px!important;
+    min-height:45px!important;
+    margin:6px 0 0!important;
+    padding:8px 10px!important;
+    font-size:16px!important;
+    line-height:1.25!important;
+    border:1px solid #cbc9c5!important;
+    border-radius:0!important;
+    background:#fff!important;
+    color:#303030!important;
+    -webkit-text-size-adjust:100%;
+  }
+}
+
+/* Affichage contrôlé du formulaire, uniquement dans l'article. */
+.ci-intemperies-article #ci-meteo-reservation[hidden],
+.ci-intemperies-article #ci-meteo-reservation:not(.is-open){display:none!important}
+.ci-intemperies-article #ci-meteo-reservation.is-open:not([hidden]){display:block!important}
+/* Exemples courts intégrés aux cartes, sans nouvel encart. */
+.ci-intemperies-article .ci-meteo-example{
+  margin:7px 0 12px!important;color:#666;font-size:13px;line-height:1.55;
+}
+.ci-intemperies-article .ci-meteo-example strong{color:#505050;font-weight:700;}
+@media(max-width:600px){
+  .ci-intemperies-article .ci-meteo-example{font-size:12.5px;line-height:1.5;margin:6px 0 10px!important;}
+}
+
+
+
+  .relais-steps{
+    max-width:900px;
+    margin:0 auto;
+    padding:28px 22px 32px;
+    font-family:Arial,sans-serif;
+    color:#222;
+    box-sizing:border-box;
+  }
+  
+  .relais-steps-title{
+    text-align:center;
+    font-size:22px;
+    line-height:1.3;
+    font-weight:800;
+    margin:0 0 24px;
+  }
+  
+  .relais-steps-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    align-items:stretch;
+  }
+  
+  .relais-step{
+    position:relative;
+    padding:0 24px;
+    text-align:center;
+  }
+  
+  .relais-step + .relais-step{
+    border-left:1px solid #d8d2cb;
+  }
+  
+  .relais-step-n{
+    width:30px;
+    height:30px;
+    margin:0 auto 10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:50%;
+    background:#efe7dd;
+    color:#8d684a;
+    font-size:13px;
+    line-height:1;
+    font-weight:800;
+  }
+  
+  .relais-step strong{
+    display:block;
+    font-size:15px;
+    line-height:1.35;
+    margin-bottom:7px;
+  }
+  
+  .relais-step p{
+    margin:0;
+    font-size:12.5px;
+    line-height:1.5;
+    color:#666;
+  }
+  
+  .relais-step-mobile{
+    display:none;
+  }
+  
+  .relais-tarif-note{
+    margin:18px auto 0;
+    max-width:820px;
+    text-align:center;
+    font-size:11.5px;
+    line-height:1.45;
+    color:#777;
+    font-weight:400;
+  }
+  
+  .relais-tarif-note strong{
+    color:#555;
+    font-weight:700;
+  }
+  
+  /* RÉASSURANCE PAIEMENT */
+  .relais-payment{
+    max-width:620px;
+    margin:22px auto 0;
+    padding:15px 18px 13px;
+    border-top:1px solid #ded8d1;
+    text-align:center;
+    box-sizing:border-box;
+  }
+  
+  .relais-payment-title{
+    margin:0 0 11px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    font-size:12px;
+    line-height:1.3;
+    font-weight:800;
+    letter-spacing:.65px;
+    color:#6f513a;
+    text-transform:uppercase;
+  }
+  
+  .relais-payment-lock{
+    width:15px;
+    height:15px;
+    flex:0 0 15px;
+    display:block;
+  }
+  
+  .relais-payment-brands{
+    display:flex;
+    flex-wrap:nowrap;
+    justify-content:center;
+    align-items:center;
+    gap:8px;
+  }
+  
+  .relais-payment-logo-box{
+    width:54px!important;
+    height:32px!important;
+    min-width:54px!important;
+    min-height:32px!important;
+    max-width:54px!important;
+    max-height:32px!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    box-sizing:border-box!important;
+    padding:2px 3px!important;
+    background:#fff!important;
+    border:1px solid #e0dedb!important;
+    border-radius:5px!important;
+    overflow:hidden!important;
+  }
+  
+  .relais-payment-logo{
+    display:block!important;
+    object-fit:contain!important;
+    margin:0 auto!important;
+  }
+  
+  .relais-logo-cb{
+    width:42px!important;
+    height:28px!important;
+    max-width:42px!important;
+    max-height:28px!important;
+  }
+  
+  .relais-logo-visa{
+    width:44px!important;
+    height:27px!important;
+    max-width:44px!important;
+    max-height:27px!important;
+  }
+  
+  .relais-logo-mastercard{
+    width:39px!important;
+    height:28px!important;
+    max-width:39px!important;
+    max-height:28px!important;
+  }
+  
+  .relais-logo-paypal{
+    width:42px!important;
+    height:26px!important;
+    max-width:42px!important;
+    max-height:26px!important;
+  }
+  
+  .relais-payment-secure{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:center;
+    gap:16px;
+    margin:12px auto 0;
+  }
+  
+  .relais-payment-secure a{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    text-decoration:none;
+  }
+  
+  .relais-stripe-badge{
+    display:block;
+    width:auto;
+    height:24px;
+    max-width:125px;
+  }
+  
+  .relais-paypal-badge{
+    display:block;
+    width:auto;
+    height:30px;
+    max-width:135px;
+  }
+  
+  .relais-payment-note{
+    margin:9px 0 0;
+    font-size:10.5px;
+    line-height:1.4;
+    color:#888;
+  }
+  
+  @media(max-width:600px){
+  
+    .relais-steps{
+      padding:16px 10px 10px;
+    }
+  
+    .relais-steps-title{
+      font-size:18px;
+      line-height:1.2;
+      margin-bottom:14px;
+    }
+  
+    .relais-steps-grid{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      align-items:stretch;
+    }
+  
+    .relais-step{
+      position:relative;
+      padding:0 8px 6px;
+  
+      display:grid;
+      grid-template-rows:
+        24px
+        10px
+        48px
+        14px
+        auto;
+  
+      align-content:start;
+    }
+  
+    .relais-step + .relais-step{
+      border-left:0;
+    }
+  
+    .relais-step + .relais-step::before{
+      content:"";
+      position:absolute;
+      left:0;
+      top:0;
+      bottom:0;
+      width:1px;
+      background:#d8d2cb;
+    }
+  
+    .relais-step-n{
+      grid-row:1;
+      width:24px;
+      height:24px;
+      margin:0 auto;
+      font-size:11px;
+    }
+  
+    .relais-step strong{
+      grid-row:3;
+      height:48px;
+      margin:0 !important;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      text-align:center;
+      font-size:10.8px;
+      line-height:1.2;
+    }
+  
+    .relais-step p{
+      grid-row:5;
+      margin:0 !important;
+      font-size:9.5px;
+      line-height:1.28;
+      text-align:center;
+      align-self:start;
+    }
+  
+    .relais-step-desktop{
+      display:none;
+    }
+  
+    .relais-step-mobile{
+      display:block;
+    }
+  
+    .relais-tarif-note{
+      margin:12px 6px 0;
+      font-size:10px;
+      line-height:1.35;
+    }
+  
+    .relais-payment{
+      margin-top:16px;
+      padding:12px 4px 10px;
+    }
+  
+    .relais-payment-title{
+      margin-bottom:9px;
+      font-size:11px;
+      gap:6px;
+    }
+  
+    .relais-payment-lock{
+      width:14px;
+      height:14px;
+      flex-basis:14px;
+    }
+  
+    .relais-payment-brands{
+      gap:5px;
+      flex-wrap:nowrap;
+    }
+  
+    .relais-payment-logo-box{
+      width:47px!important;
+      height:29px!important;
+      min-width:47px!important;
+      min-height:29px!important;
+      max-width:47px!important;
+      max-height:29px!important;
+      padding:2px!important;
+    }
+  
+    .relais-logo-cb{
+      width:38px!important;
+      height:25px!important;
+      max-width:38px!important;
+      max-height:25px!important;
+    }
+  
+    .relais-logo-visa{
+      width:39px!important;
+      height:24px!important;
+      max-width:39px!important;
+      max-height:24px!important;
+    }
+  
+    .relais-logo-mastercard{
+      width:34px!important;
+      height:25px!important;
+      max-width:34px!important;
+      max-height:25px!important;
+    }
+  
+    .relais-logo-paypal{
+      width:38px!important;
+      height:24px!important;
+      max-width:38px!important;
+      max-height:24px!important;
+    }
+  
+    .relais-payment-secure{
+      gap:12px;
+      margin-top:10px;
+    }
+  
+    .relais-stripe-badge{
+      height:22px;
+    }
+  
+    .relais-paypal-badge{
+      height:27px;
+    }
+  
+    .relais-payment-note{
+      margin-top:7px;
+      font-size:9.5px;
+      line-height:1.35;
+    }
+  }
+  
+
+  .relais-personal{
+    max-width:900px;
+    margin:0 auto;
+    padding:30px 22px 34px;
+    font-family:Arial,sans-serif;
+    box-sizing:border-box;
+    text-align:center;
+  }
+  
+  .relais-personal::before{
+    content:"";
+    display:block;
+    width:100%;
+    height:2px;
+    background:#9a7657;
+    margin:0 0 20px;
+  }
+  
+  .relais-personal-title{
+    margin:0 0 10px;
+    font-size:18px;
+    line-height:1.3;
+    font-weight:800;
+    color:#2f3842;
+    letter-spacing:.2px;
+  }
+  
+  .relais-personal-text{
+    margin:0 auto;
+    max-width:760px;
+    font-size:14px;
+    line-height:1.55;
+    color:#555;
+  }
+  
+  .relais-personal-text strong{
+    color:#222;
+  }
+  
+  
+  /* FAQ RELAIS */
+  
+  .relais-faq{
+    max-width:900px;
+    margin:0 auto;
+    padding:0 22px 36px;
+    font-family:Arial,sans-serif;
+    box-sizing:border-box;
+  }
+  
+  .relais-faq-group{
+    width:820px;
+    max-width:100%;
+    margin:0 auto 10px;
+    border:1px solid #cdb89f;
+    background:#fff;
+    overflow:hidden;
+  }
+  
+  .relais-faq-group > summary{
+    position:relative;
+    list-style:none;
+    cursor:pointer;
+    padding:15px 44px 15px 16px;
+    font-size:14px;
+    line-height:1.35;
+    font-weight:800;
+    letter-spacing:.3px;
+    color:#2f3842;
+    background:#fff;
+  }
+  
+  .relais-faq-group > summary::-webkit-details-marker{
+    display:none;
+  }
+  
+  .relais-faq-group > summary:after{
+    content:"+";
+    position:absolute;
+    right:15px;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:22px;
+    line-height:1;
+    font-weight:400;
+    color:#9a7657;
+  }
+  
+  .relais-faq-group[open] > summary:after{
+    content:"−";
+  }
+  
+  .relais-faq-group-content{
+    padding:8px 10px 10px;
+    border-top:1px solid #e5d9cc;
+    background:#faf8f5;
+  }
+  
+  .relais-faq-list{
+    width:100%;
+    margin:0 auto;
+  }
+  
+  .relais-faq-item{
+    margin:0 0 7px;
+    border:1px solid #cdb89f;
+    background:#fff;
+    overflow:hidden;
+  }
+  
+  .relais-faq-item:last-child{
+    margin-bottom:0;
+  }
+  
+  .relais-faq-item summary{
+    position:relative;
+    list-style:none;
+    cursor:pointer;
+    padding:12px 40px 12px 14px;
+    font-size:13.5px;
+    line-height:1.4;
+    font-weight:700;
+    color:#343434;
+  }
+  
+  .relais-faq-item summary::-webkit-details-marker{
+    display:none;
+  }
+  
+  .relais-faq-item summary:after{
+    content:"+";
+    position:absolute;
+    right:14px;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:20px;
+    line-height:1;
+    font-weight:400;
+    color:#9a7657;
+  }
+  
+  .relais-faq-item[open] summary:after{
+    content:"−";
+  }
+  
+  .relais-faq-answer{
+    border-top:1px solid #e5d9cc;
+    background:#faf8f5;
+    padding:11px 14px 13px;
+  }
+  
+  .relais-faq-answer p{
+    margin:0;
+    font-size:12.8px;
+    line-height:1.55;
+    color:#555;
+  }
+  
+  
+  /* ADRESSE RELAIS */
+  
+  .relais-address{
+    max-width:900px;
+    margin:0 auto;
+    padding:0 22px 34px;
+    font-family:Arial,sans-serif;
+    box-sizing:border-box;
+    text-align:center;
+  }
+  
+  .relais-address-box{
+    width:820px;
+    max-width:100%;
+    margin:0 auto;
+    padding:17px 18px;
+    box-sizing:border-box;
+    border-top:1px solid #cdb89f;
+    border-bottom:1px solid #cdb89f;
+  }
+  
+  .relais-address-brand{
+    margin:0 0 7px;
+    font-size:14px;
+    line-height:1.3;
+    font-weight:800;
+    color:#6f513a;
+    letter-spacing:.35px;
+  }
+  
+  .relais-address-place{
+    margin:0;
+    font-size:14px;
+    line-height:1.5;
+    font-weight:700;
+    color:#2f3842;
+  }
+  
+  .relais-address-service{
+    margin:7px 0 0;
+    font-size:13px;
+    line-height:1.45;
+    color:#555;
+    font-style:italic;
+  }
+  
+  .relais-address-email{
+    margin:8px 0 0;
+    font-size:13px;
+    line-height:1.4;
+  }
+  
+  .relais-address-email a{
+    color:#6f513a;
+    font-weight:700;
+    text-decoration:none;
+  }
+  
+  
+  @media(max-width:600px){
+  
+    .relais-personal{
+      padding:24px 14px 28px;
+    }
+  
+    .relais-personal::before{
+      margin-bottom:16px;
+    }
+  
+    .relais-personal-title{
+      font-size:17px;
+    }
+  
+    .relais-personal-text{
+      font-size:13.5px;
+    }
+  
+  
+    .relais-faq{
+      padding:0 14px 22px;
+    }
+  
+    .relais-faq-group{
+      margin-bottom:8px;
+    }
+  
+    .relais-faq-group > summary{
+      padding:13px 38px 13px 13px;
+      font-size:12.8px;
+      line-height:1.3;
+    }
+  
+    .relais-faq-group > summary:after{
+      right:12px;
+      font-size:20px;
+    }
+  
+    .relais-faq-group-content{
+      padding:7px 7px 8px;
+    }
+  
+    .relais-faq-item{
+      margin-bottom:6px;
+    }
+  
+    .relais-faq-item summary{
+      padding:10px 34px 10px 11px;
+      font-size:12.2px;
+      line-height:1.3;
+    }
+  
+    .relais-faq-item summary:after{
+      right:11px;
+      font-size:18px;
+    }
+  
+    .relais-faq-answer{
+      padding:9px 11px 11px;
+    }
+  
+    .relais-faq-answer p{
+      font-size:11.8px;
+      line-height:1.45;
+    }
+  
+  
+    .relais-address{
+      padding:0 14px 26px;
+    }
+  
+    .relais-address-box{
+      padding:15px 10px;
+    }
+  
+    .relais-address-brand{
+      font-size:13.5px;
+    }
+  
+    .relais-address-place{
+      font-size:13.5px;
+    }
+  
+    .relais-address-service{
+      font-size:12.5px;
+    }
+  
+    .relais-address-email{
+      font-size:12.5px;
+    }
+  }
+  
