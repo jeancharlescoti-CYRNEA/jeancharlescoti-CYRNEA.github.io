@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CYRNEA — Assistant interne</title>
+<title>CYRNEA — RELAIS PROPRIÉTAIRE & PRÉSENCE ENTREPRISES</title>
 <style>
 :root{--bg:#f5f3ef;--card:#fff;--ink:#1d2733;--muted:#6d7680;--line:#d7d2ca;--accent:#29415f;--ok:#326047;--warn:#8b5d19;--danger:#8b3434}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink)}
@@ -90,7 +90,7 @@ input,select,textarea{font-size:18px;min-height:52px}
 </head>
 <body>
 <div class="wrap">
-<div class="header"><div class="brand">CYRNEA ASSISTANT<small>Appel · préparation · terrain · restitution</small></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end"><button id="homeTop" class="btn ghost" onclick="goHome()">⌂ ACCUEIL</button><button id="backTop" class="btn ghost hidden" onclick="backStep()">← ÉTAPE PRÉCÉDENTE</button><div class="badge" id="status">ACCUEIL</div></div></div>
+<div class="header"><div class="brand">CYRNEA ASSISTANT<small>RELAIS PROPRIÉTAIRE · PRÉSENCE ENTREPRISES</small></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end"><button id="homeTop" class="btn ghost" onclick="goHome()">⌂ ACCUEIL</button><button id="backTop" class="btn ghost hidden" onclick="backStep()">← ÉTAPE PRÉCÉDENTE</button><div class="badge" id="status">ACCUEIL</div></div></div>
 <div id="timeline" class="timeline"></div>
 <main id="app"></main>
 </div>
@@ -259,7 +259,7 @@ const B2B_TALLY_MISSION={
   "RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE B2B - 109 € HT",
   "PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE B2B - 169 € HT"
 };
-function b2bCommercialMissionName(name){const labels={"VISITE TERRAIN PILOTÉE":"VISITE DE SITE","PRÉSENCE PROJET":"PRÉSENCE — 1 H 15","PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE — 3 H","SUIVI DE PROJET - 2 PASSAGES":"SUIVI DE PROJET — 2 PASSAGES","CONTINUITÉ PROJET":"SUIVI DE PROJET — 3 PASSAGES","ACCÈS B2B":"DONNER ACCÈS","REMISE CLÉ / BADGE B2B":"REMISE CLÉ / BADGE","RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE","PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE"};return labels[name]||name}
+function b2bCommercialMissionName(name){const labels={"VOIR RELAIS":"VOIR & DÉCIDER","SUIVRE":"SUIVRE L’ÉVOLUTION SUR PLACE","VISITE TERRAIN PILOTÉE":"VISITE DE SITE","PRÉSENCE PROJET":"PRÉSENCE — 1 H 15","PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE — 3 H","SUIVI DE PROJET - 2 PASSAGES":"SUIVI DE PROJET — 2 PASSAGES","CONTINUITÉ PROJET":"SUIVI DE PROJET — 3 PASSAGES","ACCÈS B2B":"DONNER ACCÈS","REMISE CLÉ / BADGE B2B":"REMISE CLÉ / BADGE","RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE","PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE"};return labels[name]||name}
 function activeMissionKey(st=S){return String(st?.missionId||st?.draftKey||"")}
 function isActiveMissionState(st=S){
  return !!(st && st.result && String(st.result.mission||"").trim() && String(st.result.contract||"").trim() && st.stage!=="ARCHIVE");
@@ -813,6 +813,7 @@ function saveIdentityV4(){
  if(!S.city)return alert("Choisissez la commune du bien / site de la mission.");
  needs();
 }
+// Ancien catalogue PRÉSENCE propriétaires conservé pour référence historique.
 const ownerNeeds=[
  ["ART","Artisan / professionnel","Accès, présence courte ou intervention d’un tiers","STANDARD"],
  ["DEL","Livraison / installation / dépannage","Donner accès ou rester pendant un créneau court","STANDARD"],
@@ -833,7 +834,8 @@ const relaisNeeds=[
  ["KEY_GIVE","Remettre vos clés, badges ou télécommandes","Une remise ponctuelle à la personne désignée","STANDARD"],
  ["OPEN","Ouvrir avant votre arrivée","Ouverture et actions simples convenues","STANDARD"],
  ["WEATHER","Avant / après une intempérie","Action simple ou vérification courte","STANDARD"],
- ["SEE","VOIR RELAIS","Observation factuelle et compte rendu","VIEW"],
+ ["SEE","VOIR & DÉCIDER","Observation factuelle pour décider soi-même — 260 € TTC","VIEW"],
+ ["FOLLOW","SUIVRE L’ÉVOLUTION SUR PLACE","Deux observations à 490 € TTC ou trois à 690 € TTC","STANDARD"],
  ["OTHER","Autre demande","Besoin à qualifier séparément","STANDARD"]
 ];
 const b2bNeeds=[
@@ -847,17 +849,17 @@ const b2bNeeds=[
 ];
 
 function needButton(v,name,goal,tag){
- let green = tag==="PRESENCE" || (tag==="VIEW" && S.universe!=="RELAIS");
+ let green = S.caller==="B2B" && tag==="PRESENCE";
  let cls=green?"choice presence":"choice standard";
  return `<button class="${cls}" onclick="S.need='${v}';sub()"><span class="missionName">${esc(name)}</span><span class="missionGoal">${esc(goal)}</span></button>`;
 }
 function needs(){
- const list=S.caller==="B2B"?b2bNeeds:(S.universe==="RELAIS"?relaisNeeds:ownerNeeds);
+ const list=S.caller==="B2B"?b2bNeeds:relaisNeeds; // nouvelles demandes propriétaires vers RELAIS
  draw(`<div class="card"><h1>Étape 2 — Pourquoi appelle-t-il ?</h1><div class="operatorOnly">Cliquez sur la phrase qui ressemble le plus à ce que dit le client. Vous pourrez revenir en arrière.</div><div class="choices">${list.map(x=>needButton(...x)).join("")}</div></div>`)
 }
 
 const subs={
- ART:[["ACCESS","Très court (~30 min) : accueillir, rester, refermer — 109 € TTC"],["STAY","Jusqu’à 1 h : accueillir, rester, refermer — 149 € TTC"],["OBS","Observer / documenter après"],["DEC","Poser des questions pour une décision"],["COMPLEX","Durée ou heure incertaine : à requalifier"]],
+ ART:[["ACCESS","Très court (~30 min) : accueillir, rester, refermer — 109 € TTC"],["STAY","Jusqu’à 1 h : accueillir, rester, refermer — 149 € TTC"],["OBS","Observer / documenter après"],["DEC","VOIR & DÉCIDER — recueillir les éléments pour une décision"],["COMPLEX","Durée ou heure incertaine : à requalifier"]],
  DEL:[["ACCESS","Très court (~30 min) : accueillir, rester, refermer — 109 € TTC"],["STAY","Jusqu’à 1 h : accueillir, rester, refermer — 149 € TTC"],["COMPLEX","Durée ou heure incertaine : à requalifier"]],
  THIRD:[["SIMPLE","Tiers identifié, accès simple"],["COMPLEX","Situation plus complexe"]],
  KEY:[["GIVE","Remettre"],["GET","Récupérer"]],
@@ -872,7 +874,7 @@ const subs={
 };
 
 function sub(){
- if(S.universe==="RELAIS" && (S.need==="KEY_GET" || S.need==="KEY_GIVE")){
+ if(S.caller==="OWNER" && (S.need==="KEY_GET" || S.need==="KEY_GIVE")){
    const action=S.need==="KEY_GET"?"GET":"GIVE";
    S.need="KEY";S.sub=action;return classify();
  }
@@ -907,7 +909,7 @@ function zone(){
  // Les autres communes nommées Sainte-Lucie ne font pas partie du secteur.
  return ["porto vecchio","lecci","sotta","san gavino di carbini","zonza","sainte lucie de porto vecchio","sainte lucie de porto vecchio / pinarello","pinarello","fautea","tarco"].includes(x);
 }
-function voir(){return S.universe==="RELAIS"?{status:"PROPOSER",mission:"VOIR RELAIS",price:"260 € TTC",cap:"1 h",contract:"RELAIS",rest:"R1_RELAIS"}:{status:"PROPOSER",mission:"VOIR PRÉSENCE",price:"260 € TTC",cap:"1 h",contract:"PRÉSENCE PROPRIÉTAIRES",rest:"R1"}}
+function voir(){return {status:"PROPOSER",mission:"VOIR RELAIS",price:"260 € TTC",cap:"1 h",contract:"RELAIS",rest:"R1_RELAIS"}}
 function classify(){
  let r={status:"À CLARIFIER",mission:"À CLARIFIER",price:"-",cap:"-",contract:"À DÉTERMINER",rest:""};
  if(S.caller==="B2B"){
@@ -925,7 +927,7 @@ function classify(){
  if(S.need==="ART"&&S.sub==="ACCESS")r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"opération très courte (~30 min), accès, présence et fermeture inclus",contract:"RELAIS",rest:"R0"};
  if(S.need==="ART"&&S.sub==="STAY")r={status:"PROPOSER",mission:"RELAIS",price:"149 € TTC",cap:"1 h, accès, présence et fermeture inclus",contract:"RELAIS",rest:"R0"};
  if(S.need==="ART"&&S.sub==="COMPLEX")r={status:"À CLARIFIER",mission:"DEMANDE À REQUALIFIER",price:"-",cap:"-",contract:"À DÉTERMINER",rest:""};
- if(S.need==="ART"&&S.sub==="OBS")r=voir(); if(S.need==="ART"&&S.sub==="DEC")r={status:"PROPOSER",mission:"DÉCIDER",price:"260 € TTC",cap:"1 h",contract:"PRÉSENCE PROPRIÉTAIRES",rest:"R2"};
+ if(S.need==="ART"&&["OBS","DEC"].includes(S.sub))r=voir();
  if(S.need==="DEL"&&S.sub==="ACCESS")r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"opération très courte (~30 min), accès, présence et fermeture inclus",contract:"RELAIS",rest:"R0"};
  if(S.need==="DEL"&&S.sub==="STAY")r={status:"PROPOSER",mission:"RELAIS",price:"149 € TTC",cap:"1 h, accès, présence et fermeture inclus",contract:"RELAIS",rest:"R0"};
  if(S.need==="DEL"&&S.sub==="COMPLEX")r={status:"À CLARIFIER",mission:"DEMANDE À REQUALIFIER",price:"-",cap:"-",contract:"À DÉTERMINER",rest:""};
@@ -937,12 +939,12 @@ function classify(){
  if(S.need==="WEATHER"&&S.sub==="BEFORE")r={status:"PROPOSER",mission:"RELAIS - AVANT INTEMPÉRIE",price:"149 € TTC",cap:"1 h",contract:"RELAIS",rest:"R0"};
  if(S.need==="WEATHER"&&S.sub==="AFTER_SIMPLE")r={status:"PROPOSER",mission:"RELAIS SIMPLE - APRÈS INTEMPÉRIE",price:"109 € TTC",cap:"cadre court, non horaire",contract:"RELAIS",rest:"R0_METEO"};
  if(S.need==="WEATHER"&&S.sub==="AFTER_OBS")r=voir();
- if(S.need==="SEE"&&S.sub==="VISIBLE")r=voir(); if(S.need==="SEE"&&S.sub==="DEC")r={status:"PROPOSER",mission:"DÉCIDER",price:"260 € TTC",cap:"1 h",contract:"PRÉSENCE PROPRIÉTAIRES",rest:"R2"};
- if(S.need==="SEE"&&S.sub==="COMPARE")r={status:"PROPOSER",mission:"SUIVRE",price:"490 € TTC",cap:"2 × 1 h",contract:"PRÉSENCE PROPRIÉTAIRES",rest:"R3",multi:true,passages:2};
+ if(S.need==="SEE"&&["VISIBLE","DEC"].includes(S.sub))r=voir();
+ if(S.need==="SEE"&&S.sub==="COMPARE")r={status:"PROPOSER",mission:"SUIVRE",price:"490 € TTC",cap:"2 × 1 h",contract:"RELAIS",rest:"R3",multi:true,passages:2};
  if(S.need==="SEE"&&S.sub==="TECH")r={status:"HORS PÉRIMÈTRE",mission:"DIAGNOSTIC / EXPERTISE",price:"-",cap:"-",contract:"-",rest:""};
- if(S.need==="DECIDE"&&S.sub==="DEC")r={status:"PROPOSER",mission:"DÉCIDER",price:"260 € TTC",cap:"1 h",contract:"PRÉSENCE PROPRIÉTAIRES",rest:"R2"};
- if(S.need==="FOLLOW"&&S.sub==="TWO")r={status:"PROPOSER",mission:"SUIVRE",price:"490 € TTC",cap:"2 × 1 h",contract:"PRÉSENCE PROPRIÉTAIRES",rest:"R3",multi:true,passages:2};
- if(S.need==="FOLLOW"&&S.sub==="THREE")r={status:"PROPOSER",mission:"SUIVRE",price:"690 € TTC",cap:"3 × 1 h",contract:"PRÉSENCE PROPRIÉTAIRES",rest:"R3",multi:true,passages:3};
+ if(S.need==="DECIDE"&&S.sub==="DEC")r=voir();
+ if(S.need==="FOLLOW"&&S.sub==="TWO")r={status:"PROPOSER",mission:"SUIVRE",price:"490 € TTC",cap:"2 × 1 h",contract:"RELAIS",rest:"R3",multi:true,passages:2};
+ if(S.need==="FOLLOW"&&S.sub==="THREE")r={status:"PROPOSER",mission:"SUIVRE",price:"690 € TTC",cap:"3 × 1 h",contract:"RELAIS",rest:"R3",multi:true,passages:3};
  if(S.need==="FOLLOW"&&S.sub==="RECUR")r={status:"HORS PÉRIMÈTRE",mission:"SURVEILLANCE RÉCURRENTE",price:"-",cap:"-",contract:"-",rest:""};
  }
  if(r.status==="PROPOSER"&&!zone())r.status="DEVIS PRÉALABLE";S.result=r;showResult()
@@ -987,7 +989,7 @@ function objectOptions(){
     "Recueillir les éléments factuels prévus au cahier des charges avant la décision du client"
   ];
   else if(m==="SUIVRE") out=[
-    "Comparer la même situation en 2 ou 3 observations ponctuelles."
+    S.result?.contract==="RELAIS" ? "SUIVRE — "+(S.result?.passages===3?"3":"2")+" observations factuelles ponctuelles" : "Comparer la même situation en 2 ou 3 observations ponctuelles."
   ];
   else if(["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","PRÉSENCE LOGISTIQUE B2B"].includes(m)){
     if(S.sub==="ACCESS") out=["Accueillir l’intervenant désigné, rester présent pendant l’opération courte, refermer les lieux après son départ et confirmer l’exécution (30 minutes maximum au total)"];
@@ -2021,14 +2023,14 @@ function validateOwnerTariffAndSchedule(){
  const mission=String(S.result.mission||"");
  let expected=fixed[mission];
  if(mission==="SUIVRE"){
-   if(contract!=="PRÉSENCE PROPRIÉTAIRES"||![2,3].includes(S.result.passages)||!S.result.multi)
+   if(!["RELAIS","PRÉSENCE PROPRIÉTAIRES"].includes(contract)||![2,3].includes(S.result.passages)||!S.result.multi)
      throw new Error("SUIVRE ancien ou incomplet : sélectionner explicitement 2 ou 3 observations avant réservation.");
    expected=S.result.passages===2?490:690;
  }
  if(expected==null)throw new Error("Mission propriétaire ancienne ou inconnue : ne pas réutiliser cette commande.");
  if(["VOIR RELAIS","RELAIS SIMPLE","RELAIS","RELAIS - AVANT INTEMPÉRIE","RELAIS SIMPLE - APRÈS INTEMPÉRIE"].includes(mission)&&contract!=="RELAIS")
    throw new Error("Incohérence contrat RELAIS / mission, commande bloquée.");
- if(["VOIR PRÉSENCE","DÉCIDER","SUIVRE"].includes(mission)&&contract!=="PRÉSENCE PROPRIÉTAIRES")
+ if(["VOIR PRÉSENCE","DÉCIDER"].includes(mission)&&contract!=="PRÉSENCE PROPRIÉTAIRES")
    throw new Error("Incohérence contrat PRÉSENCE / mission, commande bloquée.");
  const amount=parseEuroAmount(S.result.price);
  if(amount!==expected||!String(S.result.price).includes("TTC"))
@@ -2036,6 +2038,15 @@ function validateOwnerTariffAndSchedule(){
  if(/1\s*h\s*30|2\s*h|3\s*[x×]\s*1\s*h\s*30/i.test(String(S.result.cap||"")))
    throw new Error("Ancienne durée de mission détectée. Requalifier selon les plafonds actuels.");
  const known=!!S.result.multi&&Array.isArray(S.multiSlots)?S.multiSlots:[{index:1,date:S.date,time:S.slot}];
+ // Respect de la plage de réservation en ligne RELAIS ; hors plage, contact direct sans lien Tally.
+ if(contract==="RELAIS"){
+   for(const p of known){
+     const date=new Date(String(p.date||"")+"T12:00:00"), t=normalizeTime4(p.time);
+     const mins=Number(t.slice(0,2))*60+Number(t.slice(3,5));
+     if(!Number.isFinite(date.getTime())||date.getDay()===0||isFrenchPublicHoliday(p.date)||!/^\d{2}:\d{2}$/.test(t)||mins<480||mins>1125)
+       throw new Error("Hors plage RELAIS en ligne (lundi à samedi, hors fériés, 08 h–18 h 45). Demande par contact direct, sans paiement standard.");
+   }
+ }
  if(!known.length||!known.some(p=>Number(p.index)===1))
    throw new Error("Le premier créneau est obligatoire avant toute réservation.");
  if(known.some(p=>Number(p.index)>plannedPassageCount()))
