@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CYRNEA — Assistant interne</title>
+<title>CYRNEA — RELAIS PROPRIÉTAIRE & PRÉSENCE ENTREPRISES</title>
 <style>
 :root{--bg:#f5f3ef;--card:#fff;--ink:#1d2733;--muted:#6d7680;--line:#d7d2ca;--accent:#29415f;--ok:#326047;--warn:#8b5d19;--danger:#8b3434}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink)}
@@ -90,7 +90,7 @@ input,select,textarea{font-size:18px;min-height:52px}
 </head>
 <body>
 <div class="wrap">
-<div class="header"><div class="brand">CYRNEA ASSISTANT<small>Appel · préparation · terrain · restitution</small></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end"><button id="homeTop" class="btn ghost" onclick="goHome()">⌂ ACCUEIL</button><button id="backTop" class="btn ghost hidden" onclick="backStep()">← ÉTAPE PRÉCÉDENTE</button><div class="badge" id="status">ACCUEIL</div></div></div>
+<div class="header"><div class="brand">CYRNEA ASSISTANT<small>RELAIS PROPRIÉTAIRE · PRÉSENCE ENTREPRISES</small></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end"><button id="homeTop" class="btn ghost" onclick="goHome()">⌂ ACCUEIL</button><button id="backTop" class="btn ghost hidden" onclick="backStep()">← ÉTAPE PRÉCÉDENTE</button><div class="badge" id="status">ACCUEIL</div></div></div>
 <div id="timeline" class="timeline"></div>
 <main id="app"></main>
 </div>
@@ -813,6 +813,7 @@ function saveIdentityV4(){
  if(!S.city)return alert("Choisissez la commune du bien / site de la mission.");
  needs();
 }
+// Ancien catalogue PRÉSENCE propriétaires conservé pour référence historique.
 const ownerNeeds=[
  ["ART","Artisan / professionnel","Accès, présence courte ou intervention d’un tiers","STANDARD"],
  ["DEL","Livraison / installation / dépannage","Donner accès ou rester pendant un créneau court","STANDARD"],
@@ -833,7 +834,8 @@ const relaisNeeds=[
  ["KEY_GIVE","Remettre vos clés, badges ou télécommandes","Une remise ponctuelle à la personne désignée","STANDARD"],
  ["OPEN","Ouvrir avant votre arrivée","Ouverture et actions simples convenues","STANDARD"],
  ["WEATHER","Avant / après une intempérie","Action simple ou vérification courte","STANDARD"],
- ["SEE","VOIR RELAIS","Observation factuelle et compte rendu","VIEW"],
+ ["SEE","VOIR & DÉCIDER","Observation factuelle pour décider soi-même — 260 € TTC","VIEW"],
+ ["FOLLOW","SUIVRE L’ÉVOLUTION SUR PLACE","Deux observations à 490 € TTC ou trois à 690 € TTC","STANDARD"],
  ["OTHER","Autre demande","Besoin à qualifier séparément","STANDARD"]
 ];
 const b2bNeeds=[
@@ -847,12 +849,12 @@ const b2bNeeds=[
 ];
 
 function needButton(v,name,goal,tag){
- let green = tag==="PRESENCE" || (tag==="VIEW" && S.universe!=="RELAIS");
+ let green = S.caller==="B2B" && tag==="PRESENCE";
  let cls=green?"choice presence":"choice standard";
  return `<button class="${cls}" onclick="S.need='${v}';sub()"><span class="missionName">${esc(name)}</span><span class="missionGoal">${esc(goal)}</span></button>`;
 }
 function needs(){
- const list=S.caller==="B2B"?b2bNeeds:(S.universe==="RELAIS"?relaisNeeds:ownerNeeds);
+ const list=S.caller==="B2B"?b2bNeeds:relaisNeeds; // nouvelles demandes propriétaires vers RELAIS
  draw(`<div class="card"><h1>Étape 2 — Pourquoi appelle-t-il ?</h1><div class="operatorOnly">Cliquez sur la phrase qui ressemble le plus à ce que dit le client. Vous pourrez revenir en arrière.</div><div class="choices">${list.map(x=>needButton(...x)).join("")}</div></div>`)
 }
 
@@ -1886,13 +1888,13 @@ function bookingPortalKind(){
 }
 function contractRef(){
  const c=S.result?.contract;
- if(c==="RELAIS") return "CGV RELAIS PROPRIÉTAIRE V18 CM2C — 02/11/2026";
+ if(c==="RELAIS") return "CGV RELAIS PROPRIÉTAIRE V19 CM2C — 13/11/2026";
  if(c==="PRÉSENCE PROPRIÉTAIRES") return "CGV CYRNEA PRÉSENCE — PROPRIÉTAIRES V9 CM2C — 02/11/2026";
  return "CGS CYRNEA PRÉSENCE — ENTREPRISES V12 — 02/11/2026";
 }
 function contractUrl(){
  const c=S.result?.contract;
- if(c==="RELAIS") return "https://www.relaisproprietaire.fr/docs/RELAIS_CGV_V18_CM2C_2026-11-02.pdf";
+ if(c==="RELAIS") return "https://www.relaisproprietaire.fr/docs/RELAIS_CGV_V19_CM2C_2026-11-13.pdf";
  if(c==="PRÉSENCE PROPRIÉTAIRES") return "https://www.cyrneapresence.fr/docs/PRESENCE_PROPRIETAIRES_CGV_V9_CM2C_2026-11-02%20%282%29.pdf";
  return "https://www.cyrneapresence.fr/docs/PRESENCE_ENTREPRISES_CGS_V12_2026-11-02.pdf";
 }
