@@ -2043,7 +2043,7 @@ function validateOwnerTariffAndSchedule(){
    for(const p of known){
      const date=new Date(String(p.date||"")+"T12:00:00"), t=normalizeTime4(p.time);
      const mins=Number(t.slice(0,2))*60+Number(t.slice(3,5));
-     if(!Number.isFinite(date.getTime())||date.getDay()===0||isFrenchPublicHoliday(p.date)||!/^\\d{2}:\\d{2}$/.test(t)||mins<480||mins>1125)
+     if(!Number.isFinite(date.getTime())||date.getDay()===0||isFrenchPublicHoliday(p.date)||!/^\d{2}:\d{2}$/.test(t)||mins<480||mins>1125)
        throw new Error("Hors plage RELAIS en ligne (lundi à samedi, hors fériés, 08 h–18 h 45). Demande par contact direct, sans paiement standard.");
    }
  }
