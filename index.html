@@ -2023,14 +2023,14 @@ function validateOwnerTariffAndSchedule(){
  const mission=String(S.result.mission||"");
  let expected=fixed[mission];
  if(mission==="SUIVRE"){
-   if(contract!=="PRÉSENCE PROPRIÉTAIRES"||![2,3].includes(S.result.passages)||!S.result.multi)
+   if(!["RELAIS","PRÉSENCE PROPRIÉTAIRES"].includes(contract)||![2,3].includes(S.result.passages)||!S.result.multi)
      throw new Error("SUIVRE ancien ou incomplet : sélectionner explicitement 2 ou 3 observations avant réservation.");
    expected=S.result.passages===2?490:690;
  }
  if(expected==null)throw new Error("Mission propriétaire ancienne ou inconnue : ne pas réutiliser cette commande.");
  if(["VOIR RELAIS","RELAIS SIMPLE","RELAIS","RELAIS - AVANT INTEMPÉRIE","RELAIS SIMPLE - APRÈS INTEMPÉRIE"].includes(mission)&&contract!=="RELAIS")
    throw new Error("Incohérence contrat RELAIS / mission, commande bloquée.");
- if(["VOIR PRÉSENCE","DÉCIDER","SUIVRE"].includes(mission)&&contract!=="PRÉSENCE PROPRIÉTAIRES")
+ if(["VOIR PRÉSENCE","DÉCIDER"].includes(mission)&&contract!=="PRÉSENCE PROPRIÉTAIRES")
    throw new Error("Incohérence contrat PRÉSENCE / mission, commande bloquée.");
  const amount=parseEuroAmount(S.result.price);
  if(amount!==expected||!String(S.result.price).includes("TTC"))
@@ -2038,6 +2038,15 @@ function validateOwnerTariffAndSchedule(){
  if(/1\s*h\s*30|2\s*h|3\s*[x×]\s*1\s*h\s*30/i.test(String(S.result.cap||"")))
    throw new Error("Ancienne durée de mission détectée. Requalifier selon les plafonds actuels.");
  const known=!!S.result.multi&&Array.isArray(S.multiSlots)?S.multiSlots:[{index:1,date:S.date,time:S.slot}];
+ // Respect de la plage de réservation en ligne RELAIS ; hors plage, contact direct sans lien Tally.
+ if(contract==="RELAIS"){
+   for(const p of known){
+     const date=new Date(String(p.date||"")+"T12:00:00"), t=normalizeTime4(p.time);
+     const mins=Number(t.slice(0,2))*60+Number(t.slice(3,5));
+     if(!Number.isFinite(date.getTime())||date.getDay()===0||isFrenchPublicHoliday(p.date)||!/^\\d{2}:\\d{2}$/.test(t)||mins<480||mins>1125)
+       throw new Error("Hors plage RELAIS en ligne (lundi à samedi, hors fériés, 08 h–18 h 45). Demande par contact direct, sans paiement standard.");
+   }
+ }
  if(!known.length||!known.some(p=>Number(p.index)===1))
    throw new Error("Le premier créneau est obligatoire avant toute réservation.");
  if(known.some(p=>Number(p.index)>plannedPassageCount()))
