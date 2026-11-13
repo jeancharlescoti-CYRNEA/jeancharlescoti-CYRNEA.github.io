@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-20261113-relais-v19-draft';
+const CACHE='cyrnea-assistant-20261113-relais-v19';
 const ASSETS=['./index.html','./terrain-clock.js','./change-inbox.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
