@@ -874,7 +874,7 @@ const subs={
 };
 
 function sub(){
- if(S.universe==="RELAIS" && (S.need==="KEY_GET" || S.need==="KEY_GIVE")){
+ if(S.caller==="OWNER" && (S.need==="KEY_GET" || S.need==="KEY_GIVE")){
    const action=S.need==="KEY_GET"?"GET":"GIVE";
    S.need="KEY";S.sub=action;return classify();
  }
