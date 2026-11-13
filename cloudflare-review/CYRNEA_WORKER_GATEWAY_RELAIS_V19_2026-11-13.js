@@ -947,7 +947,8 @@ async function handleTallyWebhook(request, env) {
     return json({ ok: true, reference, status: currentStatus || 'UNKNOWN', reused: true }, 200);
   }
 
-  // Une validation acquise est terminale pour cette référence. Toute modification passe par CHANGE_REQUESTED + nouvelle référence.  if (currentStatus === 'VALIDATED') {
+  // Une validation acquise est terminale pour cette référence. Toute modification passe par CHANGE_REQUESTED + nouvelle référence.
+  if (currentStatus === 'VALIDATED') {
     return json({ ok: true, reference, status: 'VALIDATED', ignored: 'already_validated' }, 200);
   }
 
@@ -1897,6 +1898,7 @@ function extractCompletedPayPalCapture(order) {
   }
   return null;
 }
+
 // Les informations client ne doivent provenir que de l'intention serveur
 // validée/reçue via Tally, jamais de paramètres d'URL exposant des données perso.
 function hasChangeContact(intent) {
