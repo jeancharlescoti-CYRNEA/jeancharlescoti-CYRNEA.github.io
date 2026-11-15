@@ -1,5 +1,5 @@
-const CACHE='cyrnea-assistant-20261113-relais-v19';
-const ASSETS=['./index.html','./terrain-clock.js','./change-inbox.js','./manifest.webmanifest','./icons/icon-192.png'];
+const CACHE='cyrnea-assistant-20261115-presence-relais-v21';
+const ASSETS=['./index.html','./terrain-clock.js','./change-inbox.js','./h2-integration.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(
