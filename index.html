@@ -2279,8 +2279,8 @@ function clientMailPayload(url){
  if(!GATEWAY_REF_RE.test(reference)||u.searchParams.get("reference_temporaire")!==reference)
   throw Error("La référence Tally ne correspond pas à la réservation enregistrée");
  const allowed={
-  "RELAIS":["b5oz46","xXOqpk"],
-  "PRÉSENCE PROPRIÉTAIRES":["GxZbE2","7R6AZa"],
+  "RELAIS":["xXOqpk"],
+  "PRÉSENCE PROPRIÉTAIRES":[], // Anciennes réservations conservées en lecture, formulaire fermé.
   "PRÉSENCE ENTREPRISES":["RGp0PQ","2EQWLD"]
  };
  if(!allowed[S.result.contract]?.includes(u.pathname.slice(3)))
