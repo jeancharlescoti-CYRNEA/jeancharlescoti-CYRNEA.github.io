@@ -222,7 +222,6 @@ const RELAIS_OVERRUN_PAYMENT_LINKS={
 const B2B_PAYMENT_CAPABILITIES={CARD:true,PAYPAL:true,SEPA_TRANSFER:false};
 const TALLY_URLS={
   RELAIS_STANDARD:"https://tally.so/r/xXOqpk",
-  PRESENCE_STANDARD:"https://tally.so/r/7R6AZa",
   B2B_HS:"https://tally.so/r/RGp0PQ",
   B2B_STANDARD:"https://tally.so/r/2EQWLD"
 };
@@ -257,9 +256,10 @@ const B2B_TALLY_MISSION={
   "ACCÈS B2B":"ACCÈS B2B - 109 € HT",
   "REMISE CLÉ / BADGE B2B":"REMISE CLÉ / BADGE B2B - 109 € HT",
   "RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE B2B - 109 € HT",
-  "PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE B2B - 169 € HT"
+  "PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE B2B - 169 € HT",
+  "GESTES SIMPLES SUR SITE B2B":"GESTES SIMPLES SUR SITE B2B - 169 € HT"
 };
-function b2bCommercialMissionName(name){const labels={"VOIR RELAIS":"VOIR & DÉCIDER","SUIVRE":"SUIVRE L’ÉVOLUTION SUR PLACE","VISITE TERRAIN PILOTÉE":"VISITE DE SITE","PRÉSENCE PROJET":"PRÉSENCE — 1 H 15","PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE — 3 H","SUIVI DE PROJET - 2 PASSAGES":"SUIVI DE PROJET — 2 PASSAGES","CONTINUITÉ PROJET":"SUIVI DE PROJET — 3 PASSAGES","ACCÈS B2B":"DONNER ACCÈS","REMISE CLÉ / BADGE B2B":"REMISE CLÉ / BADGE","RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE","PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE"};return labels[name]||name}
+function b2bCommercialMissionName(name){const labels={"VOIR RELAIS":"VOIR & DÉCIDER","SUIVRE":"SUIVRE L’ÉVOLUTION SUR PLACE","VISITE TERRAIN PILOTÉE":"VISITE DE SITE","PRÉSENCE PROJET":"PRÉSENCE — 1 H 15","PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE — 3 H","SUIVI DE PROJET - 2 PASSAGES":"SUIVI DE PROJET — 2 PASSAGES","CONTINUITÉ PROJET":"SUIVI DE PROJET — 3 PASSAGES","ACCÈS B2B":"DONNER ACCÈS","REMISE CLÉ / BADGE B2B":"REMISE CLÉ / BADGE","RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE","PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE","GESTES SIMPLES SUR SITE B2B":"GESTES SIMPLES SUR SITE","CLÉS — 2 PASSAGES":"REMISE ET RÉCUPÉRATION DES CLÉS","CLÉS — 2 PASSAGES B2B":"REMISE ET RÉCUPÉRATION DES CLÉS"};return labels[name]||name}
 function activeMissionKey(st=S){return String(st?.missionId||st?.draftKey||"")}
 function isActiveMissionState(st=S){
  return !!(st && st.result && String(st.result.mission||"").trim() && String(st.result.contract||"").trim() && st.stage!=="ARCHIVE");
@@ -832,6 +832,7 @@ const relaisNeeds=[
  ["DEL","Un livreur, installateur ou dépanneur doit intervenir","Accueil, présence courte et fermeture","STANDARD"],
  ["KEY_GET","Récupérer vos clés, badges ou télécommandes","Une récupération ponctuelle auprès d’une personne désignée","STANDARD"],
  ["KEY_GIVE","Remettre vos clés, badges ou télécommandes","Une remise ponctuelle à la personne désignée","STANDARD"],
+ ["KEY_BOTH","Remettre ET récupérer vos clés (ou inversement)","Deux passages distincts, 199 € TTC ; réservation sur le site RELAIS","STANDARD"],
  ["OPEN","Ouvrir avant votre arrivée","Ouverture et actions simples convenues","STANDARD"],
  ["WEATHER","Avant / après une intempérie","Action simple ou vérification courte","STANDARD"],
  ["SEE","VOIR & DÉCIDER","Observation factuelle pour décider soi-même — 260 € TTC","VIEW"],
@@ -869,11 +870,18 @@ const subs={
  ["ACCESS","DONNER ACCÈS — 109 € HT · 30 min max. (accueil, présence, fermeture)"],
  ["STAY","PRÉSENCE LOGISTIQUE — 169 € HT · 1 h max. (accueil, présence, fermeture)"],
  ["KEY_GIVE","Remettre une clé / un badge — 109 € HT"],
- ["KEY_GET","Récupérer une clé / un badge — 109 € HT"]
+ ["KEY_GET","Récupérer une clé / un badge — 109 € HT"],
+ ["KEY_BOTH","Remettre puis récupérer, ou inversement — 218 € HT (2 passages)"],
+ ["GESTES","GESTES SIMPLES SUR SITE — 169 € HT · 45 min maximum"]
 ]
 };
 
 function sub(){
+ if(S.caller==="OWNER" && S.need==="KEY_BOTH"){
+   S.sub="BOTH";
+   S.result={status:"PARCOURS SITE OFFICIEL",mission:"CLÉS — 2 PASSAGES",price:"199 € TTC",cap:"2 passages de 30 min maximum",contract:"RELAIS",rest:"R0",multi:true,passages:2};
+   return showResult(); // Le Gateway PWA ne prend pas en charge la formule double : commande par le site RELAIS.
+ }
  if(S.caller==="OWNER" && (S.need==="KEY_GET" || S.need==="KEY_GIVE")){
    const action=S.need==="KEY_GET"?"GET":"GIVE";
    S.need="KEY";S.sub=action;return classify();
@@ -906,6 +914,8 @@ function sub(){
 }
 function zone(){
  const x=String(S.city||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[-_]/g," ").replace(/\s+/g," ").trim();
+ // B2B : déplacement forfaitaire strictement limité à Porto-Vecchio, Lecci, Sainte-Lucie/Pinarello et Tarco.
+ if(S.caller==="B2B")return ["porto vecchio","lecci","sainte lucie de porto vecchio / pinarello","pinarello","tarco"].includes(x);
  // Les autres communes nommées Sainte-Lucie ne font pas partie du secteur.
  return ["porto vecchio","lecci","sotta","san gavino di carbini","zonza","sainte lucie de porto vecchio","sainte lucie de porto vecchio / pinarello","pinarello","fautea","tarco"].includes(x);
 }
@@ -921,6 +931,8 @@ function classify(){
    if(S.sub==="KEY_GIVE")r={status:"PROPOSER",mission:"REMISE CLÉ / BADGE B2B",price:"109 € HT",cap:"action unique, cadre court",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="KEY_GET")r={status:"PROPOSER",mission:"RÉCUPÉRATION CLÉ / BADGE B2B",price:"109 € HT",cap:"action unique, cadre court",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="STAY")r={status:"PROPOSER",mission:"PRÉSENCE LOGISTIQUE B2B",price:"169 € HT",cap:"1 h",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
+   if(S.sub==="GESTES")r={status:"PROPOSER",mission:"GESTES SIMPLES SUR SITE B2B",price:"169 € HT",cap:"45 min maximum",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
+   if(S.sub==="KEY_BOTH")r={status:"PARCOURS SITE OFFICIEL",mission:"CLÉS — 2 PASSAGES B2B",price:"218 € HT",cap:"2 passages de 30 min maximum",contract:"PRÉSENCE ENTREPRISES",rest:"R0",multi:true,passages:2};
  }
 }
  else{
@@ -991,11 +1003,12 @@ function objectOptions(){
   else if(m==="SUIVRE") out=[
     S.result?.contract==="RELAIS" ? "SUIVRE — "+(S.result?.passages===3?"3":"2")+" observations factuelles ponctuelles" : "Comparer la même situation en 2 ou 3 observations ponctuelles."
   ];
-  else if(["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","PRÉSENCE LOGISTIQUE B2B"].includes(m)){
+  else if(["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","PRÉSENCE LOGISTIQUE B2B","GESTES SIMPLES SUR SITE B2B"].includes(m)){
     if(S.sub==="ACCESS") out=["Accueillir l’intervenant désigné, rester présent pendant l’opération courte, refermer les lieux après son départ et confirmer l’exécution (30 minutes maximum au total)"];
     else if(S.sub==="KEY_GIVE") out=["Remettre une clé / un badge à la personne désignée"];
     else if(S.sub==="KEY_GET") out=["Récupérer une clé / un badge auprès de la personne désignée"];
     else if(S.sub==="STAY") out=["Accueillir l’intervenant ou livreur désigné, rester présent pendant l’opération et refermer les lieux après son départ (1 heure maximum au total), sans contrôle technique"];
+    else if(S.sub==="GESTES") out=["Effectuer uniquement les gestes simples préalablement désignés par l’entreprise, sans expertise ni intervention technique (45 min maximum)"];
   }
   else if(m==="VISITE TERRAIN PILOTÉE") out=[
     "Voir et documenter un site en Corse avant d’y déplacer une équipe ou un technicien."
@@ -1051,7 +1064,7 @@ function earlyExecutionNeeded(){
   return mission<=expiry;
 }
 
-const VAT_RATE=0.20; // Taux de travail du prototype ; à confirmer comptablement avant production.
+const VAT_RATE=0.20; // TVA de la grille B2B actuelle ; calculée à nouveau côté Gateway.
 
 function isB2BContract(){
   return S.result?.contract==="PRÉSENCE ENTREPRISES";
@@ -1123,6 +1136,7 @@ function showResult(){
  setStage("CADRAGE");let r=S.result;
  const normal=(r.status==="PROPOSER");
  const quote=(r.status==="DEVIS PRÉALABLE");
+ const siteOnly=(r.status==="PARCOURS SITE OFFICIEL");
  draw(`<div class="card"><h1>${esc(r.status)}</h1><div class="readAloud">${esc(missionPhoneScript())}</div>
  <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(r.mission))}</span></div>
  ${quote?`<div class="row"><b>Prix</b><span>À CHIFFRER PAR DEVIS</span></div>`:priceRows()}
@@ -1130,7 +1144,7 @@ function showResult(){
  <div class="row"><b>Contrat</b><span>${esc(r.contract)}</span></div><div class="row"><b>Lieu d’intervention</b><span>${esc(S.city)}</span></div>
  ${normal||quote ? objectSelector() : ""}
  ${needsCahier()?`<div class="warn"><b>Cadrage renforcé requis.</b><br>Avant réservation, cette mission doit disposer d'un brief/cahier des charges écrit précisant l'objectif, les points à éclaircir, les documents et informations à recueillir, les éventuelles questions à poser à des interlocuteurs et la restitution attendue.</div>`:""}
- ${quote?`<div class="warn"><b>Secteur hors zone directe.</b><br>Le tarif standard ne vaut pas commande. Un devis doit être établi et accepté avant de poursuivre.</div>
+ ${siteOnly?`<div class="notice"><b>RÉSERVATION EXCLUSIVEMENT SUR LE SITE OFFICIEL</b><br>La formule comporte deux passages avec deux créneaux, un ordre de remise/récupération et éventuellement deux communes. Le lien de paiement PWA ne les couvre pas : ne pas générer de référence Tally ou Gateway depuis cet écran.</div><div class="toolbar"><a class="btn primary" style="text-decoration:none;text-align:center" href="${S.result.contract==="RELAIS"?"https://www.relaisproprietaire.fr/":"https://www.cyrneapresence.fr/"}" target="_blank" rel="noopener noreferrer">OUVRIR LE SITE DE RÉSERVATION</a></div>` : quote?`<div class="warn"><b>Secteur hors zone directe.</b><br>Le tarif standard ne vaut pas commande. Un devis doit être établi et accepté avant de poursuivre.</div>
  <div class="field"><label>Montant du devis accepté</label><input id="quotePrice" placeholder="${S.caller==="B2B"?"Ex. 500 € HT":"Ex. 149 € TTC"}"></div>
  <button class="btn primary" onclick="if(!saveObject())return;let q=document.getElementById('quotePrice').value.trim();if(!q)return alert('Montant du devis requis');if(S.caller==='B2B'&&!/HT/i.test(q))return alert('Pour le B2B, indiquez le montant du devis en HT.');if(S.caller!=='B2B'&&!/TTC/i.test(q))return alert('Pour un particulier, indiquez le montant du devis en TTC.');S.result.price=q;S.result.status='PROPOSER';S.result.isQuote=true;slot()">DEVIS ACCEPTÉ → CONTINUER</button>`
  : normal?`<button class="btn primary" onclick="if(!saveObject())return;slot()">CONTINUER VERS LE CRÉNEAU</button>`
@@ -1427,6 +1441,15 @@ function validateMissionTimeRules(dateStr,timeStr,label="créneau"){
  // Les horaires futurs sont recevables comme demandes. Confirmation humaine après paiement.
  return validateFutureSlot(dateStr,timeStr,label);
 }
+function validateB2BShortHours(){
+ if(S.result?.contract!=="PRÉSENCE ENTREPRISES"||S.result?.multi)return true;
+ const m=baseMissionName(S.result?.mission||"");
+ const short=["VISITE TERRAIN PILOTÉE","ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","PRÉSENCE LOGISTIQUE B2B","GESTES SIMPLES SUR SITE B2B"];
+ if(!short.includes(m))return true;
+ const t=normalizeTime4(S.slot||"");
+ const minutes=Number(t.slice(0,2))*60+Number(t.slice(3,5));
+ return /^\d{2}:\d{2}$/.test(t)&&minutes>=480&&minutes<=1125;
+}
 function autoConstraints(dateStr,timeStr){
   const dt=localDateTime(dateStr,timeStr);
   if(!dt) return {priority:false,evening:false,night:false,sunday:false};
@@ -1690,8 +1713,8 @@ function availabilityPricing(){
   }
   if(m==="LOGISTIQUE / ACCÈS B2B" || String(S.result.price).includes("À CHIFFRER")) return;
 
-  if(["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","PRÉSENCE LOGISTIQUE B2B"].includes(m)){
-    const base=m==="PRÉSENCE LOGISTIQUE B2B"?169:109;
+  if(["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","PRÉSENCE LOGISTIQUE B2B","GESTES SIMPLES SUR SITE B2B"].includes(m)){
+    const base=["PRÉSENCE LOGISTIQUE B2B","GESTES SIMPLES SUR SITE B2B"].includes(m)?169:109;
     const special=b2bExceptionalBaseSlot();
     const add=special?0:sunday?60:priority?40:0;
     S.result.price=(base+add)+" € HT";
@@ -1808,6 +1831,7 @@ function confirmSlot(){
   S.slot=normalizeTime4(getDropdownTime("sl"));
   const check=validateMissionTimeRules(S.date,S.slot,"ce créneau");
   if(!check.ok) return alert(check.msg);
+  if(!validateB2BShortHours())return alert("Ce service ne se réserve pas en soirée ou de nuit : choisissez 08 h–18 h 45, ou contactez directement CYRNEA.");
   refreshCalendarConstraints();
   availabilityPricing();
   S.acceptedSlot=false;
@@ -1871,14 +1895,14 @@ function saveCfg(){
  const owners=(document.getElementById("ownersUrl")?.value||"").trim();
  const b2b=(document.getElementById("b2bUrl")?.value||"").trim();
  localStorage.setItem("cyrnea_v45_cfg",JSON.stringify({ownersUrl:owners,b2bUrl:b2b}));
- alert("Liens SimplyBook enregistrés sur cet appareil.");
+ alert("Anciens liens SimplyBook conservés pour référence ; sans effet sur les réservations Tally actuelles.");
  home();
 }
 function settings(){
  const c=cfg();
- draw(`<div class="card"><h1>RÉGLAGES SIMPLYBOOK</h1>
- <p class="muted">À renseigner une seule fois sur chaque appareil si nécessaire.</p>
- <div class="field"><label>Portail PROPRIÉTAIRES — CYRNEA PRÉSENCE & RELAIS</label><input id="ownersUrl" type="url" value="${esc(c.ownersUrl||"")}" placeholder="https://..."></div>
+ draw(`<div class="card"><h1>ARCHIVE — LIENS SIMPLYBOOK NON UTILISÉS</h1>
+ <p class="muted">Les nouvelles réservations passent exclusivement par Tally. Ces anciens paramètres SimplyBook sont conservés sans effet sur les commandes actuelles.</p>
+ <div class="field"><label>Ancien portail particuliers — historique seulement</label><input id="ownersUrl" type="url" value="${esc(c.ownersUrl||"")}" placeholder="https://..."></div>
  <div class="field"><label>Portail ENTREPRISES — CYRNEA PRÉSENCE ENTREPRISES</label><input id="b2bUrl" type="url" value="${esc(c.b2bUrl||"")}" placeholder="https://..."></div>
  <div class="toolbar"><button class="btn primary" onclick="saveCfg()">ENREGISTRER</button></div>
  </div>`)
@@ -1890,13 +1914,13 @@ function contractRef(){
  const c=S.result?.contract;
  if(c==="RELAIS") return "CGV RELAIS PROPRIÉTAIRE V20 CM2C — 15/11/2026";
  if(c==="PRÉSENCE PROPRIÉTAIRES") return "CGV CYRNEA PRÉSENCE — PROPRIÉTAIRES V9 CM2C — 02/11/2026";
- return "CGS CYRNEA PRÉSENCE — ENTREPRISES V12 — 02/11/2026";
+ return "CGS CYRNEA PRÉSENCE — ENTREPRISES V13 — 15/11/2026";
 }
 function contractUrl(){
  const c=S.result?.contract;
- if(c==="RELAIS") return "https://www.relaisproprietaire.fr/docs/RELAIS_CGV_V20_CM2C_2026-11-15_PROJET.pdf";
+ if(c==="RELAIS") return "https://www.relaisproprietaire.fr/docs/RELAIS_CGV_V20_CM2C_2026-11-15_VERSION_PROPRE%20%286%29.pdf";
  if(c==="PRÉSENCE PROPRIÉTAIRES") return "https://www.cyrneapresence.fr/docs/PRESENCE_PROPRIETAIRES_CGV_V9_CM2C_2026-11-02%20%282%29.pdf";
- return "https://www.cyrneapresence.fr/docs/PRESENCE_ENTREPRISES_CGS_V12_2026-11-02.pdf";
+ return "https://www.cyrneapresence.fr/docs/PRESENCE_ENTREPRISES_CGS_V13_2026-11-15.pdf";
 }
 function isHorsStandard(){
  if(["RELAIS","PRÉSENCE PROPRIÉTAIRES"].includes(S.result?.contract))return false;
@@ -1955,7 +1979,7 @@ function tallyBaseUrl(){
    const fixedQuote=tallyAvailabilityMode()==="quote" && !S.result?.isQuote && S.result?.status==="PROPOSER";
    return standard||fixedQuote?TALLY_URLS.B2B_STANDARD:TALLY_URLS.B2B_HS;
  }
- return TALLY_URLS.PRESENCE_STANDARD;
+ throw new Error("Ancienne commande propriétaires PRÉSENCE : aucune redirection vers le formulaire fermé. Nouvelle demande sur RELAIS.");
 }
 function tallyMissionValue(){
  const m=String(S.result?.mission||"");
@@ -2091,6 +2115,9 @@ function validateB2BMultiBeforeGateway(){
  return true;
 }
 async function registerTallyIntent(){
+ if(S.result?.isQuote)throw Error("Devis hors grille : paiement automatique interdit. Traiter séparément le devis accepté.");
+ if(S.result?.contract==="PRÉSENCE PROPRIÉTAIRES")throw Error("Ancien contrat propriétaires PRÉSENCE : pas de nouvelle commande. Utiliser RELAIS PROPRIÉTAIRE.");
+ if(!validateB2BShortHours())throw Error("Horaire indisponible en ligne pour cette prestation B2B. Aucun paiement ne peut être préparé.");
  validateOwnerTariffAndSchedule();
  validateB2BMultiBeforeGateway();
  if(!assertVoirContractInvariant())throw new Error("Incohérence VOIR / contrat.");
@@ -2194,7 +2221,7 @@ async function shareClientTallyLink(){
   if(String(error?.message||"")==="unauthorized"||String(error?.message||"")==="invalid_operator_key")localStorage.removeItem("cyrnea_short_link_operator_key");
   if(!window.confirm("Lien court indisponible ("+String(error?.message||error)+"). Utiliser le lien Tally complet pour le SMS ?"))return;
  }
- const brand=S.result?.contract==="RELAIS"?"CYRNEA RELAIS":"CYRNEA PRÉSENCE";
+ const brand=S.result?.contract==="RELAIS"?"RELAIS PROPRIÉTAIRE":"CYRNEA PRÉSENCE";
  const message="Bonjour,\n\nVoici votre lien sécurisé "+brand+" pour compléter votre demande et consulter les conditions de service :\n\n"+smsUrl+"\n\nLe créneau reste soumis à confirmation de CYRNEA, même après règlement.";
  const phone=String(S.phone||"").replace(/[^+\d]/g,"");
  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
@@ -2237,7 +2264,7 @@ function openClientMessages(){
 }
 /* Courriel client : clé d’envoi distincte de la synchronisation des dossiers. */
 function clientMailIdentity(contract){
- if(contract==="RELAIS")return {from:"contact@relaisproprietaire.fr",brand:"CYRNEA RELAIS"};
+ if(contract==="RELAIS")return {from:"contact@relaisproprietaire.fr",brand:"RELAIS PROPRIÉTAIRE"};
  if(contract==="PRÉSENCE PROPRIÉTAIRES"||contract==="PRÉSENCE ENTREPRISES")
   return {from:"contact@cyrneapresence.fr",brand:"CYRNEA PRÉSENCE"};
  throw Error("Contrat de mission non reconnu : envoi bloqué");
@@ -2253,8 +2280,8 @@ function clientMailPayload(url){
  if(!GATEWAY_REF_RE.test(reference)||u.searchParams.get("reference_temporaire")!==reference)
   throw Error("La référence Tally ne correspond pas à la réservation enregistrée");
  const allowed={
-  "RELAIS":["b5oz46","xXOqpk"],
-  "PRÉSENCE PROPRIÉTAIRES":["GxZbE2","7R6AZa"],
+  "RELAIS":["xXOqpk"],
+  "PRÉSENCE PROPRIÉTAIRES":[], // Anciennes réservations conservées en lecture, formulaire fermé.
   "PRÉSENCE ENTREPRISES":["RGp0PQ","2EQWLD"]
  };
  if(!allowed[S.result.contract]?.includes(u.pathname.slice(3)))
@@ -2521,6 +2548,20 @@ function saveKeysTracker(){
 }
 
 function bookingHandoff(){
+ // Devis hors forfait : le Gateway interdit le paiement d’un montant libre.
+ // Conserver la demande sans générer un lien Tally trompeur ni attester un encaissement.
+ if(S.result?.isQuote){
+   setStage("RÉSERVATION");
+   S.acceptedSlot=false;
+   save();
+   return draw(`<div class="card"><h1>DEVIS ACCEPTÉ — TRAITEMENT MANUEL</h1>
+     <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result?.mission||"-"))}</span></div>
+     ${priceRows()}
+     <div class="row"><b>Créneau souhaité</b><span>${esc(scheduleText())}</span></div>
+     <div class="warn"><b>AUCUN PAIEMENT AUTOMATIQUE</b><br>Ce montant sur devis ne fait pas partie de la grille encaissable par Tally/Gateway. Ne générez pas de lien de paiement à ce tarif. La commande, les autorisations éventuelles, le paiement et la confirmation du créneau doivent être traités et vérifiés séparément par CYRNEA avant toute intervention.</div>
+     <div class="toolbar"><button class="btn ghost" onclick="goHome()">CONSERVER LE DOSSIER ET REVENIR À L’ACCUEIL</button></div>
+   </div>`);
+ }
  if(isOwnerAccessMission()&&!accessAllowed())return accessIntake();
 
  if(!assertVoirContractInvariant())return;
@@ -3535,14 +3576,20 @@ function overrunRule(){
      return {allowed:false,text:"VOIR PRIORITAIRE RELAIS : aucun tarif de prolongation n’est encore validé pour cette mission. Ne pas appliquer les +40 € RELAIS ni les +60 € VOIR RELAIS ; arrêter ou requalifier avec accord exprès du client."};
    if(mission==="VOIR RELAIS")
      return {allowed:true,unit:60,base:"TTC",max:null,label:"+60 € TTC par tranche de 30 min commencée, pour terminer l’observation convenue, avec accord exprès"};
-   return {allowed:true,unit:40,base:"TTC",max:2,label:"+40 € TTC par tranche de 30 min commencée, maximum 2 tranches, avec accord exprès"};
+   if(["RELAIS SIMPLE","RELAIS"].includes(mission))
+     return {allowed:true,unit:40,base:"TTC",max:2,label:"+40 € TTC par tranche de 30 min commencée, maximum 2 tranches, avec accord exprès"};
+   return {allowed:false,text:"Aucune prolongation tarifée n’est prévue pour cette formule RELAIS. SUIVRE et les passages supplémentaires nécessitent un accord distinct : arrêter puis requalifier."};
  }
  if(contract==="PRÉSENCE PROPRIÉTAIRES")
    return {allowed:true,unit:60,base:"TTC",max:null,label:"+60 € TTC par tranche de 30 min commencée, avec accord exprès"};
  if(contract==="PRÉSENCE ENTREPRISES"){
    if(["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","PRÉSENCE LOGISTIQUE B2B"].includes(mission))
      return {allowed:true,unit:75,base:"HT",max:2,label:"+75 € HT par tranche de 30 min commencée, maximum 2 tranches, pour terminer la même opération, avec accord exprès"};
-   return {allowed:true,unit:75,base:"HT",max:null,label:"+75 € HT par tranche de 30 min commencée, avec accord exprès"};
+   if(mission==="GESTES SIMPLES SUR SITE B2B")
+     return {allowed:false,text:"GESTES SIMPLES (45 min) : aucune prolongation automatique ni supplément horaire forfaitaire. Toute autre action nécessite un accord distinct."};
+   if(["VISITE TERRAIN PILOTÉE","PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(mission))
+     return {allowed:true,unit:75,base:"HT",max:null,label:"+75 € HT par tranche de 30 min commencée, uniquement pour terminer le même objectif, sans étendre le périmètre ni ajouter un jalon, après accord exprès"};
+   return {allowed:false,text:"Mission B2B non reconnue dans la grille de prolongation : obtenir un accord distinct avant toute intervention supplémentaire."};
  }
  return {allowed:false,text:"La mission doit être requalifiée avant toute prolongation."};
 }
