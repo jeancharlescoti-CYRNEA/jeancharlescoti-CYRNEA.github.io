@@ -3572,7 +3572,9 @@ function overrunRule(){
      return {allowed:true,unit:75,base:"HT",max:2,label:"+75 € HT par tranche de 30 min commencée, maximum 2 tranches, pour terminer la même opération, avec accord exprès"};
    if(mission==="GESTES SIMPLES SUR SITE B2B")
      return {allowed:false,text:"GESTES SIMPLES (45 min) : aucune prolongation automatique ni supplément horaire forfaitaire. Toute autre action nécessite un accord distinct."};
-   return {allowed:false,text:"Cette prestation B2B ne comporte pas de prolongation horaire standard dans le parcours. Se référer au contrat et obtenir un accord ou devis distinct."};
+   if(["VISITE TERRAIN PILOTÉE","PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE","CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(mission))
+     return {allowed:true,unit:75,base:"HT",max:null,label:"+75 € HT par tranche de 30 min commencée, uniquement pour terminer le même objectif, sans étendre le périmètre ni ajouter un jalon, après accord exprès"};
+   return {allowed:false,text:"Mission B2B non reconnue dans la grille de prolongation : obtenir un accord distinct avant toute intervention supplémentaire."};
  }
  return {allowed:false,text:"La mission doit être requalifiée avant toute prolongation."};
 }
