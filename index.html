@@ -2115,6 +2115,7 @@ function validateB2BMultiBeforeGateway(){
  return true;
 }
 async function registerTallyIntent(){
+ if(S.result?.isQuote)throw Error("Devis hors grille : paiement automatique interdit. Traiter séparément le devis accepté.");
  if(S.result?.contract==="PRÉSENCE PROPRIÉTAIRES")throw Error("Ancien contrat propriétaires PRÉSENCE : pas de nouvelle commande. Utiliser RELAIS PROPRIÉTAIRE.");
  if(!validateB2BShortHours())throw Error("Horaire indisponible en ligne pour cette prestation B2B. Aucun paiement ne peut être préparé.");
  validateOwnerTariffAndSchedule();
@@ -2547,6 +2548,20 @@ function saveKeysTracker(){
 }
 
 function bookingHandoff(){
+ // Devis hors forfait : le Gateway interdit le paiement d’un montant libre.
+ // Conserver la demande sans générer un lien Tally trompeur ni attester un encaissement.
+ if(S.result?.isQuote){
+   setStage("RÉSERVATION");
+   S.acceptedSlot=false;
+   save();
+   return draw(`<div class="card"><h1>DEVIS ACCEPTÉ — TRAITEMENT MANUEL</h1>
+     <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result?.mission||"-"))}</span></div>
+     ${priceRows()}
+     <div class="row"><b>Créneau souhaité</b><span>${esc(scheduleText())}</span></div>
+     <div class="warn"><b>AUCUN PAIEMENT AUTOMATIQUE</b><br>Ce montant sur devis ne fait pas partie de la grille encaissable par Tally/Gateway. Ne générez pas de lien de paiement à ce tarif. La commande, les autorisations éventuelles, le paiement et la confirmation du créneau doivent être traités et vérifiés séparément par CYRNEA avant toute intervention.</div>
+     <div class="toolbar"><button class="btn ghost" onclick="goHome()">CONSERVER LE DOSSIER ET REVENIR À L’ACCUEIL</button></div>
+   </div>`);
+ }
  if(isOwnerAccessMission()&&!accessAllowed())return accessIntake();
 
  if(!assertVoirContractInvariant())return;
