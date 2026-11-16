@@ -259,7 +259,7 @@ const B2B_TALLY_MISSION={
   "PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE B2B - 169 € HT",
   "GESTES SIMPLES SUR SITE B2B":"GESTES SIMPLES SUR SITE B2B - 169 € HT"
 };
-function b2bCommercialMissionName(name){const labels={"VOIR RELAIS":"VOIR & DÉCIDER","SUIVRE":"SUIVRE L’ÉVOLUTION SUR PLACE","VISITE TERRAIN PILOTÉE":"VISITE DE SITE","PRÉSENCE PROJET":"PRÉSENCE — 1 H 15","PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE — 3 H","SUIVI DE PROJET - 2 PASSAGES":"SUIVI DE PROJET — 2 PASSAGES","CONTINUITÉ PROJET":"SUIVI DE PROJET — 3 PASSAGES","ACCÈS B2B":"DONNER ACCÈS","REMISE CLÉ / BADGE B2B":"REMISE CLÉ / BADGE","RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE","PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE","GESTES SIMPLES SUR SITE B2B":"GESTES SIMPLES SUR SITE","CLÉS — 2 PASSAGES":"REMISE ET RÉCUPÉRATION DES CLÉS","CLÉS — 2 PASSAGES B2B":"REMISE ET RÉCUPÉRATION DES CLÉS"};return labels[name]||name}
+function b2bCommercialMissionName(name){const labels={"VOIR RELAIS":"VOIR & DÉCIDER","SUIVRE":"SUIVRE L’ÉVOLUTION SUR PLACE","VISITE TERRAIN PILOTÉE":"VISITE DE SITE","PRÉSENCE PROJET":"PRÉSENCE — 1 H 15","PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE — 3 H","SUIVI DE PROJET - 2 PASSAGES":"SUIVI DE PROJET — 2 PASSAGES","CONTINUITÉ PROJET":"SUIVI DE PROJET — 3 PASSAGES","ACCÈS B2B":"DONNER ACCÈS","REMISE CLÉ / BADGE B2B":"REMISE CLÉ / BADGE","RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE","PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE","GESTES SIMPLES SUR SITE B2B":"GESTES SIMPLES SUR SITE","CLÉS — 2 PASSAGES":"REMETTRE PUIS RÉCUPÉRER VOS CLÉS (OU L’INVERSE)","CLÉS — 2 PASSAGES B2B":"RÉCUPÉRER ET REMETTRE DES CLÉS — 2 PASSAGES","REMISE ET RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRER ET REMETTRE DES CLÉS — 2 PASSAGES"};return labels[name]||name}
 function activeMissionKey(st=S){return String(st?.missionId||st?.draftKey||"")}
 function isActiveMissionState(st=S){
  return !!(st && st.result && String(st.result.mission||"").trim() && String(st.result.contract||"").trim() && st.stage!=="ARCHIVE");
@@ -830,9 +830,8 @@ const ownerNeeds=[
 const relaisNeeds=[
  ["ART","Un artisan ou un professionnel doit intervenir","Accueil, présence courte et fermeture","STANDARD"],
  ["DEL","Un livreur, installateur ou dépanneur doit intervenir","Accueil, présence courte et fermeture","STANDARD"],
- ["KEY_GET","Récupérer vos clés, badges ou télécommandes","Une récupération ponctuelle auprès d’une personne désignée","STANDARD"],
- ["KEY_GIVE","Remettre vos clés, badges ou télécommandes","Une remise ponctuelle à la personne désignée","STANDARD"],
- ["KEY_BOTH","Remettre ET récupérer vos clés (ou inversement)","Deux passages distincts, 199 € TTC ; réservation sur le site RELAIS","STANDARD"],
+ ["KEY_SINGLE","REMETTRE OU RÉCUPÉRER VOS CLÉS","Une remise OU une récupération — 109 € TTC, 30 min maximum.","STANDARD"],
+ ["KEY_BOTH","REMETTRE PUIS RÉCUPÉRER VOS CLÉS (OU L’INVERSE)","Deux passages distincts — 199 € TTC, 2 × 30 min ; réservation sur le site RELAIS.","STANDARD"],
  ["OPEN","Ouvrir avant votre arrivée","Ouverture et actions simples convenues","STANDARD"],
  ["WEATHER","Avant / après une intempérie","Action simple ou vérification courte","STANDARD"],
  ["SEE","VOIR & DÉCIDER","Observation factuelle pour décider soi-même — 260 € TTC","VIEW"],
@@ -883,6 +882,14 @@ const subs={
 };
 
 function sub(){
+ if(S.caller==="OWNER" && S.need==="KEY_SINGLE"){
+   return draw(`<div class="card"><h1>REMETTRE OU RÉCUPÉRER VOS CLÉS</h1>
+      <div class="muted">Une seule opération : 109 € TTC, un rendez-vous de 30 minutes maximum.</div>
+      <div class="choices">
+        <button class="choice standard" onclick="S.need='KEY_GIVE';sub()">REMETTRE DES CLÉS</button>
+        <button class="choice standard" onclick="S.need='KEY_GET';sub()">RÉCUPÉRER DES CLÉS</button>
+      </div></div>`);
+ }
  if(S.caller==="OWNER" && S.need==="KEY_BOTH"){
    S.sub="BOTH";
    S.result={status:"PARCOURS SITE OFFICIEL",mission:"CLÉS — 2 PASSAGES",price:"199 € TTC",cap:"2 passages de 30 min maximum",contract:"RELAIS",rest:"R0",multi:true,passages:2};
@@ -950,7 +957,7 @@ function classify(){
    if(S.sub==="KEY_GET")r={status:"PROPOSER",mission:"RÉCUPÉRATION CLÉ / BADGE B2B",price:"109 € HT",cap:"action unique, cadre court",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="STAY")r={status:"PROPOSER",mission:"PRÉSENCE LOGISTIQUE B2B",price:"169 € HT",cap:"1 h",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="GESTES")r={status:"PROPOSER",mission:"GESTES SIMPLES SUR SITE B2B",price:"169 € HT",cap:"45 min maximum",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
-   if(S.sub==="KEY_BOTH")r={status:"PARCOURS SITE OFFICIEL",mission:"CLÉS — 2 PASSAGES B2B",price:"218 € HT",cap:"2 passages de 30 min maximum",contract:"PRÉSENCE ENTREPRISES",rest:"R0",multi:true,passages:2};
+   if(S.sub==="KEY_BOTH")r={status:"PARCOURS SITE OFFICIEL",mission:"REMISE ET RÉCUPÉRATION CLÉ / BADGE B2B",price:"218 € HT",cap:"2 passages de 30 min maximum",contract:"PRÉSENCE ENTREPRISES",rest:"R0",multi:true,passages:2};
  }
 }
  else{
@@ -1699,7 +1706,7 @@ function multiPassagePricing(){
   save();
   showManualMultiReview();
 }
-function plannedPassageCount(){if(S.result?.mission==="SUIVRE")return S.result?.passages===3?3:2;return S.result?.mission==="SUIVI DE PROJET - 2 PASSAGES"?2:3;}
+function plannedPassageCount(){if(S.result?.mission==="SUIVRE")return S.result?.passages===3?3:2;if(["REMISE ET RÉCUPÉRATION CLÉ / BADGE B2B","CLÉS — 2 PASSAGES B2B","CLÉS — 2 PASSAGES"].includes(S.result?.mission))return 2;return S.result?.mission==="SUIVI DE PROJET - 2 PASSAGES"?2:3;}
 function multiPassageRows(){
   if(!S.result.multi||!Array.isArray(S.multiSlots)) return "";
   let rows=S.multiSlots.map(p=>`
@@ -2449,7 +2456,7 @@ function isOwnerAccessMission(){return S.result && ["RELAIS","PRÉSENCE PROPRIÉ
 
 function isKeyMission(){return S.result?.contract==="RELAIS"&&S.need==="KEY"}
 
-function isB2BKeyMission(){return S.result?.contract==="PRÉSENCE ENTREPRISES"&&S.need==="BLOG"&&["KEY_GET","KEY_GIVE"].includes(S.sub)}
+function isB2BKeyMission(){return S.result?.contract==="PRÉSENCE ENTREPRISES"&&S.need==="BLOG"&&["KEY_GET","KEY_GIVE","KEY_BOTH"].includes(S.sub)}
 function isB2BKeyCustody(){return S.result?.contract==="PRÉSENCE ENTREPRISES"&&(isB2BKeyMission()||["Clés reçues / disponibles avant la mission","Clés à récupérer"].includes(String(S.prep?.mode||""))||!!S.keyCustody?.receivedAt||!!S.accessPlan?.keysAvailableConfirmed)}
 function hasKeyCustody(){return (isOwnerAccessMission()&&(isKeyMission()||["LOCAL","POST"].includes(S.accessPlan?.mode)))||isB2BKeyCustody()}
 
@@ -3608,7 +3615,7 @@ function overrunRule(){
  if(contract==="PRÉSENCE PROPRIÉTAIRES")
    return {allowed:true,unit:60,base:"TTC",max:null,label:"+60 € TTC par tranche de 30 min commencée, avec accord exprès"};
  if(contract==="PRÉSENCE ENTREPRISES"){
-   if(["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","PRÉSENCE LOGISTIQUE B2B"].includes(mission))
+   if(["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","REMISE ET RÉCUPÉRATION CLÉ / BADGE B2B","CLÉS — 2 PASSAGES B2B","PRÉSENCE LOGISTIQUE B2B"].includes(mission))
      return {allowed:true,unit:75,base:"HT",max:2,label:"+75 € HT par tranche de 30 min commencée, maximum 2 tranches, pour terminer la même opération, avec accord exprès"};
    if(mission==="GESTES SIMPLES SUR SITE B2B")
      return {allowed:false,text:"GESTES SIMPLES (45 min) : aucune prolongation automatique ni supplément horaire forfaitaire. Toute autre action nécessite un accord distinct."};
