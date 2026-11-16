@@ -1216,7 +1216,7 @@ function normalizeTime4(v){
 function timeDropdownHtml(baseId,onchangeFn="refreshCalendarConstraints()"){
  const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES";
  const hours=Array.from({length:24},(_,i)=>pad2(i));
- const hoursNote="Demande possible à toute heure, sans confirmation automatique du créneau.";
+ const hoursNote=isB2B?"Demande B2B à toute heure, sans confirmation automatique ; les horaires particuliers restent soumis aux CGS.":"RELAIS : commande en ligne du lundi au samedi, hors jours fériés, de 08 h 00 à 18 h 45. Autres horaires : contact direct et accord préalable.";
 
   const minutes=["00","15","30","45"];
   return `<div class="field"><label>Heure</label>
@@ -1652,6 +1652,7 @@ function multiPassagePricing(){
     }
   }
   if(!passages.length) return alert("Le premier passage / jalon doit être renseigné.");
+  if(S.result?.contract==="RELAIS"&&!S.result?.isQuote&&passages.some(p=>!relaisOnlineSlotAllowed(p.date,p.time)))return alert("Pour RELAIS, chaque passage demandé en ligne doit être du lundi au samedi, hors jours fériés, de 08 h à 18 h 45. Pour les autres horaires : contact direct et accord préalable.");
 
   if(S.result.isQuote){
     passages.forEach(p=>{
@@ -1854,6 +1855,12 @@ function manualConfirmMultiSlots(){
   save();
   bookingHandoff();
 }
+function relaisOnlineSlotAllowed(dateStr,timeStr){
+ const d=new Date(String(dateStr||"")+"T12:00:00"),t=normalizeTime4(timeStr);
+ if(!Number.isFinite(d.getTime())||d.getDay()===0||isFrenchPublicHoliday(dateStr)||!/^(?:[01][0-9]|2[0-3]):(?:00|15|30|45)$/.test(t))return false;
+ const min=Number(t.slice(0,2))*60+Number(t.slice(3));
+ return min>=480&&min<=1125;
+}
 function confirmSlot(){
   if(["PAID_PENDING_CONFIRMATION","PAID_CONFIRMED"].includes(S.paymentStatus))
     return alert("Créneau déjà payé : ne pas refaire une réservation. Utiliser la procédure d’alternative ou requalifier le dossier.");
@@ -1863,6 +1870,7 @@ function confirmSlot(){
   S.slot=normalizeTime4(getDropdownTime("sl"));
   const check=validateMissionTimeRules(S.date,S.slot,"ce créneau");
   if(!check.ok) return alert(check.msg);
+  if(S.result?.contract==="RELAIS"&&!S.result?.isQuote&&!relaisOnlineSlotAllowed(S.date,S.slot))return alert("Hors plage de commande RELAIS en ligne : du lundi au samedi, hors jours fériés, 08 h–18 h 45. Contact direct, sans paiement automatique.");
   if(!validateB2BShortHours())return alert("Ce service ne se réserve pas en soirée ou de nuit : choisissez 08 h–18 h 45, ou contactez directement CYRNEA.");
   refreshCalendarConstraints();
   availabilityPricing();
@@ -1913,7 +1921,7 @@ function slot(){
  <label class="check"><input type="checkbox" id="sunholiday" disabled> <span>Dimanche ou jour férié — détecté automatiquement.</span></label>
  <div class="muted">Les majorations B2B existantes ne se cumulent pas. Le Gateway vérifie le montant avant paiement ; hors plage tarifaire, seule la base fixe est encaissable, sous confirmation CYRNEA.</div>
  </div>`:
- `<div class="neutral">Demande possible à toute heure, à tarif fixe sans majoration automatique ; confirmation après paiement.</div>`}
+ `<div class="neutral">RELAIS : tarif fixe sans majoration. Commande en ligne du lundi au samedi hors jours fériés, 08 h–18 h 45 ; autres horaires sur contact direct. Le créneau reste soumis à confirmation humaine.</div>`}
 
  <div class="notice">${S.result?.contract==="PRÉSENCE ENTREPRISES"?"Les contraintes B2B sont tarifées selon le créneau.":"Demande à tarif fixe, sans majoration automatique."} La demande est transmise à Tally puis reste soumise à confirmation humaine.</div>
  <button class="btn primary" onclick="confirmSlot()">VÉRIFIER DISPONIBILITÉ ET TARIF</button>
@@ -2099,7 +2107,7 @@ function validateOwnerTariffAndSchedule(){
    for(const p of known){
      const date=new Date(String(p.date||"")+"T12:00:00"), t=normalizeTime4(p.time);
      const mins=Number(t.slice(0,2))*60+Number(t.slice(3,5));
-     if(!Number.isFinite(date.getTime())||date.getDay()===0||isFrenchPublicHoliday(p.date)||!/^\d{2}:\d{2}$/.test(t)||mins<480||mins>1125)
+     if(!relaisOnlineSlotAllowed(p.date,p.time))
        throw new Error("Hors plage RELAIS en ligne (lundi à samedi, hors fériés, 08 h–18 h 45). Demande par contact direct, sans paiement standard.");
    }
  }
