@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-20261115-presence-relais-v21';
+const CACHE='cyrnea-assistant-20261116-presence-relais-v22';
 const ASSETS=['./index.html','./terrain-clock.js','./change-inbox.js','./h2-integration.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
