@@ -9,7 +9,7 @@ function official(ref,contract){
  if(!m||!['RELAIS','PRÉSENCE PROPRIÉTAIRES','PRÉSENCE ENTREPRISES'].includes(contract))return '';
  return (contract==='RELAIS'?'RP':'CP')+'-'+m[1].slice(0,4)+'-'+(BigInt('0x'+m[2])%1000000000000n).toString().padStart(12,'0');
 }
-function baseMission(v){return String(v||'').toUpperCase().replace(/\s+-\s+[\d\s\u00a0\u202f]+€\s*(?:HT|TTC)?$/u,'').replace(/\s+/g,' ').trim()}
+function baseMission(v){const m=String(v||'').toUpperCase().replace(/\s+-\s+[\d\s\u00a0\u202f]+€\s*(?:HT|TTC)?$/u,'').replace(/\s+/g,' ').trim();return m==='CLÉS — 2 PASSAGES B2B'?'REMISE ET RÉCUPÉRATION CLÉ / BADGE B2B':m}
 function matching(d){return d?.ok===true&&d.payment_reference===S.tallyReference&&d.contract===S.result?.contract&&d.official_reference===official(d.payment_reference,d.contract)&&baseMission(d.mission)===baseMission(S.result?.mission)}
 function html(){
  const d=S.h2Dossier;
