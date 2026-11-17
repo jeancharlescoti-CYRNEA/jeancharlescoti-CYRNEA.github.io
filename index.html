@@ -607,7 +607,15 @@ function openArchivedMission(id){
  localStorage.removeItem(STAGE_VIEWS_KEY);
  STAGE_VIEWS={};NAV=[];LAST_VIEW=null;
  REACHED_STAGES=new Set(S.history);REACHED_STAGES.add("ACCUEIL");REACHED_STAGES.add("ARCHIVE");syncReached();
- archive();
+ // Simple consultation : ne pas réarchiver ou mettre à jour un dossier clôturé.
+ draw(`<div class="card"><h1>Archive — consultation</h1>
+  <div class="row"><b>Référence</b><span>${esc(S.missionId||id)}</span></div>
+  <div class="row"><b>Client</b><span>${esc(S.name||"-")}</span></div>
+  <div class="row"><b>Mission</b><span>${esc(b2bCommercialMissionName(S.result?.mission||"-"))}</span></div>
+  <div class="row"><b>Statut final</b><span>${esc(S.finalStatus||"MISSION ARCHIVÉE")}</span></div>
+  <div class="row"><b>Restitution transmise (attestation)</b><span>${esc(S.restitutionSentAt||"Non attestée")}</span></div>
+  <div class="toolbar"><button id="archiveExportBtn" class="btn primary" onclick="exportMissionArchive()">RÉEXPORTER LE DOSSIER → FICHIERS / iCLOUD</button>
+  <button class="btn ghost" onclick="archivedMissions()">RETOUR AUX ARCHIVES</button></div></div>`);
 }
 function resumeStoredMission(id){
  persistActiveSnapshot(S);
