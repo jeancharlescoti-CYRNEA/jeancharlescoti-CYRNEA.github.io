@@ -13,7 +13,7 @@ function passages(st){
 }
 function model(media){
  const st=S,mission=typeof b2bCommercialMissionName==='function'?b2bCommercialMissionName(st.result?.mission):st.result?.mission;
- return {reference:st.missionId||st.draftKey||'—',client:st.name||'Non renseigné',mission:mission||'Mission non renseignée',contract:st.result?.contract||'',site:st.prep?.addr||st.city||'Non renseigné',objet:st.obj||'Non renseigné',schedule:typeof scheduleText==='function'?scheduleText():(st.date||''),status:document.getElementById('fs')?.value||st.finalStatus||(st.departureAt?'MISSION RÉALISÉE — RESTITUTION À VALIDER':'BROUILLON — TERRAIN NON TERMINÉ'),arrivee:st.arrivalAt||'',depart:st.departureAt||'',faits:points(st.facts),incident:st.incident||'Non renseigné',passages:passages(st),media};
+ return {reference:st.missionId||st.draftKey||'—',client:st.name||'Non renseigné',mission:mission||'Mission non renseignée',contract:st.result?.contract||'',site:st.prep?.addr||st.city||'Non renseigné',objet:st.obj||'Non renseigné',schedule:typeof scheduleText==='function'?scheduleText():(st.date||''),status:document.getElementById('fs')?.value||st.finalStatus||(st.departureAt?'MISSION RÉALISÉE — RESTITUTION À VALIDER':'BROUILLON — TERRAIN NON TERMINÉ'),arrivee:st.arrivalAt||'',depart:st.departureAt||'',faits:points(st.facts),incident:st.incident||'Non renseigné',passages:passages(st),details:st.reportDetails||{},media};
 }
 function sections(m){
  const a=[
@@ -31,6 +31,16 @@ function sections(m){
   ['Arrivée',m.arrivee||'Non horodatée'],['Départ',m.depart||'Non horodaté'],
   ['Faits relevés / actions réalisées',m.faits.join(' ; ')||'Non renseignés'],
   ['Incident, impossibilité ou limite',m.incident]]]);
+ const detailed=m.passages.length>1?m.passages:[{passage:1,reportDetails:m.details||{}}];
+ for(const passage of detailed){
+  const d=passage.reportDetails||{};
+  if(d.observations||d.declarations||d.limites)
+   a.push([(m.passages.length>1?'COMPLÉMENTS — PASSAGE '+passage.passage:'PRÉCISIONS FACTUELLES'),[
+    ['Observations complémentaires',d.observations||'Aucune précision complémentaire'],
+    ['Déclarations attribuées à des tiers',d.declarations||'Aucune déclaration complémentaire'],
+    ['Limites / éléments non vérifiés',d.limites||'Aucune limite complémentaire signalée']
+   ]]);
+ }
  a.push(['PIÈCES JOINTES',[['Inventaire',m.media.map(r=>'Passage '+(r.passage||'client')+' — '+r.name).join(' ; ')||'Aucune pièce']]]); 
  a.push(['NATURE DU COMPTE RENDU',[['Limites','Restitution factuelle des informations enregistrées. Aucune expertise, diagnostic, conformité, réception de travaux ou décision prise à la place du client. Les éléments non observables restent non vérifiés.']]]);
  return a;
@@ -87,7 +97,7 @@ async function mediaOnThisDevice(){
  return r;
 }
 function emailText(m){return 'Objet : CYRNEA — Compte rendu de mission '+m.reference+'\n\nBonjour,\n\nVeuillez trouver ci-joint le dossier de notre intervention « '+m.mission+' » sur le site '+m.site+'.\n\nIl contient le compte rendu factuel au format PDF et les pièces associées lorsqu’elles existent.\n\nLes décisions vous appartiennent.\n\nCordialement,\nCYRNEA\n'}
-function fingerprint(){return JSON.stringify({id:S.missionId,p:S.passage,faits:S.facts,incident:S.incident,depart:S.departureAt,historique:S.passageHistory||[],fichiers:S.terrainMedia||[],statut:document.getElementById('fs')?.value||S.finalStatus||''})}
+function fingerprint(){return JSON.stringify({id:S.missionId,p:S.passage,faits:S.facts,incident:S.incident,details:S.reportDetails||{},depart:S.departureAt,historique:S.passageHistory||[],fichiers:S.terrainMedia||[],statut:document.getElementById('fs')?.value||S.finalStatus||''})}
 async function addClientDocs(){
  const input=document.getElementById('crDocs'),files=[...(input?.files||[])];
  if(!files.length)return alert('Sélectionnez les documents à joindre.');
