@@ -132,7 +132,7 @@ async function addClientDocs(){
 }
 async function openReport(){
  if(typeof saveRestitutionDetails==='function'&&document.getElementById('crNotesObservations'))saveRestitutionDetails();
- try{const m=model(await mediaOnThisDevice());document.getElementById('crDialog')?.remove();
+ try{const m=model((await mediaOnThisDevice()).filter(x=>x.purpose!=='PREP_INTERNAL'));document.getElementById('crDialog')?.remove();
   const d=document.createElement('div');d.id='crDialog';d.style.cssText='position:fixed;inset:0;overflow-y:auto;z-index:9999;background:#202425ee;padding:12px 6px';
   d.innerHTML='<div style="max-width:760px;margin:auto;background:white;padding:18px;box-sizing:border-box;line-height:1.5;font-family:Arial;color:#303437">'+
   '<div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" onclick="crCloseReport()">FERMER</button><button type="button" onclick="crExportClient()">EXPORTER PDF + PIÈCES</button></div>'+
@@ -147,7 +147,7 @@ async function exportClient(){
  if(typeof saveRestitutionDetails==='function'&&document.getElementById('crNotesObservations'))saveRestitutionDetails();
  if(!S.departureAt)return alert('Terminer le terrain avant d’envoyer un compte rendu client.');
  if(S.stage==='RESTITUTION')return alert('Valider la restitution puis choisir le statut de clôture avant l’export définitif.');
- try{const media=await mediaOnThisDevice(),m=model(media),enc=new TextEncoder();
+ try{const media=(await mediaOnThisDevice()).filter(x=>x.purpose!=='PREP_INTERNAL'),m=model(media),enc=new TextEncoder();
   const items=[{name:'COMPTE_RENDU_CLIENT.pdf',data:pdf(m)},{name:'EMAIL_PRET_A_ENVOYER.txt',data:enc.encode(emailText(m))}];
   const seen=new Set();
   for(const f of media){let root='PIECES/'+(Number(f.passage)===0?'DOCUMENTS_CLIENT':'PASSAGE_'+String(f.passage).padStart(2,'0'))+'/';
