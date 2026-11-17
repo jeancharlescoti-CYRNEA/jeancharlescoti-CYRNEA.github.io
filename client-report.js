@@ -137,15 +137,23 @@ async function exportClient(){
   S.clientReportExportedAt=nowStamp();S.clientReportFingerprint=fingerprint();save();closeReport();
  }catch(e){if(e?.name!=='AbortError')alert('Export non terminé : '+String(e.message||e))}
 }
-const oldDraw=draw;
-draw=function(content,remember){const r=oldDraw(content,remember);if(!S.result||!S.missionId||!['RESTITUTION','CLÔTURE','ARCHIVE'].includes(S.stage))return r;
- const host=document.getElementById('app'),card=host?.querySelector('.card');if(!card)return r;
- const panel=document.createElement('div');panel.className='neutral';panel.style.margin='14px 0';panel.innerHTML='<b>COMPTE RENDU CLIENT</b><p>PDF factuel et pièces réellement conservées sur cet appareil, dans un ZIP distinct de l’archive interne.</p><div class="toolbar"><button type="button" class="btn ghost" onclick="crOpenReport()">PRÉVISUALISER</button><button type="button" class="btn primary" onclick="crExportClient()">EXPORTER PDF + PIÈCES (ZIP)</button></div>';
+function crInstallReportActions(){
+ if(!S.result||!S.missionId||!['RESTITUTION','CLÔTURE','ARCHIVE'].includes(S.stage))return;
+ const host=document.getElementById('app'),card=host?.querySelector('.card');if(!card)return;
  const closeBtn=host.querySelector('button[onclick="finalizeArchive()"]');
- if(S.stage==='CLÔTURE'&&closeBtn){closeBtn.before(panel);const archiveUI=document.createElement('div');archiveUI.className='neutral';archiveUI.innerHTML='<b>ARCHIVAGE INTERNE</b><div class="toolbar"><button id="archiveExportBtn" type="button" class="btn primary" onclick="exportMissionArchive()">EXPORTER DOSSIER INTERNE → iCLOUD</button></div><label class="check"><input id="archiveIcloudChecked" type="checkbox"><span>J’atteste avoir enregistré et contrôlé l’archive interne dans iCloud Drive.</span></label>';closeBtn.before(archiveUI)}
- else card.appendChild(panel);
- return r;
-};
+ if(!host.querySelector('button[onclick="crExportClient()"]')){
+  const panel=document.createElement('div');panel.className='neutral';panel.style.margin='14px 0';
+  panel.innerHTML='<b>COMPTE RENDU CLIENT</b><p>PDF factuel et pièces réellement conservées sur cet appareil, dans un ZIP distinct de l’archive interne.</p><div class="toolbar"><button type="button" class="btn ghost" onclick="crOpenReport()">PRÉVISUALISER</button><button type="button" class="btn primary" onclick="crExportClient()">EXPORTER PDF + PIÈCES (ZIP)</button></div>';
+  if(S.stage==='CLÔTURE'&&closeBtn)closeBtn.before(panel);else card.appendChild(panel);
+ }
+ if(S.stage==='CLÔTURE'&&closeBtn&&!document.getElementById('archiveIcloudChecked')){
+  const archiveUI=document.createElement('div');archiveUI.className='neutral';
+  archiveUI.innerHTML='<b>ARCHIVAGE INTERNE</b><div class="toolbar"><button id="archiveExportBtn" type="button" class="btn primary" onclick="exportMissionArchive()">EXPORTER DOSSIER INTERNE → iCLOUD</button></div><label class="check"><input id="archiveIcloudChecked" type="checkbox"><span>J’atteste avoir enregistré et contrôlé l’archive interne dans iCloud Drive.</span></label>';
+  closeBtn.before(archiveUI);
+ }
+}
+const oldDraw=draw;
+draw=function(content,remember){const ret=oldDraw(content,remember);crInstallReportActions();return ret};
 const oldFinalize=finalizeArchive;
 finalizeArchive=function(){
  if(!S.clientReportExportedAt||S.clientReportFingerprint!==fingerprint())return alert('Exporter le compte rendu client actualisé (PDF et pièces) avant archivage.');
@@ -155,4 +163,6 @@ finalizeArchive=function(){
 };
 window.crOpenReport=openReport;window.crCloseReport=closeReport;window.crExportClient=exportClient;window.crAddClientDocs=addClientDocs;
 window.crReportPdf=pdf;window.crReportModel=model;
+// Le démarrage de index.html précède le chargement de ce module : réhydrater l’écran actuel.
+crInstallReportActions();
 })();
