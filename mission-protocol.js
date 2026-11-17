@@ -133,7 +133,7 @@ function currentCompareHtml(){
   refs.map((label,i)=>{const prev=previousRecord(i),cur=found[i]||{};
    return '<div class="field" data-compare-index="'+i+'" style="border-top:1px solid #ddd;padding-top:12px">'+
    '<label><b>REPÈRE '+(i+1)+' — '+esc(label)+'</b></label>'+
-   (prev.data?'<div class="notice"><b>Passage '+prev.passage+' :</b> '+esc(prev.data.status||"—")+' — '+esc(prev.data.note||"Observation non détaillée")+(prev.data.photo?' · Photo : '+esc(prev.data.photo):'')+'</div>':'')+
+   (prev.data?'<div class="notice"><b>Passage '+prev.passage+' :</b> '+esc(prev.data.status||"—")+' — '+esc(prev.data.note||"Observation non détaillée")+(prev.data.photo?' · Photo : '+esc(prev.data.photo):'')+'</div><div data-previous-photo="'+i+'" class="muted" style="margin:5px 0"></div>':'')+
    '<label>Constat de ce passage *</label><select data-role="status"><option value="">— Choisir —</option>'+
    options.map(x=>'<option value="'+x+'"'+(cur.status===x?' selected':'')+'>'+esc(x==="OBSERVE"?"Observé (base de référence)":x==="IDENTIQUE"?"Aucune différence visible dans les éléments observés":x==="DIFFERENT"?"Différence visible documentée":"Non observable / non vérifiable")+'</option>').join('')+'</select>'+
    '<label>Description factuelle / limite *</label><textarea rows="2" maxlength="1000" data-role="note" placeholder="Décrire ce qui est réellement visible, sans conclusion technique.">'+esc(cur.note||"")+'</textarea>'+
@@ -145,11 +145,31 @@ function currentCompareHtml(){
 async function updatePhotoOptions(){
  if(!isCompare())return;
  const container=document.getElementById('cyrneaComparisonInputs');if(!container)return;
- let records=[];try{records=await getTerrainMediaRecords(S,false)}catch(e){return}
+ let records=[];try{records=await getTerrainMediaRecords(S,true)}catch(e){
+  container.querySelectorAll('[data-previous-photo]').forEach(x=>x.textContent="Fichiers de référence non accessibles sur cet appareil.");
+  return;
+ }
+ const current=records.filter(x=>Number(x.passage)===Number(S.passage)&&String(x.type||"").startsWith("image/"));
  for(const select of container.querySelectorAll('[data-role="photo"]')){
-  const selected=select.value,imgs=records.filter(x=>String(x.type||"").startsWith("image/"));
+  const selected=select.value;
   select.innerHTML='<option value="">— Aucune photo associée —</option>'+
-    imgs.map(x=>'<option value="'+esc(x.name)+'"'+(selected===x.name?' selected':'')+'>'+esc(x.name)+'</option>').join('');
+    current.map(x=>'<option value="'+esc(x.name)+'"'+(selected===x.name?' selected':'')+'>'+esc(x.name)+'</option>').join('');
+  if(selected&&!current.some(x=>x.name===selected)){
+   const missing=document.createElement('option');missing.value=selected;missing.textContent=selected+' — photo annoncée mais absente ici';missing.selected=true;select.appendChild(missing);
+  }
+ }
+ for(const node of container.querySelectorAll('[data-previous-photo]')){
+  const prev=previousRecord(Number(node.dataset.previousPhoto));
+  const file=records.find(x=>Number(x.passage)===Number(prev.passage)&&x.name===prev.data?.photo&&String(x.type||"").startsWith("image/"));
+  node.textContent='';
+  if(!prev.data?.photo)continue;
+  if(!file){node.textContent="Photo du passage précédent absente de cet appareil : "+prev.data.photo;continue}
+  const url=URL.createObjectURL(file.blob),img=document.createElement('img');
+  img.alt='Photo repère du passage '+prev.passage+' : '+prev.data.photo;
+  img.src=url;img.style.cssText='width:min(100%,240px);max-height:180px;object-fit:contain;border:1px solid #ddd;border-radius:4px';
+  img.onload=()=>URL.revokeObjectURL(url);
+  img.onerror=()=>URL.revokeObjectURL(url);
+  node.appendChild(img);
  }
 }
 function mountComparison(){
