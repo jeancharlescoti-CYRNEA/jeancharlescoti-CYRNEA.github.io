@@ -74,31 +74,6 @@ collectPreparation=function(){
  return ret;
 };
 
-const origTerrain=terrain;
-terrain=function(){
- const out=origTerrain.apply(this,arguments);
- if(!S.result?.multi||Number(S.passage||1)<=1)return out;
- const previous=(S.passageHistory||[]).filter(p=>Number(p.passage)<Number(S.passage)).sort((a,b)=>Number(b.passage)-Number(a.passage))[0];
- const heading=document.querySelector('#app h1');if(!heading)return out;
- const box=document.createElement('div');box.className='neutral';box.id='cyrneaPreviousPassage';box.style.margin='12px 0 16px';
- if(!previous){box.innerHTML='<b>PASSAGE PRÉCÉDENT</b><br>Aucun état antérieur accessible. Vérifier le dossier d’origine avant comparaison.';heading.after(box);return out;}
- box.innerHTML='<b>RAPPEL DU PASSAGE '+Number(previous.passage)+'</b><br>'+
-  '<b>Faits précédents :</b> '+esc(previous.facts||'Non renseignés')+'<br>'+
-  '<b>Limites :</b> '+esc(previous.incident||'Non renseignées')+
-  (previous.reportDetails?.observations?'<br><b>Précisions :</b> '+esc(previous.reportDetails.observations):'')+
-  '<div id="cyrneaComparePhotos" style="margin-top:8px"><small>Recherche des photos précédentes sur cet appareil…</small></div>';
- heading.after(box);
- getTerrainMediaRecords(S,true).then(records=>{
-  const area=document.getElementById('cyrneaComparePhotos');if(!area)return;
-  const images=records.filter(x=>Number(x.passage)===Number(previous.passage)&&String(x.type||'').startsWith('image/'));
-  if(!images.length){area.innerHTML='<small>Photos du passage précédent non présentes sur cet appareil : consulter le dossier du passage d’origine.</small>';return;}
-  area.innerHTML='<b>PHOTOS DE REPÈRE — PASSAGE PRÉCÉDENT</b><div class="cyrneaCompareRow" style="display:flex;gap:7px;flex-wrap:wrap;margin-top:7px"></div>';
-  const row=area.querySelector('.cyrneaCompareRow');
-  images.slice(0,6).forEach(file=>{const url=URL.createObjectURL(file.blob),a=document.createElement('a'),img=document.createElement('img');a.href=url;a.target='_blank';a.rel='noopener';a.title=file.name;img.src=url;img.alt=file.name;img.style.cssText='width:90px;height:90px;object-fit:cover;border:1px solid #ddd;border-radius:4px';a.appendChild(img);row.appendChild(a)});
- }).catch(()=>{const area=document.getElementById('cyrneaComparePhotos');if(area)area.textContent='Consultation des photos antérieures indisponible sur cet appareil.'});
- return out;
-};
-
 // Réhydrater le formulaire / la checklist déjà affichés par boot() avant ce module.
 if(hasPrep()){
  reinstate();
@@ -109,5 +84,4 @@ if(hasPrep()){
   heading.after(box);
  }
 }
-if(hasTerrain()&&S.result?.multi&&Number(S.passage||1)>1)terrain();
 })();
