@@ -125,4 +125,8 @@ const previousReady=ready;
 ready=function(){const ret=previousReady.apply(this,arguments);mount(false);return ret};
 const previousDoc=showMissionDoc;
 showMissionDoc=function(kind){const ret=previousDoc.apply(this,arguments);if(kind==='fiche'||kind==='support')mount(false);return ret};
+// L'écran initial peut avoir été reconstitué par boot() avant le chargement de ce module.
+const initialTitle=document.querySelector('#app .card h1')?.textContent||'';
+if(initialTitle==='Préparer la mission')mount(true);
+else if(['Avant de partir','Fiche mission','Documents / photos'].includes(initialTitle))mount(false);
 })();
