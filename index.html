@@ -99,7 +99,7 @@ const STATES=["ACCUEIL","QUALIFICATION","CADRAGE","CRÉNEAU","RÉSERVATION","PR�
 let S={stage:"ACCUEIL",mode:null,universe:null,caller:null,name:"",phone:"",email:"",city:"",need:null,sub:null,result:null,obj:"",date:"",slot:"",acceptedSlot:false,draftKey:"",missionId:"",prep:{},facts:"",incident:"",terrainMedia:[],arrivalAt:"",departureAt:"",callbackReason:"",callbackPhoneCountry:"+33",callbackPhoneRaw:"",finalStatus:"",passage:1,multiSlots:[],availability:{},overrun:null,paymentMethod:"",paymentState:"",specialPending:false,resumeStage:"",history:["ACCUEIL"]};
 let NAV=[];
 let LAST_VIEW=null;
-const ZONES=["porto-vecchio","porto vecchio","lecci","sotta","sainte-lucie","sainte lucie","pinarello","tarco"];
+const ZONES=["porto-vecchio","porto vecchio","lecci","sainte-lucie","sainte lucie","pinarello","tarco","figari","bonifacio"];
 function esc(x){return String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 
 function normalizeFrenchPhone(raw){
