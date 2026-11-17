@@ -2963,7 +2963,7 @@ function collectPreparation(){
  // L’adresse exacte reste obligatoire, le lien cartographique est facultatif.
 
  const files=[...(document.getElementById('docs')?.files||[])].map(f=>f.name);
- if(docsChoice==="OUI" && !files.length)return alert("Ajoutez au moins un document / une photo, ou choisissez AUCUN DOCUMENT.");
+ if(docsChoice==="OUI" && !files.length && !(S.prepFiles||[]).length)return alert("Ajoutez au moins un document / une photo, ou choisissez AUCUN DOCUMENT.");
 
  let h={
    addr:document.getElementById('addr').value.trim(),
@@ -2973,7 +2973,7 @@ function collectPreparation(){
    contact:contactChoice==="AUCUN"?"AUCUN":contact,
    map,
    docsChoice,
-   docs:files,
+   docs:files.length?files:(docsChoice==="OUI"?(S.prepFiles||[]).map(x=>x.name):[]),
    note:(document.getElementById('note')?.value||"").trim()
  };
  if(!h.addr)return alert("Adresse exacte obligatoire.");
