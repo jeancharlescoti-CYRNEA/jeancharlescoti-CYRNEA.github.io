@@ -259,7 +259,7 @@ const B2B_TALLY_MISSION={
   "PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE B2B - 169 € HT",
   "GESTES SIMPLES SUR SITE B2B":"GESTES SIMPLES SUR SITE B2B - 169 € HT"
 };
-function b2bCommercialMissionName(name){const labels={"VOIR RELAIS":"VOIR & DÉCIDER","SUIVRE":"SUIVRE L’ÉVOLUTION SUR PLACE","VISITE TERRAIN PILOTÉE":"VISITE DE SITE","PRÉSENCE PROJET":"PRÉSENCE — 1 H 15","PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE — 3 H","SUIVI DE PROJET - 2 PASSAGES":"SUIVI DE PROJET — 2 PASSAGES","CONTINUITÉ PROJET":"SUIVI DE PROJET — 3 PASSAGES","ACCÈS B2B":"DONNER ACCÈS","REMISE CLÉ / BADGE B2B":"REMISE CLÉ / BADGE","RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE","PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE","GESTES SIMPLES SUR SITE B2B":"GESTES SIMPLES SUR SITE","CLÉS — 2 PASSAGES":"REMETTRE PUIS RÉCUPÉRER VOS CLÉS (OU L’INVERSE)","CLÉS — 2 PASSAGES B2B":"RÉCUPÉRER ET REMETTRE DES CLÉS — 2 PASSAGES","REMISE ET RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRER ET REMETTRE DES CLÉS — 2 PASSAGES"};return labels[name]||name}
+function b2bCommercialMissionName(name){const labels={"VOIR RELAIS":"VOIR & DÉCIDER","SUIVRE":"SUIVRE L’ÉVOLUTION SUR PLACE","VISITE TERRAIN PILOTÉE":"VISITE DE SITE","PRÉSENCE PROJET":"PRÉSENCE — 1 H 15","PRÉSENCE PROJET ÉTENDUE":"PRÉSENCE — 3 H","SUIVI DE PROJET - 2 PASSAGES":"OBSERVATIONS COMPARATIVES — 2 PASSAGES","CONTINUITÉ PROJET":"OBSERVATIONS COMPARATIVES — 3 PASSAGES","ACCÈS B2B":"DONNER ACCÈS","REMISE CLÉ / BADGE B2B":"REMISE CLÉ / BADGE","RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRATION CLÉ / BADGE","PRÉSENCE LOGISTIQUE B2B":"PRÉSENCE LOGISTIQUE","GESTES SIMPLES SUR SITE B2B":"GESTES SIMPLES SUR SITE","CLÉS — 2 PASSAGES":"REMETTRE PUIS RÉCUPÉRER VOS CLÉS (OU L’INVERSE)","CLÉS — 2 PASSAGES B2B":"RÉCUPÉRER ET REMETTRE DES CLÉS — 2 PASSAGES","REMISE ET RÉCUPÉRATION CLÉ / BADGE B2B":"RÉCUPÉRER ET REMETTRE DES CLÉS — 2 PASSAGES"};return labels[name]||name}
 function activeMissionKey(st=S){return String(st?.missionId||st?.draftKey||"")}
 function isActiveMissionState(st=S){
  return !!(st && st.result && String(st.result.mission||"").trim() && String(st.result.contract||"").trim() && st.stage!=="ARCHIVE");
@@ -781,12 +781,17 @@ function identify(){
 <option value="Sotta">Sotta</option>
 <option value="Sainte-Lucie-de-Porto-Vecchio / Pinarello">Sainte-Lucie-de-Porto-Vecchio / Pinarello</option>
 <option value="Tarco">Tarco</option>
+ <option value="Figari">Figari</option>
+ <option value="Bonifacio">Bonifacio</option>
 <option value="San-Gavino-di-Carbini">San-Gavino-di-Carbini</option>
 <option value="Zonza">Zonza</option>
 <option value="Fautea">Fautea</option>
 <option value="Favone">Favone</option>
-<option value="Figa">Figa</option>
 <option value="Sari-Solenzara">Sari-Solenzara</option>
+ <option value="Ghisonaccia">Ghisonaccia</option>
+ <option value="Aléria">Aléria</option>
+ <option value="Sartène">Sartène</option>
+ <option value="Propriano">Propriano</option>
 <option value="__OTHER__">AUTRE SECTEUR — préciser</option>
 </select>
 <div class="field hidden" id="otherCityWrap" style="margin-top:8px"><label>Autre commune / secteur</label><input id="otherCity" placeholder="Ex. Figari"></div>
@@ -831,7 +836,7 @@ const relaisNeeds=[
  ["ART","Un artisan ou un professionnel doit intervenir","Accueil, présence courte et fermeture","STANDARD"],
  ["DEL","Un livreur, installateur ou dépanneur doit intervenir","Accueil, présence courte et fermeture","STANDARD"],
  ["KEY_SINGLE","REMETTRE OU RÉCUPÉRER VOS CLÉS","Une remise OU une récupération — 109 € TTC, 30 min maximum.","STANDARD"],
- ["KEY_BOTH","REMETTRE PUIS RÉCUPÉRER VOS CLÉS (OU L’INVERSE)","Deux passages distincts — 199 € TTC, 2 × 30 min ; réservation sur le site RELAIS.","STANDARD"],
+ ["KEY_BOTH","REMETTRE PUIS RÉCUPÉRER VOS CLÉS (OU L’INVERSE)","Deux passages distincts — 218 € TTC, 2 × 30 min ; réservation sur le site RELAIS.","STANDARD"],
  ["OPEN","Ouvrir avant votre arrivée","Ouverture et actions simples convenues","STANDARD"],
  ["WEATHER","Avant / après une intempérie","Action simple ou vérification courte","STANDARD"],
  ["SEE","VOIR & DÉCIDER","Observation factuelle pour décider soi-même — 260 € TTC","VIEW"],
@@ -892,7 +897,7 @@ function sub(){
  }
  if(S.caller==="OWNER" && S.need==="KEY_BOTH"){
    S.sub="BOTH";
-   S.result={status:"PARCOURS SITE OFFICIEL",mission:"CLÉS — 2 PASSAGES",price:"199 € TTC",cap:"2 passages de 30 min maximum",contract:"RELAIS",rest:"R0",multi:true,passages:2};
+   S.result={status:"PARCOURS SITE OFFICIEL",mission:"CLÉS — 2 PASSAGES",price:"218 € TTC",cap:"2 passages de 30 min maximum",contract:"RELAIS",rest:"R0",multi:true,passages:2};
    return showResult(); // Le Gateway PWA ne prend pas en charge la formule double : commande par le site RELAIS.
  }
  if(S.caller==="OWNER" && (S.need==="KEY_GET" || S.need==="KEY_GIVE")){
@@ -932,13 +937,31 @@ function sub(){
  const l=subs[S.need];
  draw(`<div class="card"><h1>Précisez</h1><div class="choices">${l.map(([v,t])=>`<button class="choice standard" onclick="S.sub='${v}';classify()">${t}</button>`).join("")}</div></div>`)
 }
+// PRÉSENCE B2B : secteurs validés au 16/11/2026.
+// Les zones incertaines ne déclenchent ni tarif fixe ni paiement.
+function b2bCoverage(city){
+ const x=String(city||"").toLowerCase().normalize("NFD")
+  .replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").replace(/\s+/g," ").trim();
+ const included=["porto vecchio","lecci","sainte lucie de porto vecchio pinarello",
+  "sainte lucie de porto vecchio","sainte lucie","pinarello","tarco","figari","bonifacio"];
+ if(included.includes(x))return "INCLUS";
+ const verify=["sotta","san gavino di carbini","fautea","carbini","levie","zonza","figa"];
+ if(verify.includes(x))return "À VÉRIFIER";
+ const quote=["favone","solenzara","sari solenzara","ghisonaccia","aleria","sartene","propriano"];
+ if(quote.includes(x))return "DEVIS";
+ return "EXCEPTION";
+}
+function isB2BLogisticsMission(mission){
+ return ["ACCÈS B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B",
+ "REMISE ET RÉCUPÉRATION CLÉ / BADGE B2B","PRÉSENCE LOGISTIQUE B2B",
+ "GESTES SIMPLES SUR SITE B2B"].includes(String(mission||""));
+}
 function zoneCoverage(){
+ if(S.caller==="B2B")return b2bCoverage(S.city);
+ // RELAIS : classification historique conservée.
  const x=String(S.city||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[-_]/g," ").replace(/\s+/g," ").trim();
- // Portée certaine du déplacement inclus : tarif publié B2B V13.
  const fixed=["porto vecchio","lecci","sainte lucie de porto vecchio","sainte lucie de porto vecchio / pinarello","pinarello","tarco"];
  if(fixed.includes(x))return "INCLUS";
- // Le terme « communes limitrophes » sur les HOME est plus large que la liste
- // contractuelle précise. Ne pas présumer le forfait ni un supplément.
  const uncertain=["sotta","san gavino di carbini","bonifacio","carbini","levie","zonza","fautea"];
  if(uncertain.includes(x))return "À VÉRIFIER";
  return "DEVIS";
@@ -984,12 +1007,20 @@ function classify(){
  if(S.need==="FOLLOW"&&S.sub==="THREE")r={status:"PROPOSER",mission:"SUIVRE",price:"690 € TTC",cap:"3 × 1 h",contract:"RELAIS",rest:"R3",multi:true,passages:3};
  if(S.need==="FOLLOW"&&S.sub==="RECUR")r={status:"HORS PÉRIMÈTRE",mission:"SURVEILLANCE RÉCURRENTE",price:"-",cap:"-",contract:"-",rest:""};
  }
- if(r.status==="PROPOSER"){
-   const coverage=zoneCoverage();
-   if(coverage==="À VÉRIFIER")r.status="SECTEUR À CONFIRMER";
-   else if(coverage==="DEVIS")r.status="DEVIS PRÉALABLE";
- }
- S.result=r;showResult()
+ if(r.status==="PROPOSER"||(S.caller==="B2B"&&r.status==="PARCOURS SITE OFFICIEL")){
+    const coverage=zoneCoverage();
+    if(S.caller==="B2B"){
+      if(coverage==="À VÉRIFIER")r.status="SECTEUR À CONFIRMER";
+      else if(coverage!=="INCLUS"){
+        if(isB2BLogisticsMission(r.mission))r.status="HORS PÉRIMÈTRE";
+        else r.status=coverage==="DEVIS"?"DEVIS PRÉALABLE":"ÉTUDE EXCEPTIONNELLE";
+      }
+    }else{
+      if(coverage==="À VÉRIFIER")r.status="SECTEUR À CONFIRMER";
+      else if(coverage==="DEVIS")r.status="DEVIS PRÉALABLE";
+    }
+  }
+  S.result=r;showResult()
 }
 
 function objectOptions(){
@@ -1143,7 +1174,8 @@ function missionPhoneScript(){
   const m=S.result?.mission||'';
   if(S.result?.status==='À CLARIFIER') return "Je préfère ne pas vous annoncer une prestation au hasard. Je note votre demande et je vous rappelle pour la qualifier précisément.";
   if(S.result?.status==='HORS PÉRIMÈTRE') return "Ce que vous me demandez ne correspond pas à une mission que CYRNEA peut réaliser. Je préfère ne pas vous induire en erreur.";
-  if(S.result?.status==='DEVIS PRÉALABLE') return "Votre demande est possible à étudier, mais le lieu est hors de notre zone de réservation directe. Nous devons d’abord vous confirmer un devis.";
+  if(S.result?.status==='DEVIS PRÉALABLE') return "Cette destination nécessite un devis mission et déplacement accepté avant toute commande. Aucun paiement automatique.";
+  if(S.result?.status==='ÉTUDE EXCEPTIONNELLE') return "Cette destination dépasse notre secteur habituel. Étude exceptionnelle possible, sans tarif ni paiement automatique.";
  if(S.result?.status==='SECTEUR À CONFIRMER') return "La commune se situe dans une zone géographique à clarifier entre le site et les conditions contractuelles. Aucun tarif de déplacement ni lien de paiement ne sera présumé avant validation CYRNEA.";
   if(m==='RELAIS SIMPLE') return "Votre besoin correspond à une intervention ponctuelle simple. Le tarif de base est de 109 € TTC, sous réserve du créneau demandé.";
   if(m==='RELAIS') return "Votre besoin correspond à une mission RELAIS, avec une présence sur place jusqu’à une heure. Le tarif de base est de 149 € TTC, sous réserve du créneau demandé.";
@@ -1167,6 +1199,7 @@ function showResult(){
  setStage("CADRAGE");let r=S.result;
  const normal=(r.status==="PROPOSER");
  const quote=(r.status==="DEVIS PRÉALABLE");
+  const study=(r.status==="ÉTUDE EXCEPTIONNELLE");
  const siteOnly=(r.status==="PARCOURS SITE OFFICIEL");
  const zonePending=(r.status==="SECTEUR À CONFIRMER");
  draw(`<div class="card"><h1>${esc(r.status)}</h1><div class="readAloud">${esc(missionPhoneScript())}</div>
@@ -1174,12 +1207,14 @@ function showResult(){
  ${quote?`<div class="row"><b>Prix</b><span>À CHIFFRER PAR DEVIS</span></div>`:priceRows()}
  <div class="row"><b>Plafond</b><span>${esc(r.cap)}</span></div>
  <div class="row"><b>Contrat</b><span>${esc(r.contract)}</span></div><div class="row"><b>Lieu d’intervention</b><span>${esc(S.city)}</span></div>
- ${normal||quote ? objectSelector() : ""}
+ ${normal||quote||study ? objectSelector() : ""}
  ${needsCahier()?`<div class="warn"><b>Cadrage renforcé requis.</b><br>Avant réservation, cette mission doit disposer d'un brief/cahier des charges écrit précisant l'objectif, les points à éclaircir, les documents et informations à recueillir, les éventuelles questions à poser à des interlocuteurs et la restitution attendue.</div>`:""}
- ${zonePending?`<div class="warn"><b>COMMUNE À VÉRIFIER AVANT TOUT PAIEMENT</b><br>Les sites annoncent Porto-Vecchio et communes limitrophes, mais les tarifs contractuels précisent un secteur plus restreint. Vérifier les conditions et le déplacement avec CYRNEA. Ne pas annoncer de supplément ni transmettre de lien de paiement avant accord.</div><button class="btn ghost" onclick="goHome()">CONSERVER LE DOSSIER</button>`:siteOnly?`<div class="notice"><b>RÉSERVATION EXCLUSIVEMENT SUR LE SITE OFFICIEL</b><br>La formule comporte deux passages avec deux créneaux, un ordre de remise/récupération et éventuellement deux communes. Le lien de paiement PWA ne les couvre pas : ne pas générer de référence Tally ou Gateway depuis cet écran.</div><div class="toolbar"><a class="btn primary" style="text-decoration:none;text-align:center" href="${S.result.contract==="RELAIS"?"https://www.relaisproprietaire.fr/":"https://www.cyrneapresence.fr/?mission=cles"}" target="_blank" rel="noopener noreferrer">OUVRIR LE SITE DE RÉSERVATION</a></div>` : quote?`<div class="warn"><b>Secteur hors zone directe.</b><br>Le tarif standard ne vaut pas commande. Un devis doit être établi et accepté avant de poursuivre.</div>
- <div class="field"><label>Montant du devis accepté</label><input id="quotePrice" placeholder="${S.caller==="B2B"?"Ex. 500 € HT":"Ex. 149 € TTC"}"></div>
- <button class="btn primary" onclick="if(!saveObject())return;let q=document.getElementById('quotePrice').value.trim();if(!q)return alert('Montant du devis requis');if(S.caller==='B2B'&&!/HT/i.test(q))return alert('Pour le B2B, indiquez le montant du devis en HT.');if(S.caller!=='B2B'&&!/TTC/i.test(q))return alert('Pour un particulier, indiquez le montant du devis en TTC.');S.result.price=q;S.result.status='PROPOSER';S.result.isQuote=true;slot()">DEVIS ACCEPTÉ → CONTINUER</button>`
- : normal?`<button class="btn primary" onclick="if(!saveObject())return;slot()">CONTINUER VERS LE CRÉNEAU</button>`
+ ${zonePending?`<div class="warn"><b>COMMUNE À VÉRIFIER AVANT TOUT PAIEMENT</b><br>La commune exacte doit être contrôlée avant toute offre. Ne pas communiquer de prix ni de lien de paiement avant qualification géographique.</div><button class="btn ghost" onclick="goHome()">CONSERVER LE DOSSIER</button>`:siteOnly?`<div class="notice"><b>RÉSERVATION EXCLUSIVEMENT SUR LE SITE OFFICIEL</b><br>Pour deux passages, les deux lieux doivent se situer dans le secteur autorisé. Réservation uniquement sur le site officiel ; la PWA ne crée ni référence Tally ni paiement.</div><div class="toolbar"><a class="btn primary" style="text-decoration:none;text-align:center" href="${S.result.contract==="RELAIS"?"https://www.relaisproprietaire.fr/":"https://www.cyrneapresence.fr/?mission=cles"}" target="_blank" rel="noopener noreferrer">OUVRIR LE SITE DE RÉSERVATION</a></div>` : ((quote&&S.caller==="B2B")||study)?`<div class="warn"><b>${study?"DEMANDE EXCEPTIONNELLE":"DEVIS PRÉALABLE"}</b><br>Étude et devis mission + déplacement avant commande. Aucun paiement possible depuis la PWA pour ce lieu.</div>
+  <button class="btn primary" onclick="if(!saveObject())return;save();alert('Demande conservée. Devis et acceptation à traiter directement, sans paiement PWA.')">CONSERVER LA DEMANDE</button>`
+  : quote?`<div class="warn"><b>Secteur hors zone directe.</b><br>Le tarif standard ne vaut pas commande. Un devis doit être établi et accepté avant de poursuivre.</div>
+  <div class="field"><label>Montant du devis accepté</label><input id="quotePrice" placeholder="${S.caller==="B2B"?"Ex. 500 € HT":"Ex. 149 € TTC"}"></div>
+  <button class="btn primary" onclick="if(!saveObject())return;let q=document.getElementById('quotePrice').value.trim();if(!q)return alert('Montant du devis requis');if(S.caller==='B2B'&&!/HT/i.test(q))return alert('Pour le B2B, indiquez le montant du devis en HT.');if(S.caller!=='B2B'&&!/TTC/i.test(q))return alert('Pour un particulier, indiquez le montant du devis en TTC.');S.result.price=q;S.result.status='PROPOSER';S.result.isQuote=true;slot()">DEVIS ACCEPTÉ → CONTINUER</button>`
+  : normal?`<button class="btn primary" onclick="if(!saveObject())return;slot()">CONTINUER VERS LE CRÉNEAU</button>`
  : `<div class="stop"><b>⛔ MISSION NON RÉSERVABLE</b><br>Le parcours commercial s'arrête ici. Aucun paiement ni mission terrain.</div><button class="btn ghost" onclick="newMission()">NOUVELLE MISSION</button>`}
  </div>`)
 }
@@ -2155,6 +2190,7 @@ function validateB2BMultiBeforeGateway(){
  return true;
 }
 async function registerTallyIntent(){
+  if(S.result?.contract==="PRÉSENCE ENTREPRISES"&&zoneCoverage()!=="INCLUS")throw Error("Paiement PWA interdit : lieu hors secteur inclus ou à vérifier. Devis/étude préalable.");
  if(S.result?.isQuote)throw Error("Devis hors grille : paiement automatique interdit. Traiter séparément le devis accepté.");
  if(S.result?.contract==="PRÉSENCE PROPRIÉTAIRES")throw Error("Ancien contrat propriétaires PRÉSENCE : pas de nouvelle commande. Utiliser RELAIS PROPRIÉTAIRE.");
  if(!validateB2BShortHours())throw Error("Horaire indisponible en ligne pour cette prestation B2B. Aucun paiement ne peut être préparé.");
