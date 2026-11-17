@@ -3435,27 +3435,31 @@ async function exportMissionArchive(){
    // Ne jamais fournir silencieusement un ZIP amputé des pièces terrain.
    // Les médias peuvent exister seulement sur l'iPhone : dans ce cas, ouvrir l'export sur cet appareil.
    const media=await getTerrainMediaRecords(S,true);
-   const expectedNames=[...(Array.isArray(S.terrainMedia)?S.terrainMedia:[]),
-     ...(Array.isArray(S.passageHistory)?S.passageHistory.flatMap(p=>Array.isArray(p.media)?p.media:[]):[])];
-   const actualNames=new Set(media.map(m=>String(m.name||"")));
-   const missing=[...new Set(expectedNames.map(String))].filter(n=>n&&!actualNames.has(n));
-   if(missing.length)throw new Error("Pièces terrain manquantes sur cet appareil : "+missing.join(", ")+
-     ". Ouvrez la PWA sur l'appareil ayant conservé ces fichiers avant d'exporter.");
+   const expectedTerrain=[
+    ...(Array.isArray(S.terrainMedia)?S.terrainMedia.map(n=>Number(S.passage||1)+"::"+String(n)):[]),
+    ...(Array.isArray(S.passageHistory)?S.passageHistory.flatMap(p=>(Array.isArray(p.media)?p.media:[]).map(n=>Number(p.passage||1)+"::"+String(n))):[])
+   ];
+   const terrainActual=new Set(media.filter(r=>Number(r.passage)>0).map(r=>Number(r.passage)+"::"+String(r.name||"")));
+   const missingTerrain=[...new Set(expectedTerrain)].filter(k=>!terrainActual.has(k));
+   const preparedExpected=Array.isArray(S.prepFiles)?S.prepFiles:[];
+   const preparedActual=new Set(media.filter(x=>x.purpose==="PREP_INTERNAL").map(x=>x.id));
+   const missingPrepared=preparedExpected.filter(x=>!preparedActual.has(x.id)).map(x=>x.name);
+   if(missingTerrain.length||missingPrepared.length)throw new Error("Pièces absentes sur cet appareil : "+
+      [...missingTerrain,...missingPrepared].join(", ")+". Utiliser l'appareil ayant conservé ces fichiers avant d'exporter.");
    const used=new Map();
    for(const r of media){
      let base=String(r.name||"fichier");
-     const count=used.get(base)||0;
-     used.set(base,count+1);
-     if(count){
-       const dot=base.lastIndexOf(".");
-       base=dot>0?base.slice(0,dot)+"_"+(count+1)+base.slice(dot):base+"_"+(count+1);
-     }
-     const passage=String(r.passage||1).padStart(2,"0");
+     const dir=r.purpose==="PREP_INTERNAL"?"DOCUMENTS_PREPARATION/":
+        Number(r.passage)===0?"DOCUMENTS_CLIENT/":"MEDIA/PASSAGE_"+String(r.passage||1).padStart(2,"0")+"/";
+     const originalKey=dir+base;
+     const count=used.get(originalKey)||0;
+     used.set(originalKey,count+1);
+     if(count){const dot=base.lastIndexOf(".");base=dot>0?base.slice(0,dot)+"_"+(count+1)+base.slice(dot):base+"_"+(count+1)}
      const ab=await r.blob.arrayBuffer();
-     entries.push({name:"MEDIA/PASSAGE_"+passage+"/"+base,data:new Uint8Array(ab)});
+     entries.push({name:dir+base,data:new Uint8Array(ab)});
    }
    if(typeof window.crReportPdf!=="function"||typeof window.crReportModel!=="function")throw new Error("Générateur PDF client indisponible. Vérifier la mise à jour de la PWA.");
-   entries.push({name:"CLIENT/COMPTE_RENDU_CLIENT.pdf",data:window.crReportPdf(window.crReportModel(media))});
+   entries.push({name:"CLIENT/COMPTE_RENDU_CLIENT.pdf",data:window.crReportPdf(window.crReportModel(media.filter(x=>x.purpose!=="PREP_INTERNAL")))});
    const zip=await makeStoredZip(entries);
    const filename=safeArchiveName(S.missionId)+".zip";
    const file=new File([zip],filename,{type:"application/zip"});
