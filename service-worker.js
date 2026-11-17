@@ -1,5 +1,5 @@
-const CACHE='cyrnea-assistant-20261117-presence-zones-v23';
-const ASSETS=['./index.html','./terrain-clock.js','./change-inbox.js','./h2-integration.js','./manifest.webmanifest','./icons/icon-192.png'];
+const CACHE='cyrnea-assistant-20261117-rapport-client-pwa-v24';
+const ASSETS=['./index.html','./terrain-clock.js','./change-inbox.js','./h2-integration.js','./mission-ux.js','./client-report.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(
