@@ -8,7 +8,7 @@ function points(x){return safe(x).split(/\s*;\s*|\n+/).map(s=>s.trim()).filter(B
 function passages(st){
  const arr=(Array.isArray(st.passageHistory)?st.passageHistory:[]).map(p=>({...p}));
  if(st.arrivalAt&&!arr.some(p=>Number(p.passage)===Number(st.passage||1)))
-  arr.push({passage:st.passage||1,date:st.date,slot:st.slot,arrivalAt:st.arrivalAt,departureAt:st.departureAt,facts:st.facts,incident:st.incident,media:st.terrainMedia||[]});
+  arr.push({passage:st.passage||1,date:st.date,slot:st.slot,arrivalAt:st.arrivalAt,departureAt:st.departureAt,facts:st.facts,incident:st.incident,reportDetails:st.reportDetails||{},media:st.terrainMedia||[]});
  return arr.sort((a,b)=>Number(a.passage)-Number(b.passage));
 }
 function model(media){
@@ -109,6 +109,7 @@ async function addClientDocs(){
  }catch(e){alert('Pièce non conservée : '+String(e.message||e))}
 }
 async function openReport(){
+ if(typeof saveRestitutionDetails==='function'&&document.getElementById('crNotesObservations'))saveRestitutionDetails();
  try{const m=model(await mediaOnThisDevice());document.getElementById('crDialog')?.remove();
   const d=document.createElement('div');d.id='crDialog';d.style.cssText='position:fixed;inset:0;overflow-y:auto;z-index:9999;background:#202425ee;padding:12px 6px';
   d.innerHTML='<div style="max-width:760px;margin:auto;background:white;padding:18px;box-sizing:border-box;line-height:1.5;font-family:Arial;color:#303437">'+
@@ -121,7 +122,9 @@ async function openReport(){
 }
 function closeReport(){document.getElementById('crDialog')?.remove();document.body.style.overflow=''}
 async function exportClient(){
+ if(typeof saveRestitutionDetails==='function'&&document.getElementById('crNotesObservations'))saveRestitutionDetails();
  if(!S.departureAt)return alert('Terminer le terrain avant d’envoyer un compte rendu client.');
+ if(S.stage==='RESTITUTION')return alert('Valider la restitution puis choisir le statut de clôture avant l’export définitif.');
  try{const media=await mediaOnThisDevice(),m=model(media),enc=new TextEncoder();
   const items=[{name:'COMPTE_RENDU_CLIENT.pdf',data:pdf(m)},{name:'EMAIL_PRET_A_ENVOYER.txt',data:enc.encode(emailText(m))}];
   const seen=new Set();
