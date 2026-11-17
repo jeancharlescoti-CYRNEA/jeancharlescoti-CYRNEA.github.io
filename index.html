@@ -836,7 +836,7 @@ const relaisNeeds=[
  ["ART","Un artisan ou un professionnel doit intervenir","Accueil, présence courte et fermeture","STANDARD"],
  ["DEL","Un livreur, installateur ou dépanneur doit intervenir","Accueil, présence courte et fermeture","STANDARD"],
  ["KEY_SINGLE","REMETTRE OU RÉCUPÉRER VOS CLÉS","Une remise OU une récupération — 109 € TTC, 30 min maximum.","STANDARD"],
- ["KEY_BOTH","REMETTRE PUIS RÉCUPÉRER VOS CLÉS (OU L’INVERSE)","Deux passages distincts — 218 € TTC, 2 × 30 min ; réservation sur le site RELAIS.","STANDARD"],
+ ["KEY_BOTH","REMETTRE PUIS RÉCUPÉRER VOS CLÉS (OU L’INVERSE)","Deux passages distincts — 199 € TTC, 2 × 30 min ; réservation sur le site RELAIS.","STANDARD"],
  ["OPEN","Ouvrir avant votre arrivée","Ouverture et actions simples convenues","STANDARD"],
  ["WEATHER","Avant / après une intempérie","Action simple ou vérification courte","STANDARD"],
  ["SEE","VOIR & DÉCIDER","Observation factuelle pour décider soi-même — 260 € TTC","VIEW"],
@@ -897,7 +897,7 @@ function sub(){
  }
  if(S.caller==="OWNER" && S.need==="KEY_BOTH"){
    S.sub="BOTH";
-   S.result={status:"PARCOURS SITE OFFICIEL",mission:"CLÉS — 2 PASSAGES",price:"218 € TTC",cap:"2 passages de 30 min maximum",contract:"RELAIS",rest:"R0",multi:true,passages:2};
+   S.result={status:"PARCOURS SITE OFFICIEL",mission:"CLÉS — 2 PASSAGES",price:"199 € TTC",cap:"2 passages de 30 min maximum",contract:"RELAIS",rest:"R0",multi:true,passages:2};
    return showResult(); // Le Gateway PWA ne prend pas en charge la formule double : commande par le site RELAIS.
  }
  if(S.caller==="OWNER" && (S.need==="KEY_GET" || S.need==="KEY_GIVE")){
