@@ -3412,6 +3412,12 @@ function missionArchiveText(){
  return lines.join("\n");
 }
 async function exportMissionArchive(){
+ if(S.stage==="CLÔTURE"){
+  if(!document.getElementById("reportSentChecked")?.checked)return alert("Attestez d'abord l'envoi réel de la restitution au client avant de préparer l'archive.");
+  S.restitutionSentAt=S.restitutionSentAt||nowStamp();
+  S.finalStatus=document.getElementById("fs")?.value||S.finalStatus||"MISSION CLÔTURÉE";
+  save();
+ }
  const btn=document.getElementById("archiveExportBtn");
  if(btn){btn.disabled=true;btn.textContent="PRÉPARATION DU DOSSIER…"}
  try{
@@ -4102,7 +4108,7 @@ function finalizeArchive(){
  if(S.overrun?.accepted && S.overrun.paymentStatus!=="PAID"){
    return alert("Supplément de prolongation non réglé. La mission ne peut pas être archivée définitivement tant que le paiement n’est pas confirmé.");
  }
- S.restitutionSentAt=nowStamp();
+ S.restitutionSentAt=S.restitutionSentAt||nowStamp();
  S.restitutionProofMode="ATTESTATION_OPERATEUR";
  S.finalStatus=document.getElementById("fs")?.value||S.finalStatus||"MISSION CLÔTURÉE";
  save();archive();
