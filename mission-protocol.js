@@ -163,11 +163,20 @@ function mountComparison(){
  panel.addEventListener('input',saveCurrentComparisons,true);
  panel.addEventListener('change',saveCurrentComparisons,true);
  updatePhotoOptions();
- const media=document.getElementById("terrainMedia");
- if(media){media.addEventListener('change',()=>{setTimeout(updatePhotoOptions,1100)},true)}
 }
+const oldStoreMedia=storeSelectedTerrainMedia;
+storeSelectedTerrainMedia=async function(){
+ const result=await oldStoreMedia.apply(this,arguments);
+ await updatePhotoOptions();return result;
+};
 const oldTerrain=terrain;
-terrain=function(){const r=oldTerrain.apply(this,arguments);mountComparison();return r};
+terrain=function(){
+ if(!S.arrivalAt){
+  const v=planChecks(getPlan(),S.prep?.addr);
+  if(!v.ok){alert("Préparation de mission incomplète. Compléter le plan avant de commencer le terrain.");return preparationMission()}
+ }
+ const r=oldTerrain.apply(this,arguments);mountComparison();return r;
+};
 const oldCollectTerrain=collectTerrain;
 collectTerrain=async function(){
  if(isCompare()){
