@@ -98,4 +98,16 @@ terrain=function(){
  }).catch(()=>{const area=document.getElementById('cyrneaComparePhotos');if(area)area.textContent='Consultation des photos antérieures indisponible sur cet appareil.'});
  return out;
 };
+
+// Réhydrater le formulaire / la checklist déjà affichés par boot() avant ce module.
+if(hasPrep()){
+ reinstate();
+ const heading=document.querySelector('#app h1');
+ if(heading&&!document.getElementById('cyrneaPrepGuide')){
+  const box=document.createElement('div');box.id='cyrneaPrepGuide';box.className='notice';box.style.margin='8px 0 16px';
+  box.innerHTML='<b>AVANT LE DÉPART — '+esc(S.result?.mission||'MISSION')+'</b><br>'+esc(PREP[S.result?.mission]||'Vérifier adresse, accès, personne désignée, consignes et documents nécessaires.');
+  heading.after(box);
+ }
+}
+if(hasTerrain()&&S.result?.multi&&Number(S.passage||1)>1)terrain();
 })();
