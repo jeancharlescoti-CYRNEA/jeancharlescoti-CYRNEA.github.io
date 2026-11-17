@@ -41,6 +41,8 @@ app.addEventListener('input',e=>{if((hasTerrain()||hasPrep())&&app.contains(e.ta
 app.addEventListener('change',e=>{if((hasTerrain()||hasPrep())&&app.contains(e.target))queued()},true);
 app.addEventListener('click',e=>{if((hasTerrain()||hasPrep())&&e.target.closest('button')){clearTimeout(debounce);store()}},true);
 window.addEventListener('pagehide',()=>{clearTimeout(debounce);store()},true);
+window.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(debounce);store()}},true);
+['homeTop','backTop','timeline'].forEach(id=>document.getElementById(id)?.addEventListener('click',()=>{clearTimeout(debounce);store()},true));
 function reinstate(){
  const d=S.prepWorkingDraft;if(!hasPrep()||!d)return;
  for(const id of ['addr','access','mode','contact','map','note']){
