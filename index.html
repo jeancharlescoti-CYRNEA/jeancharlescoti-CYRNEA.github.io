@@ -947,7 +947,7 @@ function b2bCoverage(city){
  if(included.includes(x))return "INCLUS";
  const verify=["sotta","san gavino di carbini","fautea","carbini","levie","zonza","figa"];
  if(verify.includes(x))return "À VÉRIFIER";
- const quote=["favone","solenzara","sari solenzara","ghisonaccia","aleria","sartene","propriano"];
+ const quote=["favone","solenzara","sari solenzara","ghisonaccia","aleria"];
  if(quote.includes(x))return "DEVIS";
  return "EXCEPTION";
 }
@@ -976,8 +976,8 @@ function classify(){
   if(S.need==="BSUIVI2")r={status:"PROPOSER",mission:"SUIVI DE PROJET - 2 PASSAGES",price:"850 € HT",cap:"2 × 1 h 15",contract:"PRÉSENCE ENTREPRISES",rest:"R3",multi:true,passages:2};
  if(S.need==="BLOG"){
    if(S.sub==="ACCESS")r={status:"PROPOSER",mission:"ACCÈS B2B",price:"109 € HT",cap:"30 min",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
-   if(S.sub==="KEY_GIVE")r={status:"PROPOSER",mission:"REMISE CLÉ / BADGE B2B",price:"109 € HT",cap:"action unique, cadre court",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
-   if(S.sub==="KEY_GET")r={status:"PROPOSER",mission:"RÉCUPÉRATION CLÉ / BADGE B2B",price:"109 € HT",cap:"action unique, cadre court",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
+   if(S.sub==="KEY_GIVE")r={status:"PROPOSER",mission:"REMISE CLÉ / BADGE B2B",price:"109 € HT",cap:"30 min maximum",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
+   if(S.sub==="KEY_GET")r={status:"PROPOSER",mission:"RÉCUPÉRATION CLÉ / BADGE B2B",price:"109 € HT",cap:"30 min maximum",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="STAY")r={status:"PROPOSER",mission:"PRÉSENCE LOGISTIQUE B2B",price:"169 € HT",cap:"1 h",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="GESTES")r={status:"PROPOSER",mission:"GESTES SIMPLES SUR SITE B2B",price:"169 € HT",cap:"45 min maximum",contract:"PRÉSENCE ENTREPRISES",rest:"R0"};
    if(S.sub==="KEY_BOTH")r={status:"PARCOURS SITE OFFICIEL",mission:"REMISE ET RÉCUPÉRATION CLÉ / BADGE B2B",price:"218 € HT",cap:"2 passages de 30 min maximum",contract:"PRÉSENCE ENTREPRISES",rest:"R0",multi:true,passages:2};
@@ -993,7 +993,7 @@ function classify(){
  if(S.need==="DEL"&&S.sub==="COMPLEX")r={status:"À CLARIFIER",mission:"DEMANDE À REQUALIFIER",price:"-",cap:"-",contract:"À DÉTERMINER",rest:""};
  if(S.need==="THIRD"&&S.sub==="SIMPLE")r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"cadre court, non horaire",contract:"RELAIS",rest:"R0"};
  if(S.need==="THIRD"&&S.sub==="COMPLEX")r={status:"À CLARIFIER",mission:"DEMANDE À REQUALIFIER",price:"-",cap:"-",contract:"À DÉTERMINER",rest:""};
- if(S.need==="KEY"&&(S.sub==="GIVE"||S.sub==="GET"))r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"action unique, cadre court",contract:"RELAIS",rest:"R0"};
+ if(S.need==="KEY"&&(S.sub==="GIVE"||S.sub==="GET"))r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"30 min maximum",contract:"RELAIS",rest:"R0"};
  if(S.need==="OPEN"&&S.sub==="SIMPLE")r={status:"PROPOSER",mission:"RELAIS",price:"149 € TTC",cap:"1 h",contract:"RELAIS",rest:"R0"};
  if(S.need==="OPEN"&&S.sub==="EXC")r={status:"HORS PÉRIMÈTRE",mission:"ACTIONS EXCLUES",price:"-",cap:"-",contract:"-",rest:""};
  if(S.need==="WEATHER"&&S.sub==="BEFORE")r={status:"PROPOSER",mission:"RELAIS - AVANT INTEMPÉRIE",price:"149 € TTC",cap:"1 h",contract:"RELAIS",rest:"R0"};
@@ -3357,7 +3357,7 @@ function missionArchiveText(){
    "Client : "+(S.name||"-"),
    "Mission : "+(S.result?.mission||"-"),
    "Contrat : "+(S.result?.contract||"-"),
-   "Statut : "+(S.finalStatus||S.stage||"-"),
+   "Statut : "+(document.getElementById("fs")?.value||S.finalStatus||S.stage||"-"),
    "Objet : "+(S.obj||"-"),
    "Date / créneau : "+(typeof scheduleText==="function"?scheduleText():"-"),
    "Adresse : "+(S.prep?.addr||S.city||"-"),
@@ -3435,6 +3435,8 @@ async function exportMissionArchive(){
      const ab=await r.blob.arrayBuffer();
      entries.push({name:"MEDIA/PASSAGE_"+passage+"/"+base,data:new Uint8Array(ab)});
    }
+   if(typeof window.crReportPdf!=="function"||typeof window.crReportModel!=="function")throw new Error("Générateur PDF client indisponible. Vérifier la mise à jour de la PWA.");
+   entries.push({name:"CLIENT/COMPTE_RENDU_CLIENT.pdf",data:window.crReportPdf(window.crReportModel(media))});
    const zip=await makeStoredZip(entries);
    const filename=safeArchiveName(S.missionId)+".zip";
    const file=new File([zip],filename,{type:"application/zip"});
@@ -3451,6 +3453,7 @@ async function exportMissionArchive(){
      setTimeout(()=>URL.revokeObjectURL(url),30000);
      alert("Le dossier ZIP a été préparé. Enregistrez-le dans iCloud Drive / CYRNEA / MISSIONS / "+(S.result?.contract==="RELAIS"?"RELAIS":"PRÉSENCE")+".");
    }
+   S.archivePreparedAt=nowStamp();save();
  }catch(e){
    if(e?.name!=="AbortError")alert("Export impossible : "+String(e?.message||e));
  }finally{
@@ -3613,7 +3616,7 @@ function archivePartialMulti(){
     <button class="btn ghost" onclick="missionDesk()">RETOUR AU DOSSIER MISSION</button>
   </div>`);
 }
-function collectTerrain(){
+async function collectTerrain(){
   if(!S.arrivalAt)return alert("Appuyez d’abord sur J’ARRIVE SUR PLACE pour horodater le début de mission.");
   if(!allChecked("input[name='terrainGuard']"))return alert("Tous les garde-fous applicables doivent être vérifiés avant de quitter.");
   if(!allChecked("input[name='exitCheck']"))return alert("Effectuez les contrôles de sortie avant de quitter les lieux.");
@@ -3631,11 +3634,18 @@ function collectTerrain(){
     if(!incText)return alert("Précisez l’incident / la limite.");
   }
 
-  S.terrainMedia=terrainMediaNames();
+  const namedFiles=terrainMediaNames();
+  let savedMedia=[];
+  try{savedMedia=await getTerrainMediaRecords(S,false)}catch(e){return alert("Stockage photo inaccessible : vérifiez les pièces avant de quitter les lieux.")}
+  const storedNames=new Set(savedMedia.map(r=>String(r.name||"")));
+  const missingMedia=namedFiles.filter(n=>!storedNames.has(String(n)));
+  if(missingMedia.length)return alert("Photos non conservées : "+missingMedia.join(", ")+". Attendez leur enregistrement ou recommencez avant de quitter.");
+  S.terrainMedia=namedFiles;
   S.facts=facts.join(" ; ");
   S.incident=inc==="AUCUN"?"Aucun":incText;
   S.departureAt=nowStamp();
   S.terrainDraft=null;
+  S.clientReportExportedAt="";S.archivePreparedAt="";
   save();
   restitution();
 }
@@ -4148,6 +4158,8 @@ boot();
 <script src="./change-inbox.js"></script>
 <script src="./terrain-clock.js"></script>
 <script src="./h2-integration.js"></script>
+<script src="./mission-ux.js"></script>
+<script src="./client-report.js"></script>
 <script>
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', async () => {
