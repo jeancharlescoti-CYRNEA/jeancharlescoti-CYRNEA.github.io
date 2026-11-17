@@ -78,7 +78,6 @@ function check(plan,st,prior){
  if(normalized.kind==="compare"){
   const refs=references(normalized.fields.referencePoints);
   if(refs.length<1||refs.length>8)errors.push("Prévoir entre 1 et 8 repères comparatifs.");
-  if(fingerprintRef(refs).length!==new Set(refs.map(x=>x.toLowerCase())).size && false){} // le contrôle des doublons suit
   if(new Set(refs.map(x=>x.toLocaleLowerCase('fr-FR'))).size!==refs.length)errors.push("Les points de repère doivent être distincts.");
   if(prior?.length && fingerprintRef(prior)!==fingerprintRef(refs))errors.push("Les repères d'origine ne peuvent pas être modifiés après le premier passage.");
  }
