@@ -3387,6 +3387,9 @@ function missionArchiveText(){
      "La décision appartient exclusivement au client."
    ]:[]),
    "Incident / limite : "+(S.incident||"Aucun"),
+   "Observations complémentaires : "+(S.reportDetails?.observations||"-"),
+   "Déclarations de tiers : "+(S.reportDetails?.declarations||"-"),
+   "Limites de vérification : "+(S.reportDetails?.limites||"-"),
    "Restitution transmise (déclaration opérateur) : "+(S.restitutionSentAt||"Non attestée"),
    "Contrôle paiement initial : "+(S.paymentEvidence?.reference||"Non attesté localement"),
    "Contrôle remboursement : "+(S.refundEvidence?.reference||"-"),
@@ -3395,6 +3398,9 @@ function missionArchiveText(){
      "  PASSAGE "+p.passage+" — "+(p.date||"-")+" "+(p.slot||""),
      "  Arrivée : "+(p.arrivalAt||"-")+" / Départ : "+(p.departureAt||"-"),
      "  Faits : "+(p.facts||"-"),"  Incident : "+(p.incident||"-"),
+     "  Observations : "+(p.reportDetails?.observations||"-"),
+     "  Déclarations : "+(p.reportDetails?.declarations||"-"),
+     "  Limites : "+(p.reportDetails?.limites||"-"),
      "  Fichiers : "+(Array.isArray(p.media)?p.media.join(" ; "):"-"),
      "  Prolongation : "+(p.overrun?.accepted?(p.overrun.total+" € "+p.overrun.base+" — "+(p.overrun.paymentStatus||"-")+" — justificatif : "+(p.overrun.paymentEvidence?.reference||"-")):"aucune")
    ]),
@@ -3525,7 +3531,7 @@ function recordPassageSnapshot(){
  if(history.some(p=>Number(p.passage)===passage))return;
  history.push({
    passage,date:S.date||"",slot:S.slot||"",arrivalAt:S.arrivalAt,departureAt:S.departureAt,
-   facts:S.facts||"",incident:S.incident||"",media:Array.isArray(S.terrainMedia)?[...S.terrainMedia]:[],
+   facts:S.facts||"",incident:S.incident||"",reportDetails:{...(S.reportDetails||{})},media:Array.isArray(S.terrainMedia)?[...S.terrainMedia]:[],
    overrun:S.overrun?.accepted?{...S.overrun}:null,
    savedAt:nowStamp()
  });
@@ -3576,6 +3582,7 @@ function confirmNextSuivrePassage(){
  save();continueMultiAfterRestitution();
 }
 function continueMultiAfterRestitution(){
+ if(document.getElementById("crNotesObservations"))saveRestitutionDetails();
   if(S.overrun?.accepted&&S.overrun.paymentStatus!=="PAID")
     return alert("Passage suivant bloqué : supplément du passage actuel non encore encaissé et vérifié.");
   recordPassageSnapshot();
@@ -3603,6 +3610,7 @@ function continueMultiAfterRestitution(){
   S.facts="";
   S.incident="";
   S.terrainMedia=[];
+  S.reportDetails={};
   S.overrun=null;
   save();
   ready();
@@ -3999,6 +4007,23 @@ function terrain(){
  restoreTerrainDraft();
  setTimeout(refreshTerrainMediaStatus,0);
 }
+let cyrneaRestitutionTimer=null;
+function saveRestitutionDetails(){
+ const obs=document.getElementById("crNotesObservations");
+ if(!obs)return;
+ S.reportDetails={
+  observations:(obs.value||"").trim(),
+  declarations:(document.getElementById("crNotesDeclarations")?.value||"").trim(),
+  limites:(document.getElementById("crNotesLimites")?.value||"").trim()
+ };
+ save();
+}
+function queueRestitutionDetails(){
+ clearTimeout(cyrneaRestitutionTimer);
+ cyrneaRestitutionTimer=setTimeout(saveRestitutionDetails,350);
+}
+window.addEventListener("pagehide",saveRestitutionDetails,true);
+
 function restitution(){
  setStage("RESTITUTION");
  const interim=!!S.result.multi&&S.passage<plannedPassageCount();
@@ -4014,6 +4039,11 @@ function restitution(){
  <div class="row"><b>Accord client</b><span>${esc(S.overrun.agreementMethod==="SMS"?"SMS reçu":"Accord téléphonique")} — ${esc(S.overrun.agreementAt||"-")}</span></div>
  <div class="row"><b>Supplément</b><span>${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":S.overrun.paymentStatus==="PENDING"?"À ENCAISSER":"À VÉRIFIER")}</span></div>`:""}
  <div class="row"><b>Médias / preuves</b><span>${S.terrainMedia.length?esc(S.terrainMedia.join(" • ")):"AUCUN FICHIER AJOUTÉ"}</span></div>
+ <div class="neutral" style="margin-top:12px"><b>PRÉCISIONS FACTUELLES POUR LE COMPTE RENDU CLIENT</b><div class="muted">Facultatives. Ni interprétation technique ni affirmation non vérifiée.</div>
+  <div class="field"><label>Observations factuelles complémentaires</label><textarea id="crNotesObservations" maxlength="3000" oninput="queueRestitutionDetails()" placeholder="Ce qui a été vu, fait ou constaté précisément.">${esc(S.reportDetails?.observations||"")}</textarea></div>
+  <div class="field"><label>Déclarations de tiers (attribuées à leur auteur)</label><textarea id="crNotesDeclarations" maxlength="3000" oninput="queueRestitutionDetails()" placeholder="Selon M./Mme ..., sans valider ses déclarations.">${esc(S.reportDetails?.declarations||"")}</textarea></div>
+  <div class="field"><label>Limites / éléments non vérifiables</label><textarea id="crNotesLimites" maxlength="3000" oninput="queueRestitutionDetails()" placeholder="Point inaccessible, non observé, document non communiqué…">${esc(S.reportDetails?.limites||"")}</textarea></div>
+ </div>
  ${S.result.mission==="DÉCIDER"?`<div class="neutral"><b>DÉCIDER — RESTITUTION FACTUELLE</b><div class="muted">Les faits et les limites de vérification sont repris ci-dessus. Aucun dossier préparatoire complexe obligatoire. Le client décide lui-même.</div></div>`:""}
  <div class="notice">La PWA rassemble les données nécessaires à la restitution R0/R1/R2/R3 et évite de ressaisir les informations déjà connues.</div>
  ${interim
@@ -4023,6 +4053,7 @@ function restitution(){
  save();
 }
 function closeMission(){
+ if(document.getElementById("crNotesObservations"))saveRestitutionDetails();
  if(S.result?.multi&&S.paymentStatus!=="REFUNDED"&&Number(S.passage||1)<plannedPassageCount())
    return alert("Mission en plusieurs passages : la clôture définitive ne peut intervenir avant le dernier passage inclus. Conserver le dossier actif.");
  if(!S.departureAt)return alert("⛔ Impossible de clôturer sans contrôle terrain terminé et heure de départ.");
