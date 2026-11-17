@@ -8,16 +8,16 @@
     return Number.isFinite(value) ? value : null;
   }
   function capMinutes(cap) {
-    const perPassage = String(cap || '').replace(/^\s*\d+\s*[x×]\s*/i, '').trim();
-    const h = perPassage.match(/^(\d+)\s*h(?:\s*(\d+))?$/i);
-    if (h) return +h[1] * 60 + +(h[2] || 0);
-    const m = perPassage.match(/^(\d+)\s*min(?:utes)?$/i);
-    if (m) return +m[1];
-    // RELAIS court : certaines durées incluent une description et non un nombre isolé.
-    const short = perPassage.match(/(?:~|≈|environ\s*)\s*(30)\s*min/i);
-    if (short) return +short[1];
-    const oneHour = perPassage.match(/^1\s*h\s*,/i);
-    return oneHour ? 60 : null;
+    const original = String(cap||'').trim();
+    // Deux ou trois passages: le compteur est celui d'UN passage, jamais la somme du contrat.
+    const perPassage = original.replace(/^\s*\d+\s*[x×]\s*/i,'').replace(/^\s*\d+\s*passages?\s+de\s+/i,'').trim();
+    const h=perPassage.match(/^(\d+)\s*h(?:\s*(\d+))?/i);
+    if(h)return Number(h[1])*60+Number(h[2]||0);
+    const m=perPassage.match(/^(\d+)\s*min(?:utes)?/i);
+    if(m)return Number(m[1]);
+    const short=perPassage.match(/(?:~|≈|environ\s*)\s*(\d+)\s*min/i);
+    if(short)return Number(short[1]);
+    return null; // Ne jamais inventer une durée à partir d'un libellé ambigu.
   }
   function clockState(state, now) {
     if (!state.arrivalAt || state.departureAt || state.stage === 'ARCHIVE') return null;
