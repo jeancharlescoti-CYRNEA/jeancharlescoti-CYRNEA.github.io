@@ -791,7 +791,7 @@ function identify(){
  <option value="Ghisonaccia">Ghisonaccia</option>
  <option value="Aléria">Aléria</option>
  <option value="Sartène">Sartène</option>
- <option value="Propriano">Propriano</option>
+ 
 <option value="__OTHER__">AUTRE SECTEUR — préciser</option>
 </select>
 <div class="field hidden" id="otherCityWrap" style="margin-top:8px"><label>Autre commune / secteur</label><input id="otherCity" placeholder="Ex. Figari"></div>
@@ -947,7 +947,7 @@ function b2bCoverage(city){
  if(included.includes(x))return "INCLUS";
  const verify=["sotta","san gavino di carbini","fautea","carbini","levie","zonza","figa"];
  if(verify.includes(x))return "À VÉRIFIER";
- const quote=["favone","solenzara","sari solenzara","ghisonaccia","aleria","sartene","propriano"];
+ const quote=["favone","solenzara","sari solenzara","ghisonaccia","aleria","sartene"];
  if(quote.includes(x))return "DEVIS";
  return "EXCEPTION";
 }
