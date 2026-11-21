@@ -1,6 +1,12 @@
 name: Audit PWA isole (sans paiement)
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tests/**'
+      - 'playwright.config.cjs'
+      - 'package.json'
+      - '.github/workflows/audit-pwa-isole.yml'
 permissions:
   contents: read
 jobs:
