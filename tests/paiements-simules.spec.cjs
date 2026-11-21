@@ -9,7 +9,7 @@ function fn(name){
 }
 test('RELAIS clés 199 : deux passages vers site officiel, sans lien paiement PWA',()=>{
  let result=null;
- const ctx={S:{caller:'OWNER',need:'KEY_BOTH',sub:'',result:null},showResult(){result=this.S.result},draw(){}};
+ const ctx={S:{caller:'OWNER',need:'KEY_BOTH',sub:'',result:null},showResult(){result=ctx.S.result},draw(){}};
  vm.createContext(ctx);vm.runInContext(fn('sub')+';sub()',ctx,{timeout:1000});
  expect(result).toMatchObject({status:'PARCOURS SITE OFFICIEL',mission:'CLÉS — 2 PASSAGES',price:'199 € TTC',contract:'RELAIS',multi:true,passages:2});
  expect(fn('showResult')).toContain('siteOnly');
