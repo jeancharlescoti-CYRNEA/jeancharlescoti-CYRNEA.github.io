@@ -2916,7 +2916,7 @@ function preparationMission(){
  draw(`<div class="card"><h1>Préparer la mission</h1>
  <div class="operatorOnly">Suivez simplement les étapes. Si une information manque, demandez-la au client ou laissez la mission en attente. N’inventez rien.</div>
  <div class="guideTitle">ÉTAPE 1</div><div class="bigQuestion">Où faut-il aller ?</div>
- <div class="field"><label>Adresse exacte</label><input id="addr" placeholder="Numéro, voie, commune"></div>
+ <div class="field"><label>Adresse exacte</label><input id="addr" value="${esc(S.prep?.addr||"")}" placeholder="Numéro, voie, commune"></div>
  <div class="field"><label>Point d’accès</label>
    <select id="access">
      <option>Portail / entrée principale</option><option>Accueil / réception</option><option>Début de chemin privé</option><option>Accès par la personne présente</option><option>Autre point d’accès</option>
@@ -2932,9 +2932,9 @@ function preparationMission(){
   <label class="choice"><input type="radio" name="contactChoice" value="CONTACT" onchange="toggleContactChoice()"> OUI — j’ai un contact</label>
   <label class="choice"><input type="radio" name="contactChoice" value="AUCUN" onchange="toggleContactChoice()"> NON — aucun contact</label>
  </div>
- <div class="field hidden" id="contactDetailsWrap"><label>Nom + téléphone du contact</label><input id="contact" placeholder="Nom — téléphone"></div>
- <div class="field"><label>Localisation / lien Plans ou Maps (facultatif)</label><input id="map" placeholder="Coller le lien si utile"></div>
- `:`<div class="guideTitle">ÉTAPE 3</div><div class="bigQuestion">Y a-t-il un contact sur place ?</div><div class="field"><label>Contact sur place — facultatif</label><input id="contact" placeholder="Nom — téléphone si utile"></div>`}
+ <div class="field hidden" id="contactDetailsWrap"><label>Nom + téléphone du contact</label><input id="contact" value="${esc(S.prep?.contact||"")}" placeholder="Nom — téléphone"></div>
+ <div class="field"><label>Localisation / lien Plans ou Maps (facultatif)</label><input id="map" value="${esc(S.prep?.map||"")}" placeholder="Coller le lien si utile"></div>
+ `:`<div class="guideTitle">ÉTAPE 3</div><div class="bigQuestion">Y a-t-il un contact sur place ?</div><div class="field"><label>Contact sur place — facultatif</label><input id="contact" value="${esc(S.prep?.contact||"")}" placeholder="Nom — téléphone si utile"></div>`}
  <div class="guideTitle">ÉTAPE 4</div><div class="bigQuestion">Faut-il emporter ou consulter un document ?</div>
  ${clientDocsPreview()}
  <div class="choices">${b2b?'<label class="choice"><input type="radio" name="docsChoice" value="TALLY" onchange="toggleDocsChoice()"> DÉJÀ TRANSMIS DANS TALLY</label>':""}<label class="choice"><input type="radio" name="docsChoice" value="OUI" onchange="toggleDocsChoice()"> OUI — ajouter un document / une photo</label><label class="choice"><input type="radio" name="docsChoice" value="AUCUN" onchange="toggleDocsChoice()"> NON — aucun document utile</label></div>
@@ -3135,9 +3135,9 @@ function terrainFactOptions(){
   if(m==="PRÉSENCE PROJET ÉTENDUE")return ["Objectif et zones prévus respectés","Interlocuteurs rencontrés et déclarations attribuées","Points observés et documents utiles relevés","Questions restées sans réponse consignées","Aucune réception ni décision pour le client"];
   if(m==="CONTINUITÉ PROJET"||m==="SUIVI DE PROJET - 2 PASSAGES")return ["Même périmètre et repères observés","Évolutions factuelles consignées","Photographies comparables réalisées si utiles","Éléments non comparables ou inaccessibles identifiés","Aucune appréciation de conformité"];
   if(m==="ACCÈS B2B")
-    return ["Heure précise du rendez-vous confirmée par l’entreprise","Intervenant désigné accueilli et identité vérifiée","Accès à la zone autorisée assuré","Présence pendant l’opération courte (attente comprise, 30 min maximum au total)","Intervenant parti et lieux refermés","Exécution et tout incident communiqués à l’entreprise"];
+    return ["Intervenant désigné accueilli et identité vérifiée","Accès à la zone autorisée assuré","Présence pendant l’opération courte (attente comprise, 30 min maximum au total)","Intervenant parti et lieux refermés","Exécution et tout incident communiqués à l’entreprise"];
   if(m==="PRÉSENCE LOGISTIQUE B2B")
-    return ["Heure précise du rendez-vous confirmée par l’entreprise","Professionnel ou livreur désigné accueilli et identité vérifiée","Accès à la zone autorisée assuré si nécessaire","Présence pendant l’opération (attente comprise, 1 heure maximum au total)","Intervenant parti et lieux refermés","Exécution et tout incident communiqués à l’entreprise"];
+    return ["Professionnel ou livreur désigné accueilli et identité vérifiée","Accès à la zone autorisée assuré si nécessaire","Présence pendant l’opération (attente comprise, 1 heure maximum au total)","Intervenant parti et lieux refermés","Exécution et tout incident communiqués à l’entreprise"];
   if(m==="RELAIS SIMPLE" && S.need==="ART" && S.sub==="ACCESS")
     return ["Professionnel désigné présent","Identité / société vérifiée","Accès donné","Présence pendant l’opération très courte","Lieux refermés avant le départ"];
   if(m==="RELAIS" && S.need==="ART" && S.sub==="STAY")
@@ -3947,6 +3947,7 @@ function terrain(){
  <div class="advice"><b>CONSEIL</b>Les cases ci-dessous sont vos contrôles internes. Le client n’a rien à cocher ici.</div>
 
  <div class="row"><b>${esc(S.missionId)}</b><span>${esc(b2bCommercialMissionName(S.result.mission))}</span></div>
+ <div class="notice"><b>PRÉPARATION DÉJÀ ENREGISTRÉE — NE PAS RESSAISIR</b><div class="row"><b>Adresse</b><span>${esc(S.prep?.addr||"Non renseignée")}</span></div><div class="row"><b>Accès prévu</b><span>${esc(S.prep?.access||"-")} — ${esc(S.prep?.mode||"-")}</span></div>${S.prep?.contact&&S.prep.contact!=="AUCUN"?`<div class="row"><b>Contact prévu</b><span>${esc(S.prep.contact)}</span></div>`:""}</div>
  <div class="toolbar"><button class="btn ghost" onclick="missionDesk()">DOSSIER MISSION</button>${isB2BKeyCustody()?`<button class="btn ghost" onclick="keysTracker()">CLÉS — RÉCEPTION / RESTITUTION</button>`:""}</div>
 
  <div class="checkZone">
