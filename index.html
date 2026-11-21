@@ -3130,6 +3130,10 @@ function showMissionDoc(kind){
 }
 function terrainFactOptions(){
   const m=S.result?.mission||"";
+  if(m==="GESTES SIMPLES SUR SITE B2B")return ["Action d'usage non technique prévue identifiée","Conditions d'accès et de sécurité vérifiées","Action effectivement réalisée ou impossibilité constatée","Résultat directement observable consigné","Aucune intervention technique ni action supplémentaire entreprise"];
+  if(["REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","REMISE ET RÉCUPÉRATION CLÉ / BADGE B2B","CLÉS — 2 PASSAGES B2B","CLÉS — 2 PASSAGES"].includes(m))return ["Personne désignée identifiée","Nature et nombre des clés / badges constatés","Remise ou récupération effectivement réalisée","Date, heure et destinataire consignés","État de garde et destination suivante clarifiés"];
+  if(m==="PRÉSENCE PROJET ÉTENDUE")return ["Objectif et zones prévus respectés","Interlocuteurs rencontrés et déclarations attribuées","Points observés et documents utiles relevés","Questions restées sans réponse consignées","Aucune réception ni décision pour le client"];
+  if(m==="CONTINUITÉ PROJET"||m==="SUIVI DE PROJET - 2 PASSAGES")return ["Même périmètre et repères observés","Évolutions factuelles consignées","Photographies comparables réalisées si utiles","Éléments non comparables ou inaccessibles identifiés","Aucune appréciation de conformité"];
   if(m==="ACCÈS B2B")
     return ["Heure précise du rendez-vous confirmée par l’entreprise","Intervenant désigné accueilli et identité vérifiée","Accès à la zone autorisée assuré","Présence pendant l’opération courte (attente comprise, 30 min maximum au total)","Intervenant parti et lieux refermés","Exécution et tout incident communiqués à l’entreprise"];
   if(m==="PRÉSENCE LOGISTIQUE B2B")
