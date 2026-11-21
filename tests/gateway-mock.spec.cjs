@@ -4,7 +4,7 @@ const html=fs.readFileSync('index.html','utf8');
 function source(name){
  const start=html.indexOf('function '+name+'(');if(start<0)throw Error('Missing '+name);
  let depth=0,quote='',escaped=false,begin=html.indexOf('{',start);
- for(let i=begin;i<html.length;i++){const c=html[i];if(quote){if(escaped){escaped=false;continue}if(c==='\\'){escaped=true;continue}if(c===quote)quote='';continue}if(c==='"'||c==="'"||c==='`'){quote=c;continue}if(c==='{')depth++;if(c==='}'&&!--depth)return html.slice(start,i+1)}
+ for(let i=begin;i<html.length;i++){const c=html[i];if(quote){if(escaped){escaped=false;continue}if(c==='\\'){escaped=true;continue}if(c===quote)quote='';continue}if(c==='"'||c==="'"||c==='`'){quote=c;continue}if(c==='{')depth++;if(c==='}'&&!--depth)return html.slice(start,i+1).replace(/^function registerTallyIntent/, 'async function registerTallyIntent')}
  throw Error('Unclosed '+name);
 }
 function sandbox(overrides={}){
