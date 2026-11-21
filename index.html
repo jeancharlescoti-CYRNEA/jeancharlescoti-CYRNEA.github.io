@@ -3412,6 +3412,7 @@ async function exportMissionArchive(){
    const enc=new TextEncoder();
    const entries=[];
    entries.push({name:"DOSSIER_MISSION.txt",data:enc.encode(missionArchiveText())});
+    entries.push({name:"COMPTE_RENDU_CLIENT.txt",data:enc.encode(clientReportText())});
    entries.push({name:"MISSION.json",data:enc.encode(JSON.stringify(S,null,2))});
    // Ne jamais fournir silencieusement un ZIP amputé des pièces terrain.
    // Les médias peuvent exister seulement sur l'iPhone : dans ce cas, ouvrir l'export sur cet appareil.
@@ -3573,6 +3574,7 @@ function confirmNextSuivrePassage(){
  save();continueMultiAfterRestitution();
 }
 function continueMultiAfterRestitution(){
+ if(!saveReportAnswers())return;
   if(S.overrun?.accepted&&S.overrun.paymentStatus!=="PAID")
     return alert("Passage suivant bloqué : supplément du passage actuel non encore encaissé et vérifié.");
   recordPassageSnapshot();
@@ -3989,6 +3991,46 @@ function terrain(){
  restoreTerrainDraft();
  setTimeout(refreshTerrainMediaStatus,0);
 }
+
+function reportQuestions(){
+ const m=S.result?.mission||"",n=S.need||"";
+ if(m.includes("CLÉ")||n==="KEY"||isB2BKeyMission())return ["Éléments et quantités remis / récupérés","Identité et qualité du destinataire / remettant","Preuve et modalités de remise / récupération"];
+ if(m==="GESTES SIMPLES SUR SITE B2B"||(m==="RELAIS"&&n==="OPEN"))return ["Actions précisément demandées","Actions réalisées et résultats observés","Actions non réalisées et motifs"];
+ if(["SUIVRE","CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(m))return ["Repères identiques comparés","Évolutions visibles depuis le précédent passage","Points non comparables et limites"];
+ if(m.includes("VOIR")||m==="VISITE TERRAIN PILOTÉE")return ["Zones ou points observés","Constats factuels par zone","Limites et références photographiques"];
+ if(m==="DÉCIDER"||m.includes("PRÉSENCE PROJET")||(m==="RELAIS"&&n==="ART"))return ["Interlocuteurs et qualité déclarée","Questions posées et réponses attribuées","Questions sans réponse et décisions laissées au client"];
+ if(["ACCÈS B2B","RELAIS SIMPLE","RELAIS","PRÉSENCE LOGISTIQUE B2B"].includes(m))return ["Personne accueillie et qualité déclarée","Accès et opération effectivement réalisés","Départ du tiers et fermeture des lieux"];
+ return ["Actions ou observations effectuées","Points non réalisés ou non vérifiables","État des accès au départ"];
+}
+function reportAnswersFromDom(){return reportQuestions().map((q,i)=>({question:q,answer:(document.getElementById("reportAnswer"+i)?.value||"").trim()}))}
+function saveReportAnswers(){
+ const v=reportAnswersFromDom();
+ if(v.some(x=>!x.answer)){alert("Complétez chaque rubrique, ou indiquez Non applicable / Non vérifiable avec son motif.");return false}
+ S.reportAnswers=v;save();return true;
+}
+function clientReportText(){
+ const lines=["CYRNEA — COMPTE RENDU FACTUEL DE MISSION","",
+ "Référence : "+(S.missionId||"-"),"Client : "+(S.name||"-"),
+ "Mission : "+b2bCommercialMissionName(S.result?.mission||"-"),
+ "Objet : "+(S.obj||"-"),"Lieu : "+(S.prep?.addr||S.city||"-"),
+ "Date / créneau : "+scheduleText(),"Passage : "+(S.passage||1),
+ "Arrivée : "+(S.arrivalAt||"-"),"Départ : "+(S.departureAt||"-"),
+ "","FAITS ET ACTIONS",S.facts||"-","","RESTITUTION SPÉCIFIQUE"];
+ (S.reportAnswers||[]).forEach(x=>lines.push(x.question+" : "+x.answer));
+ lines.push("","INCIDENTS / LIMITES",S.incident||"Aucun",
+ "","PIÈCES RÉFÉRENCÉES",...(S.terrainMedia?.length?S.terrainMedia:["Aucune"]),
+ "","Restitution factuelle uniquement : ni diagnostic, ni réception de travaux, ni décision pour le client.");
+ return lines.join("\n");
+}
+function downloadClientReport(){
+ if(!saveReportAnswers())return;
+ const blob=new Blob([clientReportText()],{type:"text/plain;charset=utf-8"});
+ const a=document.createElement("a"),u=URL.createObjectURL(blob);
+ a.href=u;a.download=safeArchiveName(S.missionId)+"_COMPTE_RENDU_CLIENT.txt";
+ document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000);
+ S.clientReportPreparedAt=nowStamp();save();
+}
+
 function restitution(){
  setStage("RESTITUTION");
  const interim=!!S.result.multi&&S.passage<plannedPassageCount();
@@ -4005,7 +4047,7 @@ function restitution(){
  <div class="row"><b>Supplément</b><span>${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":S.overrun.paymentStatus==="PENDING"?"À ENCAISSER":"À VÉRIFIER")}</span></div>`:""}
  <div class="row"><b>Médias / preuves</b><span>${S.terrainMedia.length?esc(S.terrainMedia.join(" • ")):"AUCUN FICHIER AJOUTÉ"}</span></div>
  ${S.result.mission==="DÉCIDER"?`<div class="neutral"><b>DÉCIDER — RESTITUTION FACTUELLE</b><div class="muted">Les faits et les limites de vérification sont repris ci-dessus. Aucun dossier préparatoire complexe obligatoire. Le client décide lui-même.</div></div>`:""}
- <div class="notice">La PWA rassemble les données nécessaires à la restitution R0/R1/R2/R3 et évite de ressaisir les informations déjà connues.</div>
+ <div class="neutral"><b>RESTITUTION SPÉCIFIQUE À LA MISSION</b><div class="muted">Faits observés, déclarations attribuées, limites motivées.</div>${reportQuestions().map((q,i)=>`<div class="field"><label>${esc(q)}</label><textarea id="reportAnswer${i}">${esc(S.reportAnswers?.[i]?.question===q?S.reportAnswers[i].answer:"")}</textarea></div>`).join("")}</div><button class="btn ghost" onclick="downloadClientReport()">TÉLÉCHARGER LE COMPTE RENDU CLIENT (.TXT)</button><div class="notice">Vérifier les pièces avant envoi. Le compte rendu client est distinct de l'archive interne.</div>
  ${interim
    ? `<button class="btn primary" onclick="continueMultiAfterRestitution()">ENREGISTRER L’INTERMÉDIAIRE ET PRÉPARER LE PASSAGE ${S.passage+1}</button>`
    : `<button class="btn primary" onclick="closeMission()">VALIDER LA RESTITUTION FINALE</button>${extraMomentRule()&&!interim?`<button class="btn ghost" onclick="extraMomentInfo()" style="margin-top:10px">${S.result?.mission==="SUIVRE"?"3e OBSERVATION FACULTATIVE (+200 €)":"PASSAGE B2B SUPPLÉMENTAIRE À REQUALIFIER"}</button>`:""}`}
@@ -4013,6 +4055,7 @@ function restitution(){
  save();
 }
 function closeMission(){
+ if(!saveReportAnswers())return;
  if(S.result?.multi&&S.paymentStatus!=="REFUNDED"&&Number(S.passage||1)<plannedPassageCount())
    return alert("Mission en plusieurs passages : la clôture définitive ne peut intervenir avant le dernier passage inclus. Conserver le dossier actif.");
  if(!S.departureAt)return alert("⛔ Impossible de clôturer sans contrôle terrain terminé et heure de départ.");
@@ -4054,7 +4097,8 @@ function closeMission(){
 function finalizeArchive(){
  if(S.result?.multi&&S.paymentStatus!=="REFUNDED"&&Number(S.passage||1)<plannedPassageCount())
    return alert("Archivage impossible : les passages inclus dans la mission ne sont pas terminés.");
- if(!document.getElementById("reportSentChecked")?.checked)
+ if(!S.reportAnswers?.length || S.reportAnswers.some(x=>!x.answer))return alert("Compte rendu spécifique incomplet.");
+  if(!document.getElementById("reportSentChecked")?.checked)
    return alert("Archivage bloqué : confirmez d’abord l’envoi réel de la restitution au client. Le dossier peut rester actif.");
  const status=document.getElementById("fs")?.value||"";
  if(!keysFullyReturned()&&!(status.startsWith("MISSION IMPOSSIBLE")&&!S.keyCustody?.receivedAt))return alert("⛔ Archive bloquée : clés non restituées ou retour postal non distribué.");
