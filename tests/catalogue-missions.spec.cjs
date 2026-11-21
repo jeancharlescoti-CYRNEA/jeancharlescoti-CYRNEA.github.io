@@ -62,3 +62,31 @@ test('RELAIS : expertise technique interdite',()=>{
 test('RELAIS : suivi 2 passages = base 490 TTC dans PWA',()=>{
  expect(classify('RELAIS','Porto-Vecchio','FOLLOW','TWO').price).toBe('490 € TTC');
 });
+
+const paymentCases=[
+ ['RELAIS','ART','ACCESS',10900],
+ ['RELAIS','ART','STAY',14900],
+ ['RELAIS','SEE','VISIBLE',26000],
+ ['RELAIS','KEY','GIVE',10900],
+ ['RELAIS','KEY','GET',10900],
+ ['B2B','BLOG','ACCESS',13080],
+ ['B2B','BLOG','KEY_GIVE',13080],
+ ['B2B','BLOG','KEY_GET',13080],
+ ['B2B','BLOG','KEY_BOTH',26160],
+ ['B2B','BLOG','STAY',20280],
+ ['B2B','BLOG','GESTES',20280],
+ ['B2B','BVISIT',null,42000],
+ ['B2B','BPROJECT',null,58800],
+ ['B2B','BEXT',null,82800],
+ ['B2B','BSUIVI2',null,102000],
+ ['B2B','BCONT',null,142800],
+ ['RELAIS','FOLLOW','TWO',49000]
+];
+for(const [caller,need,sub,expectedCents] of paymentCases){
+ test('montant transmis au paiement '+caller+' '+need+'/'+(sub||'-'),()=>{
+  const r=classify(caller,'Porto-Vecchio',need,sub);
+  const amount=Number(r.price.replace(/[^0-9,]/g,'').replace(',','.'));
+  const cents=Math.round(amount*(caller==='B2B'?1.2:1)*100);
+  expect(cents).toBe(expectedCents);
+ });
+}
