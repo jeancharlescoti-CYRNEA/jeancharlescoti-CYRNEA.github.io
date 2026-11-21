@@ -2914,7 +2914,7 @@ function preparationMission(){
  setStage("RÉSERVATION");
  const b2b=S.caller==="B2B";
  draw(`<div class="card"><h1>Préparer la mission</h1>
- <div class="operatorOnly">Suivez simplement les étapes. Si une information manque, demandez-la au client ou laissez la mission en attente. N’inventez rien.</div>
+ <div class="operatorOnly">Si la réservation provient de Tally, vérifiez la soumission correspondante avant de compléter les seuls éléments manquants. La référence Tally seule ne garantit pas la récupération des réponses. N’inventez rien.</div>
  <div class="guideTitle">ÉTAPE 1</div><div class="bigQuestion">Où faut-il aller ?</div>
  <div class="field"><label>Adresse exacte</label><input id="addr" value="${esc(S.prep?.addr||"")}" placeholder="Numéro, voie, commune"></div>
  <div class="field"><label>Point d’accès</label>
@@ -2942,7 +2942,7 @@ function preparationMission(){
  <div class="guideTitle">ÉTAPE 5</div><div class="bigQuestion">${b2b?"Compléter le brief reçu dans Tally (si nécessaire) ?":"Une précision exceptionnelle ?"}</div>
  <button class="btn ghost" onclick="document.getElementById('prepExtra').classList.toggle('hidden')">${b2b?"AJOUTER UN COMPLÉMENT FACULTATIF":"AJOUTER UNE PRÉCISION"}</button>
  <div class="field hidden" id="prepExtra">${b2b?'<label>Points à documenter, questions ou liens utiles (facultatif)</label><textarea id="note" maxlength="4000" placeholder="Reporter uniquement les éléments utiles de la demande Tally."></textarea>':'<label>Précision courte</label><input id="note" maxlength="140">'}</div>
- <div class="operatorOnly">Avant de valider : vérifiez adresse, accès, contact éventuel et documents utiles.</div>
+ <div class="operatorOnly">Avant de valider : vérifiez adresse, accès, contact éventuel et documents utiles. Une information issue de Tally doit être confirmée, pas ressaisie.</div>
  <button class="btn primary" onclick="collectPreparation()">MISSION PRÉPARÉE</button>
  </div>`);
 }
