@@ -28,3 +28,14 @@
 **Paiement client complet de bout en bout : NON CERTIFIÉ.**
 
 Ne jamais envoyer de fausses notifications webhook aux endpoints de production.
+
+## Contre-tests locaux du webhook (21/11/2026)
+
+Code exact de `cyrnea-payments-webhook-corrige.js` fourni dans la conversation, exécuté localement avec signature HMAC valide et stockage KV simulé (aucun appel production).
+
+- 6/6 tests de base réussis : signature, PAID, doublon, échec tardif, signature invalide, consultation statut.
+- **ANOMALIE REPRODUITE** : un événement `checkout.session.completed` correctement signé avec `payment_status=paid`, `amount_total=100` et référence de mission fictive à 10900 centimes est enregistré `PAYMENT:<reference>` avec `status=PAID`. Le webhook ne compare pas le montant de la session à un montant attendu de réservation provenant d'un enregistrement fiable.
+- `payment_intent.succeeded` est ignoré par `normalizeStatusPayload` ; les 19 transactions Stripe TEST directes ne prouvent donc pas que le webhook reçoit ou traite une confirmation.
+- Risque à analyser : `PAYMENTS` est KV avec lectures/écritures non atomiques ; l'idempotence n'est pas garantie en cas d'événements concurrents.
+
+**Conclusion actualisée : validation E2E refusée, correction/validation du contrôle montant-référence et essais webhook déployé nécessaires.** Ne pas déployer une correction non testée en production.
