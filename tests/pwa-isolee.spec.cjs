@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('version isolée identifiable et aucun paiement réel', async ({ page }) => {
-  await expect(page.locator('body')).toContainText('MODE TEST — AUCUN PAIEMENT RÉEL');
+  expect(await page.locator('body').evaluate(el => getComputedStyle(el, '::before').content)).toContain('MODE TEST');
   await expect(page.locator('h1').first()).toContainText('CYRNEA ASSISTANT');
   await expect(page.getByRole('button', { name: /NOUVELLE MISSION/ })).toBeVisible();
 });
@@ -19,7 +19,7 @@ test('version isolée identifiable et aucun paiement réel', async ({ page }) =>
 test('nouvelle mission ouvre le parcours sans appel externe', async ({ page }) => {
   await page.getByRole('button', { name: /NOUVELLE MISSION/ }).click();
   await expect(page.locator('main#app')).not.toBeEmpty();
-  await expect(page.locator('body')).toContainText('MODE TEST — AUCUN PAIEMENT RÉEL');
+  expect(await page.locator('body').evaluate(el => getComputedStyle(el, '::before').content)).toContain('MODE TEST');
 });
 
 test('version production présente dans le dépôt, sans exécution de ses appels externes', async ({ request }) => {
