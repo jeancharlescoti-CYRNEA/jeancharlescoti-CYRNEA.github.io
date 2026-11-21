@@ -41,19 +41,40 @@ async function evidence(page,n){
 async function pay(page,x,n){
   if(!x.session_id.startsWith('cs_test_')||!x.checkout_url.startsWith('https://checkout.stripe.com/')||!x.checkout_url.includes(x.session_id))throw Error('Non TEST checkout refused');
   await page.goto(x.checkout_url,{waitUntil:'domcontentloaded',timeout:55000});
-  await page.waitForTimeout(2200);
+  await page.waitForTimeout(3000);
+  // Force EUR: Stripe adaptive pricing otherwise proposes USD on US CI IP.
+  for(const frame of page.frames()){
+    try{
+      const eur=frame.locator('#currency-eur').first();
+      if(await eur.count()){
+        await eur.check({force:true,timeout:3000});
+        console.log('EUR selected for '+x.session_id);
+        await page.waitForTimeout(1600);
+        break;
+      }
+    }catch(e){console.log('EUR selection:',String(e.message).slice(0,140))}
+  }
   await fill(page,['input[name="email"]','input[type="email"]','input[autocomplete="email"]'],'cyrnea-stripe-test@example.com',false);
-  await fill(page,['input[name="billingName"]','input[autocomplete="cc-name"]','input[autocomplete="name"]'],'CYRNEA TEST',false);
-  await fill(page,['input[name="cardNumber"]','input[autocomplete="cc-number"]','input[placeholder*="1234"]','input[aria-label*="Card number"]','input[aria-label*="Numéro"]'],'4242424242424242',true);
-  await fill(page,['input[name="cardExpiry"]','input[autocomplete="cc-exp"]','input[placeholder*="MM / YY"]','input[aria-label*="Expiration"]'],'1234',true);
-  await fill(page,['input[name="cardCvc"]','input[autocomplete="cc-csc"]','input[placeholder="CVC"]','input[aria-label*="CVC"]'],'123',true);
-  await fill(page,['input[name="billingPostalCode"]','input[autocomplete="postal-code"]'],'20137',false);
+  await fill(page,['input[name="billingName"]','input[name="name"]','input[autocomplete="cc-name"]','input[autocomplete="name"]'],'CYRNEA TEST',false);
+  await fill(page,['input[name="number"]','input[name="cardNumber"]','input[autocomplete="cc-number"]','input[placeholder*="1234"]','input[aria-label*="Card number"]','input[aria-label*="Numéro"]'],'4242424242424242',true);
+  await fill(page,['input[name="expiry"]','input[name="cardExpiry"]','input[autocomplete="cc-exp"]','input[placeholder*="MM / YY"]','input[aria-label*="Expiration"]'],'1234',true);
+  await fill(page,['input[name="cvc"]','input[name="cardCvc"]','input[autocomplete="cc-csc"]','input[placeholder="CVC"]','input[aria-label*="CVC"]'],'123',true);
+  await fill(page,['input[name="postalCode"]','input[name="billingPostalCode"]','input[autocomplete="postal-code"]'],'20137',false);
+  for(const frame of page.frames()){
+    try{
+      const buttons=await frame.locator('button').evaluateAll(els=>els.filter(e=>e.offsetParent!==null).map(e=>({text:e.innerText.trim().slice(0,90),type:e.type,aria:e.getAttribute('aria-label')})));
+      if(buttons.length)console.log('BUTTONS '+frame.url().split('?')[0].slice(0,65)+' '+JSON.stringify(buttons).slice(0,1300));
+    }catch(e){}
+  }
   let clicked=false;
-  for(const f of page.frames()){
-    for(const selector of ['button[type="submit"]:visible','button:has-text("Payer")','button:has-text("Pay")']){
+  for(const frame of page.frames()){
+    for(const selector of ['button:has-text("Payer")','button:has-text("Pay")','button[type="submit"]:visible']){
       try{
-        const b=f.locator(selector).last();
-        if(await b.isVisible({timeout:500})&&await b.isEnabled({timeout:500})){await b.click({timeout:8000});clicked=true;break}
+        const b=frame.locator(selector).last();
+        if(await b.isVisible({timeout:500})&&await b.isEnabled({timeout:500})){
+          console.log('CLICK '+selector+' on '+frame.url().split('?')[0].slice(0,80));
+          await b.click({timeout:8000});clicked=true;break
+        }
       }catch(e){}
     }
     if(clicked)break;
