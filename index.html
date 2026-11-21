@@ -4008,21 +4008,31 @@ function terrain(){
 
 function reportQuestions(){
  const m=S.result?.mission||"",n=S.need||"",sub=S.sub||"";
- const keys=["CLÉS — 2 PASSAGES","CLÉS — 2 PASSAGES B2B","REMISE CLÉ / BADGE B2B","RÉCUPÉRATION CLÉ / BADGE B2B","REMISE ET RÉCUPÉRATION CLÉ / BADGE B2B"];
- if(keys.includes(m)||n==="KEY"||isB2BKeyMission())return ["Opération du passage : remise ou récupération, nature et nombre d'éléments","Personne remettante / destinataire, identité et qualité déclarée","Date, heure, preuve, garde et destination des clés / badges"];
- if(m==="GESTES SIMPLES SUR SITE B2B"||(m==="RELAIS"&&n==="OPEN"))return ["Action d'usage précisément convenue","Action effectuée et résultat directement observable","Action non effectuée, motif et état laissé sur site"];
- if(["SUIVRE","CONTINUITÉ PROJET","SUIVI DE PROJET - 2 PASSAGES"].includes(m))return ["Repères observés et références de comparaison","Évolution factuelle depuis les passages précédents","Points non comparables, limites et photographies associées"];
- if(m==="VOIR RELAIS"||m==="DÉCIDER")return ["Points demandés par le propriétaire et faits constatés","Informations recueillies auprès des tiers, avec leur origine","Points non observables et éléments restant à décider par le propriétaire"];
- if(m==="VISITE TERRAIN PILOTÉE")return ["Zones du site parcourues et points demandés par l'entreprise","Constats factuels par zone et références des pièces","Zones inaccessibles et limites de vérification"];
- if(["PRÉSENCE PROJET","PRÉSENCE PROJET ÉTENDUE"].includes(m))return ["Interlocuteurs présents, rôles déclarés et objet du rendez-vous","Questions prévues, réponses attribuées et faits observés","Questions sans réponse, documents recueillis et décisions réservées à l'entreprise"];
- if(m==="PRÉSENCE LOGISTIQUE B2B")return ["Personne ou livraison accueillie et identité vérifiée","Opération logistique observée, horaires et documents utiles","Départ du tiers, fermeture, anomalies et limites"];
- if(m==="ACCÈS B2B")return ["Tiers autorisé accueilli et identité vérifiée","Accès effectivement donné, heure et périmètre","Fin d'accès, départ du tiers et fermeture"];
- if(m==="RELAIS"&&["ART","DEL"].includes(n))return ["Professionnel ou livreur accueilli et identité vérifiée","Déroulement factuel du rendez-vous et documents recueillis","Départ, fermeture et points restés en suspens"];
- if(m==="RELAIS SIMPLE"&&["ART","DEL","THIRD"].includes(n))return ["Tiers autorisé et identité vérifiée","Accès donné et opération réellement constatée","Départ, fermeture ou limite rencontrée"];
- if(m.includes("INTEMPÉRIE"))return ["Éléments convenus observés ou manipulés sans intervention technique","Faits constatés, actions réalisées et photographies","Limites de sécurité et état laissé sur place"];
- return ["Actions ou observations réellement effectuées","Éléments non réalisés ou non vérifiables avec motif","Situation des accès et du site au départ"];
+ const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES";
+ const common=["Points prévus non réalisés ou non vérifiables et motifs","État du site, accès et clés à la fin du passage"];
+ const keyQuestions=["Sens de l'opération de ce passage (remise ou récupération), nature, quantité et références des clés/badges","Identité et qualité déclarée du remettant et du destinataire, autorisation vérifiée","Date, heure, mode et preuve du transfert, détenteur après passage","Écart, refus, absence ou garde intermédiaire et suite convenue"];
+ if(n==="KEY"||isB2BKeyMission()||m.includes("CLÉ"))return keyQuestions;
+ if(m==="GESTES SIMPLES SUR SITE B2B")return ["Action d'usage exactement autorisée et limites de sécurité","État initial observé et conditions permettant l'action","Actions réellement réalisées, partielles ou impossibles, avec motif","Résultat directement observable et état final laissé sur site"];
+ if(m==="PRÉSENCE LOGISTIQUE B2B")return ["Tiers, livreur ou professionnel présent, identité et qualité déclarée","Objet, horaires et déroulement factuel de l'opération logistique","Documents, quantités ou réserves factuelles recueillis, sans réception pour le client",...common];
+ if(m==="ACCÈS B2B")return ["Autorisation de l'entreprise et identité du tiers accueilli","Zone autorisée, heure d'ouverture et accès réellement donné","Heure de départ du tiers, fermeture et état des accès","Incident, refus d'accès ou écart au programme"];
+ if(m==="VISITE TERRAIN PILOTÉE")return ["Objectif et zones de visite demandés par l'entreprise","Constats factuels zone par zone et références des photos","Éléments ou déclarations de tiers, avec leur source","Zones inaccessibles, éléments non vérifiables et limites","Questions restant à traiter par l'entreprise, sans recommandation technique"];
+ if(m==="PRÉSENCE PROJET"||m==="PRÉSENCE PROJET ÉTENDUE")return ["Objet du rendez-vous ou des séquences prévues, lieux et horaires","Interlocuteurs rencontrés et qualité déclarée","Questions prévues, réponses exactes attribuées à chaque interlocuteur","Documents ou éléments présentés, références et constats directs","Points en suspens, limites et décisions laissées exclusivement à l'entreprise"];
+ if(m==="CONTINUITÉ PROJET"||m==="SUIVI DE PROJET - 2 PASSAGES")return ["Passage concerné, zones et repères identiques à comparer","Constats datés par repère et références photographiques","Évolutions factuelles depuis le passage précédent, sans interprétation","Éléments non comparables, absents ou inaccessibles et raisons","Questions ouvertes et limites, sans appréciation de conformité"];
+ if(m==="SUIVRE")return ["Passage concerné, zones et repères convenus avec le propriétaire","Constats datés par repère et références photographiques","Évolutions visibles depuis le passage précédent, sans diagnostic","Éléments non comparables ou non accessibles et raisons","Questions restant à décider par le propriétaire"];
+ if(m==="VOIR RELAIS"||m==="DÉCIDER")return ["Objectif du propriétaire, zones et questions à examiner","Constats factuels par zone et références photographiques","Échanges en visio ou informations de tiers, source et horaire si applicables","Points non observables, contradictions et limites de vérification","Options ou questions transmises au propriétaire, sans décision ni conseil technique"];
+ if(m==="RELAIS"&&["ART","DEL"].includes(n))return ["Identité et qualité déclarée du tiers, autorisation d'accès","Heure d'arrivée, objet et déroulement du rendez-vous","Questions, réponses attribuées et documents éventuellement remis","Départ du tiers, fermeture et état laissé sur place","Écarts, absences, incidents ou points non résolus"];
+ if(m==="RELAIS SIMPLE"&&["ART","DEL","THIRD"].includes(n))return ["Autorisation, identité et qualité du tiers accueilli","Accès et opération réellement effectués, horaires","Départ du tiers, fermeture et état des lieux","Absence, refus, incident ou impossibilité et motif"];
+ if(m==="RELAIS"&&n==="OPEN")return ["Actions simples précisément convenues avec le propriétaire","État initial observable et conditions de sécurité","Actions effectuées, partielles ou impossibles et raisons","Résultat visible et état final laissé sur place"];
+ if(m.includes("INTEMPÉRIE"))return ["Éléments prévus et état initial observé sans diagnostic","Actions d'usage autorisées réalisées ou impossibles","Constats factuels et photographies utiles","Limites de sécurité, accès et état laissé sur place"];
+ return ["Objet et périmètre exacts de la mission","Actions réalisées et constats directement observés","Déclarations de tiers et origine si applicables",...common];
 }
-function reportAnswersFromDom(){return reportQuestions().map((q,i)=>({question:q,answer:(document.getElementById("reportAnswer"+i)?.value||"").trim()}))}
+function reportAnswersFromDom(){
+ return reportQuestions().map((q,i)=>{
+  const el=document.getElementById("reportAnswer"+i);
+  const saved=(S.reportAnswers||[]).find(x=>x.question===q);
+  return {question:q,answer:(el?el.value:(saved?.answer||"")).trim()};
+ });
+}
 function saveReportAnswers(){
  const v=reportAnswersFromDom();
  if(v.some(x=>!x.answer)){alert("Complétez chaque rubrique, ou indiquez Non applicable / Non vérifiable avec son motif.");return false}
