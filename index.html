@@ -3172,7 +3172,7 @@ function terrainFactOptions(){
 }
 function toggleIncidentOther(){
   const s=document.getElementById("incidentSelect"),w=document.getElementById("incidentOtherWrap");
-  if(s&&w)w.classList.toggle("hidden",s.value!=="AUTRE");
+  if(s&&w)w.classList.toggle("hidden",!["AUTRE","SITUATION DIFFÉRENTE / DOUTE"].includes(s.value));
 }
 
 const MEDIA_DB_NAME="cyrnea_media_v1";
@@ -3395,6 +3395,7 @@ function missionArchiveText(){
      "  PASSAGE "+p.passage+" — "+(p.date||"-")+" "+(p.slot||""),
      "  Arrivée : "+(p.arrivalAt||"-")+" / Départ : "+(p.departureAt||"-"),
      "  Faits : "+(p.facts||"-"),"  Incident : "+(p.incident||"-"),
+    ...(p.reportAnswers||[]).map(x=>"  "+x.question+" : "+x.answer),
      "  Fichiers : "+(Array.isArray(p.media)?p.media.join(" ; "):"-"),
      "  Prolongation : "+(p.overrun?.accepted?(p.overrun.total+" € "+p.overrun.base+" — "+(p.overrun.paymentStatus||"-")+" — justificatif : "+(p.overrun.paymentEvidence?.reference||"-")):"aucune")
    ]),
@@ -3413,6 +3414,7 @@ async function exportMissionArchive(){
    const entries=[];
    entries.push({name:"DOSSIER_MISSION.txt",data:enc.encode(missionArchiveText())});
     entries.push({name:"COMPTE_RENDU_CLIENT.txt",data:enc.encode(clientReportText())});
+    (S.passageHistory||[]).forEach(p=>{if(p.reportAnswers?.length){const lines=["PASSAGE "+p.passage,"Arrivée : "+p.arrivalAt,"Départ : "+p.departureAt,"Faits : "+p.facts,"Incident : "+p.incident,...p.reportAnswers.map(x=>x.question+" : "+x.answer)];entries.push({name:"RESTITUTIONS/PASSAGE_"+String(p.passage).padStart(2,"0")+".txt",data:enc.encode(lines.join("\n"))});}});
    entries.push({name:"MISSION.json",data:enc.encode(JSON.stringify(S,null,2))});
    // Ne jamais fournir silencieusement un ZIP amputé des pièces terrain.
    // Les médias peuvent exister seulement sur l'iPhone : dans ce cas, ouvrir l'export sur cet appareil.
@@ -3523,7 +3525,7 @@ function recordPassageSnapshot(){
  if(history.some(p=>Number(p.passage)===passage))return;
  history.push({
    passage,date:S.date||"",slot:S.slot||"",arrivalAt:S.arrivalAt,departureAt:S.departureAt,
-   facts:S.facts||"",incident:S.incident||"",media:Array.isArray(S.terrainMedia)?[...S.terrainMedia]:[],
+   facts:S.facts||"",incident:S.incident||"",media:Array.isArray(S.terrainMedia)?[...S.terrainMedia]:[],reportAnswers:Array.isArray(S.reportAnswers)?S.reportAnswers.map(x=>({...x})):[],
    overrun:S.overrun?.accepted?{...S.overrun}:null,
    savedAt:nowStamp()
  });
@@ -3603,6 +3605,8 @@ function continueMultiAfterRestitution(){
   S.incident="";
   S.terrainMedia=[];
   S.overrun=null;
+  S.reportAnswers=[];
+  S.clientReportPreparedAt="";
   save();
   ready();
 }
@@ -3628,7 +3632,7 @@ function collectTerrain(){
   const inc=document.getElementById("incidentSelect").value;
   if(!inc)return alert("Choisissez la situation : AUCUN INCIDENT ou un incident / une limite.");
   let incText=inc;
-  if(inc==="AUTRE"){
+  if(["AUTRE","SITUATION DIFFÉRENTE / DOUTE"].includes(inc)){
     incText=(document.getElementById("incidentOther")?.value||"").trim();
     if(!incText)return alert("Précisez l’incident / la limite.");
   }
@@ -4098,6 +4102,7 @@ function finalizeArchive(){
  if(S.result?.multi&&S.paymentStatus!=="REFUNDED"&&Number(S.passage||1)<plannedPassageCount())
    return alert("Archivage impossible : les passages inclus dans la mission ne sont pas terminés.");
  if(!S.reportAnswers?.length || S.reportAnswers.some(x=>!x.answer))return alert("Compte rendu spécifique incomplet.");
+  if(!S.clientReportPreparedAt)return alert("Téléchargez et vérifiez le compte rendu client avant de confirmer sa transmission.");
   if(!document.getElementById("reportSentChecked")?.checked)
    return alert("Archivage bloqué : confirmez d’abord l’envoi réel de la restitution au client. Le dossier peut rester actif.");
  const status=document.getElementById("fs")?.value||"";
