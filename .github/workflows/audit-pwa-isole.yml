@@ -1,6 +1,8 @@
 name: Audit PWA isole (sans paiement)
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '17 7 * * 1'
   pull_request:
     paths:
       - 'tests/**'
