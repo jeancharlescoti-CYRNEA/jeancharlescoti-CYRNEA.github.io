@@ -3950,12 +3950,12 @@ function terrain(){
  <div class="toolbar"><button class="btn ghost" onclick="missionDesk()">DOSSIER MISSION</button>${isB2BKeyCustody()?`<button class="btn ghost" onclick="keysTracker()">CLÉS — RÉCEPTION / RESTITUTION</button>`:""}</div>
 
  <div class="checkZone">
-   <div class="checkIntro">GARDE-FOUS À COCHER</div>
+   <div class="checkIntro">GARDE-FOUS À VÉRIFIER</div>
    ${rules.map(x=>`<label class="check"><input type="checkbox" name="terrainGuard"> <span>J’ai vérifié / appliqué : <b>${esc(x)}</b></span></label>`).join("")}
  </div>
 
  <div class="checkZone">
-   <div class="checkIntro">FAITS / ACTIONS UTILES — PLUSIEURS CHOIX POSSIBLES</div>
+   <div class="checkIntro">FAITS / ACTIONS — COCHEZ UNIQUEMENT CE QUI EST CONSTATÉ</div>
    ${facts.map(x=>`<label class="check"><input type="checkbox" name="terrainFact" value="${esc(x)}"> <span>${esc(x)}</span></label>`).join("")}
    <button class="btn ghost" onclick="document.getElementById('factOtherWrap').classList.toggle('hidden')">+ AUTRE FAIT — EXCEPTION</button>
    <div class="field hidden" id="factOtherWrap"><label>Autre fait — quelques mots</label><input id="factOther" maxlength="140" placeholder="Uniquement si aucune case ne convient."></div>
@@ -4007,9 +4007,7 @@ function terrain(){
 }
 
 function reportQuestions(){
- const m=S.result?.mission||"",n=S.need||"",sub=S.sub||"";
- const isB2B=S.result?.contract==="PRÉSENCE ENTREPRISES";
- const common=["Points prévus non réalisés ou non vérifiables et motifs","État du site, accès et clés à la fin du passage"];
+ const m=S.result?.mission||"",n=S.need||"";
  const keyQuestions=["Opération, nature, nombre et références des clés / badges","Remettant, destinataire et autorisation vérifiée","Preuve, garde après transfert et tout écart ou impossibilité"];
  if(n==="KEY"||isB2BKeyMission()||m.includes("CLÉ"))return keyQuestions;
  if(m==="GESTES SIMPLES SUR SITE B2B")return ["Action autorisée et état initial observable","Action réalisée, partielle ou impossible et motif","Résultat visible, état final et limite de sécurité éventuelle"];
@@ -4071,14 +4069,12 @@ function restitution(){
  <div class="row"><b>Objet</b><span>${esc(S.obj)}</span></div>
  <div class="row"><b>Arrivée</b><span>${esc(S.arrivalAt||"-")}</span></div>
  <div class="row"><b>Départ</b><span>${esc(S.departureAt||"-")}</span></div>
- <div class="row"><b>Faits/actions</b><span>${esc(S.facts||"À compléter")}</span></div>
- <div class="row"><b>Incident/limite</b><span>${esc(S.incident||"Aucun")}</span></div>
+ <div class="notice"><b>Déjà enregistré sur le terrain</b><div class="muted">Les faits cochés, l’incident et les pièces sont repris automatiquement dans le compte rendu. Ne les recopiez pas ci-dessous.</div></div>
  ${S.overrun?.accepted?`<div class="row"><b>Prolongation</b><span>+${esc(String(S.overrun.total))} € ${esc(S.overrun.base)} — ${esc(String(S.overrun.tranches))} tranche(s) de 30 min</span></div>
  <div class="row"><b>Accord client</b><span>${esc(S.overrun.agreementMethod==="SMS"?"SMS reçu":"Accord téléphonique")} — ${esc(S.overrun.agreementAt||"-")}</span></div>
  <div class="row"><b>Supplément</b><span>${esc(S.overrun.paymentStatus==="PAID"?"RÉGLÉ":S.overrun.paymentStatus==="PENDING"?"À ENCAISSER":"À VÉRIFIER")}</span></div>`:""}
  <div class="row"><b>Médias / preuves</b><span>${S.terrainMedia.length?esc(S.terrainMedia.join(" • ")):"AUCUN FICHIER AJOUTÉ"}</span></div>
- ${S.result.mission==="DÉCIDER"?`<div class="neutral"><b>DÉCIDER — RESTITUTION FACTUELLE</b><div class="muted">Les faits et les limites de vérification sont repris ci-dessus. Aucun dossier préparatoire complexe obligatoire. Le client décide lui-même.</div></div>`:""}
- <div class="neutral"><b>RESTITUTION SPÉCIFIQUE À LA MISSION</b><div class="muted">Faits observés, déclarations attribuées, limites motivées.</div>${reportQuestions().map((q,i)=>`<div class="field"><label>${esc(q)}</label><textarea id="reportAnswer${i}">${esc(S.reportAnswers?.[i]?.question===q?S.reportAnswers[i].answer:"")}</textarea></div>`).join("")}</div><button class="btn ghost" onclick="downloadClientReport()">TÉLÉCHARGER LE COMPTE RENDU CLIENT (.TXT)</button><div class="notice">Vérifier les pièces avant envoi. Le compte rendu client est distinct de l'archive interne.</div>
+ <div class="neutral"><b>COMPLÉMENTS AU COMPTE RENDU</b><div class="muted">Saisissez uniquement les précisions non présentes dans les faits terrain. Si aucun complément n’est nécessaire, indiquez « Aucun complément » ; ne répétez pas les coches.</div>${reportQuestions().map((q,i)=>`<div class="field"><label>${esc(q)}</label><textarea id="reportAnswer${i}">${esc(S.reportAnswers?.[i]?.question===q?S.reportAnswers[i].answer:"")}</textarea></div>`).join("")}</div><button class="btn ghost" onclick="downloadClientReport()">TÉLÉCHARGER LE COMPTE RENDU CLIENT (.TXT)</button><div class="notice">Vérifier les pièces avant envoi. Le compte rendu client est distinct de l'archive interne.</div>
  ${interim
    ? `<button class="btn primary" onclick="continueMultiAfterRestitution()">ENREGISTRER L’INTERMÉDIAIRE ET PRÉPARER LE PASSAGE ${S.passage+1}</button>`
    : `<button class="btn primary" onclick="closeMission()">VALIDER LA RESTITUTION FINALE</button>${extraMomentRule()&&!interim?`<button class="btn ghost" onclick="extraMomentInfo()" style="margin-top:10px">${S.result?.mission==="SUIVRE"?"3e OBSERVATION FACULTATIVE (+200 €)":"PASSAGE B2B SUPPLÉMENTAIRE À REQUALIFIER"}</button>`:""}`}
