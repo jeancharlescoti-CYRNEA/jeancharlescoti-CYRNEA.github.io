@@ -1,23 +1,30 @@
-# Validation de paiement — chemin le plus court (sans débit réel)
+# Audit paiements CYRNEA — état vérifié au 21 novembre 2026
 
-## État
-Les tests Playwright isolés contrôlent le code de la PWA et des simulations locales. Ils ne prouvent PAS un paiement Stripe/PayPal de bout en bout. Ne jamais utiliser les URLs Workers de production pour les tests de webhook.
+## Preuves acquises
+- Worker isolé `cyrnea-payment-test` : `/stripe-check` a confirmé l'authentification Stripe TEST.
+- Rapport `/run-all` fourni par l'exploitant, horodaté `2026-11-21T13:00:11.026Z` : **19/19** PaymentIntents Stripe TEST avec `status=succeeded`, `livemode=false`, montant reçu égal au montant attendu, 0 échec.
+- 8 scénarios RELAIS et 11 scénarios PRÉSENCE. Montants codés dans le Worker de test, TVA 20 % supposée sur les tarifs HT B2B.
+- Audit PWA GitHub isolé : dernier run réussi `44905970382`. Tests locaux du code, **sans** paiement réel ni webhook.
+- Aucun débit réel, aucun changement des Workers de production.
 
-## Étape 1 — Préparer un environnement de paiement TEST séparé
-Créer dans Cloudflare un Worker de test et un stockage/namespace séparé (aucune ressource de production). Déployer la même version du code que le Worker de production, avec uniquement des clés Stripe TEST et PayPal Sandbox. Ne pas copier les secrets LIVE dans GitHub.
+## Limites à ne pas confondre avec une validation
+1. Les 19 paiements ont été créés directement par le Worker TEST, **sans passer par la PWA ni Tally**.
+2. Aucune preuve de réception, validation de signature, dédoublonnage ou traitement d'un webhook dans un stockage de test.
+3. Aucune preuve qu'une réservation est marquée « payée » après le webhook.
+4. Aucun test PayPal Sandbox.
+5. Les tarifs de test ne sont pas une lecture dynamique de toutes les réservations PWA. Le scénario RELAIS « CLÉS — 2 PASSAGES » est dirigé vers le site officiel, hors intention PWA, d'après `tests/paiements-simules.spec.cjs`.
+6. Les Workers de production `cyrnea-payment-gateway`, `cyrnea-payments-webhook` et leurs secrets/stocks ne sont pas présents dans ce dépôt GitHub. Impossible de certifier leur logique en l'état.
 
-## Étape 2 — Brancher GitHub Actions
-Configurer les secrets du dépôt ou de l'environnement GitHub de test (noms à confirmer avec le code du Worker) : TEST_GATEWAY_URL, TEST_GATEWAY_TOKEN si requis, STRIPE_TEST_WEBHOOK_SECRET, PAYPAL_SANDBOX_* si requis. Ne jamais exposer ces valeurs dans les logs. Autoriser le test E2E uniquement si les URLs pointent explicitement vers l'environnement de test; bloquer workers.dev/stripe-webhook de production.
+## Protocole E2E à réaliser exclusivement en environnement isolé
+- Obtenir une copie **sans secrets** du code Gateway, webhook et bridge Tally.
+- Déployer leurs copies dans un Worker et stockage **de test séparés** ; clés Stripe TEST seulement.
+- Tester la chaîne PWA test → intention Tally test → Gateway test → paiement Stripe TEST → webhook signé test → état de réservation dans stockage test.
+- Tester paiement refusé, événement webhook dupliqué, signature invalide, montant altéré, timeout et rejouement.
+- Vérifier aucune écriture dans les systèmes LIVE.
+- Rapporter les preuves avec IDs test et timestamps, sans clés ni données personnelles.
 
-## Étape 3 — Scénarios probants
-1. RELAIS: intention au tarif TTC correct, carte Stripe de test, statut payé confirmé via webhook dans stockage de test.
-2. PRÉSENCE: montant HT+TVA exact, carte Stripe de test, statut payé confirmé.
-3. PayPal Sandbox: payer avec acheteur Sandbox et vérifier le webhook.
-4. Paiement refusé, webhook en double, timeout, montant erroné: aucune commande marquée payée.
-5. Vérifier référence Tally, montant, mission, identité de l'environnement et absence d'écritures en production.
+## Décision
+**Stripe TEST : VALIDÉ sur 19 transactions.**
+**Paiement client complet de bout en bout : NON CERTIFIÉ.**
 
-## Critère de succès
-Rapport GitHub horodaté contenant chaque étape et les identifiants TEST anonymisés. Tant que le webhook et le statut final n'ont pas été observés dans l'environnement isolé, afficher « paiement non certifié ».
-
-## Contraintes
-Zéro débit réel, zéro paiement LIVE, zéro écriture sur production, zéro abonnement payant requis. Ne pas activer les scénarios E2E tant que les paramètres d'environnement de test n'ont pas été vérifiés.
+Ne jamais envoyer de fausses notifications webhook aux endpoints de production.
