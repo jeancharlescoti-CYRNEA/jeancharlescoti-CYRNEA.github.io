@@ -222,6 +222,7 @@ const RELAIS_OVERRUN_PAYMENT_LINKS={
 const B2B_PAYMENT_CAPABILITIES={CARD:true,PAYPAL:true,SEPA_TRANSFER:false};
 const TALLY_URLS={
   RELAIS_STANDARD:"https://tally.so/r/xXOqpk",
+  RELAIS_QUOTE:"https://tally.so/r/X50QOY",
   B2B_HS:"https://tally.so/r/RGp0PQ",
   B2B_STANDARD:"https://tally.so/r/2EQWLD"
 };
@@ -299,6 +300,7 @@ function archivedMissionList(){
    .sort((a,b)=>(Number(b.state._localUpdatedAt||0)-Number(a.state._localUpdatedAt||0)) || String(b.state.date||"").localeCompare(String(a.state.date||"")));
 }
 function activeMissionStatus(st){
+ if(st.result?.contract==="RELAIS"&&st.result.status==="DEVIS PRÉALABLE")return "DEMANDE DE DEVIS — SANS PAIEMENT";
  if(st.overrun?.accepted && st.overrun.paymentStatus!=="PAID")return "SUPPLÉMENT À ENCAISSER";
  if(st.paymentStatus==="PAID_PENDING_CONFIRMATION")return "PAIEMENT ATTESTÉ MANUELLEMENT — CRÉNEAU À CONFIRMER";
  if(st.decisionStatus==="ALTERNATIVE_PROPOSED")return "ALTERNATIVE EN ATTENTE";
@@ -755,7 +757,7 @@ function identify(){
  <option value="INDÉTERMINÉ">Autre / ne sait pas</option>
  </select>
  <div class="muted" style="margin-top:4px">L’origine de l’appel aide au routage mais ne décide pas, à elle seule, de la mission.</div></div>
- <div class="guideTitle">QUESTION 2</div><div class="bigQuestion">Le client appelle pour lui-même ou pour une entreprise ?</div><div class="field"><label>Client agit dans quel cadre ?</label><select id="c">
+ <div class="guideTitle">QUESTION 2</div><div class="bigQuestion">Le client appelle pour lui-même ou pour une entreprise ?</div><div class="field"><label>Client agit dans quel cadre ?</label><select id="c" onchange="toggleRelaisLieuType()">
  <option value="OWNER">PROPRIÉTAIRE / PARTICULIER — besoin privé</option>
  <option value="B2B">ENTREPRISE / PROFESSIONNEL — besoin professionnel</option>
  </select></div>
@@ -796,9 +798,11 @@ function identify(){
 </select>
 <div class="field hidden" id="otherCityWrap" style="margin-top:8px"><label>Autre commune / secteur</label><input id="otherCity" placeholder="Ex. Figari"></div>
 <div class="muted" style="margin-top:4px">Indiquer le lieu où CYRNEA doit intervenir, pas le lieu où se trouve actuellement le client.</div></div>
+ <div class="field" id="relaisLieuTypeWrap"><label>Nature du bien / lieu (facultatif)</label><select id="relaisLieuType"><option value="">— Non précisé —</option>${["Maison / villa","Appartement","Résidence secondaire","Bien locatif","Bien inoccupé","Bien en indivision / succession","Bien en construction ou en rénovation","Terrain","Sépulture familiale","Autre lieu autorisé"].map(x=>`<option value="${esc(x)}"${S.relaisLieuType===x?" selected":""}>${esc(x)}</option>`).join("")}</select><div class="muted">La nature du lieu ne vaut pas autorisation d’accès.</div></div>
  <div class="toolbar"><button class="btn primary" onclick="saveIdentityV4()">CONTINUER</button></div></div>`);
  setTimeout(()=>{const c=document.getElementById("phoneCountry");if(c)c.value=S.callbackPhoneCountry||"+33";refreshPhoneFormat()},0);
 }
+function toggleRelaisLieuType(){const w=document.getElementById("relaisLieuTypeWrap");if(w)w.classList.toggle("hidden",document.getElementById("c")?.value!=="OWNER");}
 function toggleOtherCity(){
  const s=document.getElementById("city"),w=document.getElementById("otherCityWrap");
  if(s&&w)w.classList.toggle("hidden",s.value!=="__OTHER__");
@@ -816,6 +820,7 @@ function saveIdentityV4(){
  if(!rawPhone)return alert("Numéro de téléphone requis.");
  if(!S.email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(S.email))return alert("Adresse e-mail valide requise.");
  if(!S.city)return alert("Choisissez la commune du bien / site de la mission.");
+ if(S.caller==="OWNER"){S.relaisV21=true;S.relaisLieuType=document.getElementById("relaisLieuType")?.value||"";S.relaisQuote=null;}
  needs();
 }
 // Ancien catalogue PRÉSENCE propriétaires conservé pour référence historique.
@@ -837,6 +842,7 @@ const relaisNeeds=[
  ["DEL","Un livreur, installateur ou dépanneur doit intervenir","Accueil, présence courte et fermeture","STANDARD"],
  ["KEY_SINGLE","REMETTRE OU RÉCUPÉRER VOS CLÉS","Une remise OU une récupération — 109 € TTC, 30 min maximum.","STANDARD"],
  ["KEY_BOTH","REMETTRE PUIS RÉCUPÉRER VOS CLÉS (OU L’INVERSE)","Deux passages distincts — 199 € TTC, 2 × 30 min ; réservation sur le site RELAIS.","STANDARD"],
+ ["THIRD","Un proche ou un tiers autorisé doit accéder aux lieux","Accès ponctuel, présence et fermeture — 109 € TTC, 30 min maximum.","STANDARD"],
  ["OPEN","Ouvrir avant votre arrivée","Ouverture et actions simples convenues","STANDARD"],
  ["WEATHER","Avant / après une intempérie","Action simple ou vérification courte","STANDARD"],
  ["SEE","VOIR & DÉCIDER","Observation factuelle pour décider soi-même — 260 € TTC","VIEW"],
@@ -862,13 +868,14 @@ function needButton(v,name,goal,tag){
  return `<button class="${cls}" onclick="S.need='${v}';sub()"><span class="missionName">${esc(name)}</span><span class="missionGoal">${esc(goal)}</span></button>`;
 }
 function needs(){
- const list=S.caller==="B2B"?b2bNeeds:relaisNeeds; // nouvelles demandes propriétaires vers RELAIS
+ const coverage=S.caller==="B2B"?"":zoneCoverage();
+ const list=S.caller==="B2B"?b2bNeeds:coverage==="DEVIS"?[["SEE","VOIR & DÉCIDER","Observation factuelle — sur devis préalable, sans paiement.","VIEW"],["FOLLOW","SUIVRE L’ÉVOLUTION SUR PLACE","Deux ou trois observations — sur devis préalable, sans paiement.","STANDARD"],["OTHER","Autre demande","À qualifier ; AGIR et CLÉS non proposés hors secteur.","STANDARD"]]:coverage==="À VÉRIFIER"?relaisNeeds.map(([v,n,g,t])=>[v,n,"Secteur à confirmer avant tout tarif ou commande.",t]):relaisNeeds;
  draw(`<div class="card"><h1>Étape 2 — Pourquoi appelle-t-il ?</h1><div class="operatorOnly">Cliquez sur la phrase qui ressemble le plus à ce que dit le client. Vous pourrez revenir en arrière.</div><div class="choices">${list.map(x=>needButton(...x)).join("")}</div></div>`)
 }
 
 const subs={
  ART:[["ACCESS","Très court (~30 min) : accueillir, rester, refermer — 109 € TTC"],["STAY","Jusqu’à 1 h : accueillir, rester, refermer — 149 € TTC"],["OBS","Observer / documenter après"],["DEC","VOIR & DÉCIDER — recueillir les éléments pour une décision"],["COMPLEX","Durée ou heure incertaine : à requalifier"]],
- DEL:[["ACCESS","Très court (~30 min) : accueillir, rester, refermer — 109 € TTC"],["STAY","Jusqu’à 1 h : accueillir, rester, refermer — 149 € TTC"],["COMPLEX","Durée ou heure incertaine : à requalifier"]],
+ DEL:[["ACCESS","Très court (30 min maximum) : accueillir, rester, refermer — 109 € TTC"],["STAY","Jusqu’à 1 h : accueillir, rester, refermer — 149 € TTC"],["OBS","Observer / documenter après la livraison"],["COMPLEX","Durée ou heure incertaine : à requalifier"]],
  THIRD:[["SIMPLE","Tiers identifié, accès simple"],["COMPLEX","Situation plus complexe"]],
  KEY:[["GIVE","Remettre"],["GET","Récupérer"]],
  OPEN:[["SIMPLE","Actions simples avant arrivée"],["EXC","Ménage/linge/courses/jardin/piscine/bricolage"]],
@@ -898,7 +905,8 @@ function sub(){
  if(S.caller==="OWNER" && S.need==="KEY_BOTH"){
    S.sub="BOTH";
    S.result={status:"PARCOURS SITE OFFICIEL",mission:"CLÉS — 2 PASSAGES",price:"199 € TTC",cap:"2 passages de 30 min maximum",contract:"RELAIS",rest:"R0",multi:true,passages:2};
-   return showResult(); // Le Gateway PWA ne prend pas en charge la formule double : commande par le site RELAIS.
+   S.result=relaisApplyArea(S.result);
+    return showResult(); // Les deux lieux restent contrôlés sur le site officiel.
  }
  if(S.caller==="OWNER" && (S.need==="KEY_GET" || S.need==="KEY_GIVE")){
    const action=S.need==="KEY_GET"?"GET":"GIVE";
@@ -908,7 +916,8 @@ function sub(){
  if(S.caller!=="B2B" && S.need==="SEE"){S.sub="VISIBLE";return classify()}
  if(S.caller!=="B2B" && S.need==="DECIDE"){S.sub="DEC";return classify()}
  if(S.caller!=="B2B" && S.need==="FOLLOW"){
- return draw(`<div class="card"><h1>SUIVRE — nombre d’observations</h1><div class="choices"><button class="choice standard" onclick="S.sub='TWO';classify()">2 observations ponctuelles — 490 € TTC</button><button class="choice standard" onclick="S.sub='THREE';classify()">3 observations ponctuelles — 690 € TTC</button></div></div>`);
+ const local=zoneCoverage()==="INCLUS";const label=zoneCoverage()==="DEVIS"?" — sur devis":" — secteur à confirmer";
+  return draw(`<div class="card"><h1>SUIVRE — nombre d’observations</h1><div class="choices"><button class="choice standard" onclick="S.sub='TWO';classify()">2 observations ponctuelles${local?" — 490 € TTC":label}</button><button class="choice standard" onclick="S.sub='THREE';classify()">3 observations ponctuelles${local?" — 690 € TTC":label}</button></div></div>`);
 }
 
  if(S.caller==="B2B"){
@@ -956,15 +965,32 @@ function isB2BLogisticsMission(mission){
  "REMISE ET RÉCUPÉRATION CLÉ / BADGE B2B","PRÉSENCE LOGISTIQUE B2B",
  "GESTES SIMPLES SUR SITE B2B"].includes(String(mission||""));
 }
+function relaisCityKey(city){return String(city||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");}
+function relaisCanonicalCommune(city){
+ const k=relaisCityKey(city),local={"portovecchio":"Porto-Vecchio","lecci":"Lecci","sainteluciedeportovecchiopinarello":"Sainte-Lucie-de-Porto-Vecchio / Pinarello","sainteluciedeportovecchio":"Sainte-Lucie-de-Porto-Vecchio / Pinarello","saintelucie":"Sainte-Lucie-de-Porto-Vecchio / Pinarello","pinarello":"Sainte-Lucie-de-Porto-Vecchio / Pinarello","tarco":"Tarco"};
+ return Object.prototype.hasOwnProperty.call(local,k)?local[k]:"";
+}
+function relaisQuoteDestination(city){
+ const k=relaisCityKey(city),known={"figari":"Figari","bonifacio":"Bonifacio","sarisolenzara":"Sari-Solenzara","solenzara":"Sari-Solenzara","ghisonaccia":"Ghisonaccia","aleria":"Aléria"};
+ if(Object.prototype.hasOwnProperty.call(known,k))return {commune:known[k]};
+ return {commune:["favone","sartene","propriano"].includes(k)?"Autre commune du Sud de la Corse ou de la côte orientale":"Ailleurs en Corse",commune_exacte:String(city||"").trim()};
+}
+function relaisCoverage(city){
+ if(relaisCanonicalCommune(city))return "INCLUS";
+ if(!relaisCityKey(city)||["sotta","sangavinodicarbini","carbini","levie","zonza","fautea"].includes(relaisCityKey(city)))return "À VÉRIFIER";
+ return "DEVIS";
+}
+function relaisApplyArea(r,city=S.city){
+ if(r?.contract!=="RELAIS"||!["PROPOSER","PARCOURS SITE OFFICIEL"].includes(r.status))return r;
+ const coverage=relaisCoverage(city);
+ if(coverage==="INCLUS")return r;
+ if(coverage==="À VÉRIFIER")return {...r,status:"SECTEUR À CONFIRMER",price:"—"};
+ if(["VOIR RELAIS","SUIVRE"].includes(r.mission))return {...r,status:"DEVIS PRÉALABLE",price:"Sur devis",isQuote:true};
+ return {...r,status:"HORS PÉRIMÈTRE",price:"—"};
+}
 function zoneCoverage(){
  if(S.caller==="B2B")return b2bCoverage(S.city);
- // RELAIS : classification historique conservée.
- const x=String(S.city||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[-_]/g," ").replace(/\s+/g," ").trim();
- const fixed=["porto vecchio","lecci","sainte lucie de porto vecchio","sainte lucie de porto vecchio / pinarello","pinarello","tarco"];
- if(fixed.includes(x))return "INCLUS";
- const uncertain=["sotta","san gavino di carbini","bonifacio","carbini","levie","zonza","fautea"];
- if(uncertain.includes(x))return "À VÉRIFIER";
- return "DEVIS";
+ return relaisCoverage(S.city);
 }
 function zone(){return zoneCoverage()==="INCLUS"}
 function voir(){return {status:"PROPOSER",mission:"VOIR RELAIS",price:"260 € TTC",cap:"1 h",contract:"RELAIS",rest:"R1_RELAIS"}}
@@ -984,20 +1010,21 @@ function classify(){
  }
 }
  else{
- if(S.need==="ART"&&S.sub==="ACCESS")r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"opération très courte (~30 min), accès, présence et fermeture inclus",contract:"RELAIS",rest:"R0"};
+ if(S.need==="ART"&&S.sub==="ACCESS")r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"30 min maximum, accès, présence et fermeture inclus",contract:"RELAIS",rest:"R0"};
  if(S.need==="ART"&&S.sub==="STAY")r={status:"PROPOSER",mission:"RELAIS",price:"149 € TTC",cap:"1 h, accès, présence et fermeture inclus",contract:"RELAIS",rest:"R0"};
  if(S.need==="ART"&&S.sub==="COMPLEX")r={status:"À CLARIFIER",mission:"DEMANDE À REQUALIFIER",price:"-",cap:"-",contract:"À DÉTERMINER",rest:""};
  if(S.need==="ART"&&["OBS","DEC"].includes(S.sub))r=voir();
- if(S.need==="DEL"&&S.sub==="ACCESS")r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"opération très courte (~30 min), accès, présence et fermeture inclus",contract:"RELAIS",rest:"R0"};
+ if(S.need==="DEL"&&S.sub==="ACCESS")r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"30 min maximum, accès, présence et fermeture inclus",contract:"RELAIS",rest:"R0"};
  if(S.need==="DEL"&&S.sub==="STAY")r={status:"PROPOSER",mission:"RELAIS",price:"149 € TTC",cap:"1 h, accès, présence et fermeture inclus",contract:"RELAIS",rest:"R0"};
+ if(S.need==="DEL"&&S.sub==="OBS")r=voir();
  if(S.need==="DEL"&&S.sub==="COMPLEX")r={status:"À CLARIFIER",mission:"DEMANDE À REQUALIFIER",price:"-",cap:"-",contract:"À DÉTERMINER",rest:""};
- if(S.need==="THIRD"&&S.sub==="SIMPLE")r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"cadre court, non horaire",contract:"RELAIS",rest:"R0"};
+ if(S.need==="THIRD"&&S.sub==="SIMPLE")r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"30 min maximum",contract:"RELAIS",rest:"R0"};
  if(S.need==="THIRD"&&S.sub==="COMPLEX")r={status:"À CLARIFIER",mission:"DEMANDE À REQUALIFIER",price:"-",cap:"-",contract:"À DÉTERMINER",rest:""};
- if(S.need==="KEY"&&(S.sub==="GIVE"||S.sub==="GET"))r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"action unique, cadre court",contract:"RELAIS",rest:"R0"};
+ if(S.need==="KEY"&&(S.sub==="GIVE"||S.sub==="GET"))r={status:"PROPOSER",mission:"RELAIS SIMPLE",price:"109 € TTC",cap:"30 min maximum, dont 15 min d’attente",contract:"RELAIS",rest:"R0"};
  if(S.need==="OPEN"&&S.sub==="SIMPLE")r={status:"PROPOSER",mission:"RELAIS",price:"149 € TTC",cap:"1 h",contract:"RELAIS",rest:"R0"};
  if(S.need==="OPEN"&&S.sub==="EXC")r={status:"HORS PÉRIMÈTRE",mission:"ACTIONS EXCLUES",price:"-",cap:"-",contract:"-",rest:""};
  if(S.need==="WEATHER"&&S.sub==="BEFORE")r={status:"PROPOSER",mission:"RELAIS - AVANT INTEMPÉRIE",price:"149 € TTC",cap:"1 h",contract:"RELAIS",rest:"R0"};
- if(S.need==="WEATHER"&&S.sub==="AFTER_SIMPLE")r={status:"PROPOSER",mission:"RELAIS SIMPLE - APRÈS INTEMPÉRIE",price:"109 € TTC",cap:"cadre court, non horaire",contract:"RELAIS",rest:"R0_METEO"};
+ if(S.need==="WEATHER"&&S.sub==="AFTER_SIMPLE")r={status:"PROPOSER",mission:"RELAIS SIMPLE - APRÈS INTEMPÉRIE",price:"109 € TTC",cap:"30 min maximum",contract:"RELAIS",rest:"R0_METEO"};
  if(S.need==="WEATHER"&&S.sub==="AFTER_OBS")r=voir();
  if(S.need==="SEE"&&["VISIBLE","DEC"].includes(S.sub))r=voir();
  if(S.need==="SEE"&&S.sub==="COMPARE")r={status:"PROPOSER",mission:"SUIVRE",price:"490 € TTC",cap:"2 × 1 h",contract:"RELAIS",rest:"R3",multi:true,passages:2};
@@ -1016,8 +1043,7 @@ function classify(){
         else r.status=coverage==="DEVIS"?"DEVIS PRÉALABLE":"ÉTUDE EXCEPTIONNELLE";
       }
     }else{
-      if(coverage==="À VÉRIFIER")r.status="SECTEUR À CONFIRMER";
-      else if(coverage==="DEVIS")r.status="DEVIS PRÉALABLE";
+      r=relaisApplyArea(r);
     }
   }
   S.result=r;showResult()
@@ -1038,7 +1064,7 @@ function objectOptions(){
     "Accueillir le livreur ou technicien, rester pendant le créneau court et refermer dans l’heure"
   ];
   else if(m==="RELAIS SIMPLE" && S.need==="THIRD") out=[
-    "Donner accès au tiers autorisé désigné"
+    "Accueillir le tiers autorisé désigné, rester pendant l’accès et refermer les lieux (30 min maximum)"
   ];
   else if(m==="RELAIS SIMPLE" && S.need==="KEY" && S.sub==="GIVE") out=[
     "Remettre les clés, badges ou télécommandes à la personne désignée — une remise"
@@ -1195,7 +1221,51 @@ function missionPhoneScript(){
   if(m==='PRÉSENCE LOGISTIQUE B2B') return "Votre besoin correspond à PRÉSENCE LOGISTIQUE à 169 € HT : accueil, présence pendant l’opération et fermeture, une heure maximum au total." ;
   return "Je vais vous orienter vers la mission la plus adaptée et vous indiquer le tarif avant toute réservation.";
 }
+function relaisQuoteType(){
+ if(S.result?.mission==="SUIVRE")return "suivre";
+ if(S.need==="ART")return "artisan_voir";
+ if(S.need==="DEL")return "livraison_voir";
+ if(S.need==="WEATHER")return "meteo_voir";
+ return "voir_general";
+}
+function relaisQuoteUrlValid(url,reference){
+ try{const u=new URL(url);return u.origin==="https://tally.so"&&u.pathname==="/r/X50QOY"&&/^Q-\d{14}-[A-F0-9]{32}$/.test(reference)&&u.searchParams.get("reference_temporaire")===reference&&u.searchParams.get("quote_only")==="true"&&!u.searchParams.has("tarif");}catch{return false;}
+}
+function relaisQuoteLinkBox(){
+ const q=S.relaisQuote;
+ if(!q||!relaisQuoteUrlValid(q.url,q.reference))return "";
+ return '<div class="notice"><b>LIEN DE DEVIS — SANS PAIEMENT</b><p>Le client complète le formulaire ; RELAIS établit ensuite le devis. Ce lien ne vaut ni commande ni réservation.</p><div class="field"><label>Lien client</label><input id="relaisQuoteLink" readonly value="'+esc(q.url)+'" onclick="this.select()"></div><div class="toolbar"><a class="btn primary" href="'+esc(q.url)+'" target="_blank" rel="noopener noreferrer">OUVRIR LE FORMULAIRE DE DEVIS</a><button class="btn ghost" onclick="copyRelaisQuoteLink()">COPIER LE LIEN</button><button class="btn ghost" onclick="copyRelaisQuoteMessage()">COPIER LE MESSAGE CLIENT</button></div></div>';
+}
+async function copyRelaisQuoteLink(){const e=document.getElementById("relaisQuoteLink");if(!e)return;try{if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(e.value);else{e.select();if(!document.execCommand("copy"))throw Error("Copie refusée");}alert("Lien de devis copié.");}catch{e.select();alert("Copiez le lien sélectionné.");}}
+async function copyRelaisQuoteMessage(){const q=S.relaisQuote;if(!q||!relaisQuoteUrlValid(q.url,q.reference))return alert("Lien indisponible.");const msg="Bonjour,\n\nVoici le formulaire RELAIS PROPRIÉTAIRE pour préciser votre demande de devis :\n"+q.url+"\n\nAucun paiement ni réservation à ce stade. Nous vous communiquerons le devis et les conditions d’intervention.";try{await navigator.clipboard.writeText(msg);alert("Message de devis copié. À transmettre après vérification.");}catch{prompt("Copiez le message ci-dessous :",msg);}}
+async function prepareRelaisQuote(){
+ if(S.result?.contract!=="RELAIS"||S.result.status!=="DEVIS PRÉALABLE"||relaisCoverage(S.city)!=="DEVIS"||!["VOIR RELAIS","SUIVRE"].includes(S.result.mission))return alert("Cette demande ne relève pas du parcours de devis RELAIS.");
+ if(!saveObject())return;
+ const type=relaisQuoteType(),count=type==="suivre"?Number(S.result.passages):1;
+ if(type==="suivre"&&![2,3].includes(count))return alert("Choisissez deux ou trois observations.");
+ const requested={type,requested_mode:"quote",...relaisQuoteDestination(S.city),...(type==="suivre"?{observations:count}:{})};
+ const box=document.getElementById("relaisQuoteShare"),btn=document.getElementById("relaisQuotePrepare"),draft=S.draftKey;
+ if(!box||!btn)return;
+ btn.disabled=true;box.textContent="Préparation du lien de devis…";
+ try{
+  const res=await fetch(PAYMENT_GATEWAY_URL+"/site-relais-quote",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify(requested),cache:"no-store"});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok||data.ok!==true||data.quote_only!==true||data.payment_enabled!==false||!relaisQuoteUrlValid(data.tally_url,data.reference)||Number(data.observations)!==count)throw Error(data.error||"Réponse devis non conforme");
+  if(S.draftKey!==draft||S.result?.status!=="DEVIS PRÉALABLE"||!box.isConnected)return;
+  S.relaisQuote={reference:data.reference,url:data.tally_url,commune:data.commune,formula:count,object:S.obj,createdAt:new Date().toISOString()};
+  S.acceptedSlot=false;save();box.innerHTML=relaisQuoteLinkBox();
+ }catch(e){if(box.isConnected)box.innerHTML='<div class="stop">Lien de devis indisponible : '+esc(String(e.message||e))+'. Aucun paiement ni réservation créé.</div>';}
+ finally{if(btn.isConnected)btn.disabled=false;}
+}
+function relaisQuoteScreen(){
+ setStage("CADRAGE");const r=S.result;
+ const name=b2bCommercialMissionName(r.mission)+(r.mission==="SUIVRE"?" — "+r.passages+" observations":"");
+ draw('<div class="card"><h1>DEMANDE DE DEVIS — SANS PAIEMENT</h1><div class="readAloud">Nous étudions votre demande et vous transmettons un devis préalable. Vous ne réglez rien à ce stade.</div><div class="row"><b>Mission</b><span>'+esc(name)+'</span></div><div class="row"><b>Lieu d’intervention</b><span>'+esc(S.city)+'</span></div>'+(S.relaisLieuType?'<div class="row"><b>Nature du lieu</b><span>'+esc(S.relaisLieuType)+'</span></div>':'')+'<div class="row"><b>Conditions</b><span><a href="'+esc(contractUrl())+'" target="_blank" rel="noopener noreferrer">'+esc(contractRef())+'</a></span></div>'+objectSelector()+'<div class="notice">Les autorisations et conditions d’accès seront vérifiées avant toute commande. Aucun prix, créneau confirmé ou paiement à ce stade.</div><div class="toolbar"><button id="relaisQuotePrepare" class="btn primary" onclick="prepareRelaisQuote()">PRÉPARER LE LIEN DE DEVIS</button><button class="btn ghost" onclick="if(saveObject()){save();goHome()}">CONSERVER LA DEMANDE</button></div><div id="relaisQuoteShare">'+relaisQuoteLinkBox()+'</div></div>');
+ save();
+}
 function showResult(){
+ if(S.result?.contract==="RELAIS"&&!S.missionId&&!S.paymentEvidence&&!S.result.isQuote)S.result=relaisApplyArea(S.result);
+ if(S.result?.contract==="RELAIS"&&S.result.status==="DEVIS PRÉALABLE")return relaisQuoteScreen();
  setStage("CADRAGE");let r=S.result;
  const normal=(r.status==="PROPOSER");
  const quote=(r.status==="DEVIS PRÉALABLE");
@@ -1914,6 +1984,7 @@ function confirmSlot(){
   showManualSlotReview();
 }
 function slot(){
+ if(S.result?.contract==="RELAIS"&&!S.missionId&&!S.paymentEvidence&&relaisCoverage(S.city)!=="INCLUS"&&!S.result.isQuote){S.result=relaisApplyArea(S.result);return showResult();}
  setStage("CRÉNEAU");
  const multi=S.result.multi;
 
@@ -2105,6 +2176,7 @@ function buildTallyUrl(){
    q.set("disponibilite",extra>0?"Créneau particulier — majorations par jalon, total validé":"Demande standard — forfait de base");
  }
  q.set("availability_mode",tallyAvailabilityMode());
+ if(S.result?.contract==="RELAIS"&&relaisCanonicalCommune(S.city))q.set("commune_passage_1",relaisCanonicalCommune(S.city));
  if(S.caller==="OWNER")q.set("execution_anticipee_14j",earlyExecutionNeeded()?"oui":"non");
  return tallyBaseUrl()+"?"+q.toString();
 }
@@ -2190,6 +2262,7 @@ function validateB2BMultiBeforeGateway(){
  return true;
 }
 async function registerTallyIntent(){
+  if(S.result?.contract==="RELAIS"&&!relaisCanonicalCommune(S.city))throw Error("Paiement RELAIS interdit hors secteur forfaitaire ou secteur incertain. Requalifiez la demande.");
   if(S.result?.contract==="PRÉSENCE ENTREPRISES"&&zoneCoverage()!=="INCLUS")throw Error("Paiement PWA interdit : lieu hors secteur inclus ou à vérifier. Devis/étude préalable.");
  if(S.result?.isQuote)throw Error("Devis hors grille : paiement automatique interdit. Traiter séparément le devis accepté.");
  if(S.result?.contract==="PRÉSENCE PROPRIÉTAIRES")throw Error("Ancien contrat propriétaires PRÉSENCE : pas de nouvelle commande. Utiliser RELAIS PROPRIÉTAIRE.");
@@ -2202,7 +2275,7 @@ async function registerTallyIntent(){
 
  const sendIntent=async()=>{
    const ref=ensureTallyReference();
-   const body={reference:ref,universe:S.universe||"",contract:S.result?.contract||"",mission:tallyMissionValue(),object:S.obj||"",schedule:scheduleText(),email:S.email||"",customer_name:S.name||"",customer_email:S.email||"",customer_phone:S.phone||"",amount_cents:cents,currency:"eur",price_text:paymentAmountText(),availability_mode:tallyAvailabilityMode(),availability_label:S.result?.availabilityLabel||"Standard"};
+   const body={reference:ref,universe:S.universe||"",contract:S.result?.contract||"",mission:tallyMissionValue(),object:S.obj||"",schedule:scheduleText(),email:S.email||"",customer_name:S.name||"",customer_email:S.email||"",customer_phone:S.phone||"",amount_cents:cents,currency:"eur",price_text:paymentAmountText(),availability_mode:tallyAvailabilityMode(),availability_label:S.result?.availabilityLabel||"Standard",...(S.result?.contract==="RELAIS"?{commune:relaisCanonicalCommune(S.city)}:{})};
    const controller=new AbortController();
    const timer=setTimeout(()=>controller.abort(),10000);
    try{
@@ -2624,6 +2697,8 @@ function saveKeysTracker(){
 }
 
 function bookingHandoff(){
+ if(S.result?.contract==="RELAIS"&&S.result.status==="DEVIS PRÉALABLE")return relaisQuoteScreen();
+ if(S.result?.contract==="RELAIS"&&!S.missionId&&!S.paymentEvidence&&!S.result.isQuote&&relaisCoverage(S.city)!=="INCLUS"){S.result=relaisApplyArea(S.result);return showResult();}
  // Devis hors forfait : le Gateway interdit le paiement d’un montant libre.
  // Conserver la demande sans générer un lien Tally trompeur ni attester un encaissement.
  if(S.result?.isQuote){
@@ -2709,6 +2784,7 @@ function recordFinancialEvidence(kind,amountText){
  return true;
 }
 function markBooked(){
+ if(S.result?.contract==="RELAIS"&&(S.result.isQuote||S.result.status!=="PROPOSER"||!relaisCanonicalCommune(S.city)))return alert("Aucun paiement standard RELAIS ne peut être attesté pour cette demande.");
  if(routeKind()==="TALLY"){
    if(!S.tallyIntentReady||!GATEWAY_REF_RE.test(String(S.tallyReference||"")))
      return alert("Aucun paiement ne peut être déclaré reçu : référence Gateway / intention de paiement non enregistrée. Revenir au lien Tally sécurisé.");
@@ -3112,6 +3188,7 @@ function showMissionDoc(kind){
       <div class="row"><b>Créneau(x)</b><span>${esc(scheduleText())}</span></div>
       <div class="row"><b>Plafond</b><span>${esc(S.result.cap)}</span></div>
       <div class="row"><b>Adresse</b><span>${esc(S.prep.addr||"-")}</span></div>
+      ${S.result?.contract==="RELAIS"&&S.relaisV21?`<div class="row"><b>Nature du lieu</b><span>${esc(S.relaisLieuType||"Non précisée")}</span></div><div class="row"><b>Commune</b><span>${esc(S.city||"-")}</span></div><div class="notice">Vérifier les droits et autorisations d’accès ; aucun diagnostic, aucune coordination, aucune décision pour le client.</div>`:""}
       <div class="row"><b>Accès</b><span>${esc(S.prep.access||"-")} — ${esc(S.prep.mode||"-")}</span></div>
       <div class="row"><b>Contact</b><span>${esc(S.prep.contact||"AUCUN")}</span></div>${b2bPrepEvidenceHtml()}`;
   } else if(kind==="support"){
@@ -3365,6 +3442,7 @@ function missionArchiveText(){
    "Objet : "+(S.obj||"-"),
    "Date / créneau : "+(typeof scheduleText==="function"?scheduleText():"-"),
    "Adresse : "+(S.prep?.addr||S.city||"-"),
+   ...(S.result?.contract==="RELAIS"&&S.relaisV21?["Nature du lieu : "+(S.relaisLieuType||"Non précisée"),"Commune : "+(S.city||"-")]:[]),
    "Arrivée : "+(S.arrivalAt||"-"),
    "Départ : "+(S.departureAt||"-"),
    ...((isOwnerAccessMission()||isB2BKeyCustody())?[
@@ -3664,6 +3742,11 @@ function overrunRule(){
  const contract=String(S.result?.contract||"");
  const mission=String(S.result?.mission||"");
  if(contract==="RELAIS"){
+   if(S.relaisV21){
+     if(S.result?.isQuote||relaisCoverage(S.city)!=="INCLUS")return {allowed:false,text:"Hors secteur : adaptation uniquement sur proposition écrite acceptée avant exécution."};
+     if(["RELAIS SIMPLE","CLÉS — 2 PASSAGES","RELAIS SIMPLE - APRÈS INTEMPÉRIE","APRÈS INTEMPÉRIE — VÉRIFICATION PRATIQUE"].includes(mission))return {allowed:false,text:"CGV V21 : 30 minutes maximum par passage, aucune prolongation."};
+     if(["RELAIS - AVANT INTEMPÉRIE","AVANT INTEMPÉRIE"].includes(mission))return {allowed:true,unit:40,base:"TTC",max:2,label:"+40 € TTC par tranche de 30 min commencée, maximum 2 tranches, accord exprès préalable"};
+   }
    if(mission==="VOIR PRIORITAIRE RELAIS")
      return {allowed:false,text:"VOIR PRIORITAIRE RELAIS : aucun tarif de prolongation n’est encore validé pour cette mission. Ne pas appliquer les +40 € RELAIS ni les +60 € VOIR RELAIS ; arrêter ou requalifier avec accord exprès du client."};
    if(mission==="VOIR RELAIS")
@@ -3906,6 +3989,7 @@ function extraMomentInfo(){
  if(!r)return;
  const next=S.passage+1;
  if(S.result?.mission==="SUIVRE"){
+   if(S.result.contract==="RELAIS"&&S.relaisV21&&(S.result.isQuote||relaisCoverage(S.city)!=="INCLUS"))return draw(`<div class="card"><h1>Observation complémentaire hors secteur</h1><div class="notice">Devis préalable tenant compte des passages déjà réalisés et réglés. Aucun nouveau paiement automatique.</div><button class="btn ghost" onclick="restitution()">RETOUR</button></div>`);
    return draw(`<div class="card"><h1>Troisième observation facultative</h1>
      <div class="notice">+200 € TTC, pour une troisième observation factuelle de la même situation après la formule à 490 €.</div>
      <div class="stop"><b>PAIEMENT SPÉCIFIQUE NON RACCORDÉ</b><br>Ne pas réserver automatiquement 200 € dans Tally : aucun formulaire correspondant n'est configuré. Accord et paiement distinct à faire valider avant cette observation, sans altérer la commande initiale.</div>
@@ -4017,8 +4101,8 @@ function reportQuestions(){
  if(m==="VISITE TERRAIN PILOTÉE")return ["Zones prévues, constats par zone et photos associées","Déclarations de tiers attribuées et documents relevés","Zones inaccessibles, limites et questions laissées à l'entreprise"];
  if(m==="PRÉSENCE PROJET"||m==="PRÉSENCE PROJET ÉTENDUE")return ["Séquences et interlocuteurs effectivement présents","Questions, réponses attribuées, constats et documents","Points en suspens, limites et décisions réservées à l'entreprise"];
  if(m==="CONTINUITÉ PROJET"||m==="SUIVI DE PROJET - 2 PASSAGES")return ["Repères comparés, constats datés et photos","Évolutions visibles depuis le passage précédent","Éléments non comparables, limites et questions laissées à l'entreprise"];
- if(m==="SUIVRE")return ["Repères observés, constats datés et photos","Évolutions visibles depuis le passage précédent","Éléments non comparables et questions laissées au propriétaire"];
- if(m==="VOIR RELAIS"||m==="DÉCIDER")return ["Points demandés, constats par zone et photos","Visio, déclarations de tiers et leur origine si applicables","Limites, questions ouvertes et décisions réservées au propriétaire"];
+ if(m==="SUIVRE")return ["Repères observés, constats datés et photos","Évolutions visibles depuis le passage précédent","Éléments non comparables et questions laissées au propriétaire",...(S.result?.contract==="RELAIS"&&S.relaisV21?["Points non accessibles ou non observables et motif, sans appréciation technique"]:[])];
+ if(m==="VOIR RELAIS"||m==="DÉCIDER")return ["Points demandés, constats par zone et photos","Visio, déclarations de tiers et leur origine si applicables","Limites, questions ouvertes et décisions réservées au propriétaire",...(S.result?.contract==="RELAIS"&&S.relaisV21?["Relevés simples ou inventaire visuel convenus, si applicables ; points non vérifiables et motif"]:[])];
  if(m==="RELAIS"&&["ART","DEL"].includes(n))return ["Tiers autorisé et déroulement du rendez-vous","Réponses attribuées et documents recueillis","Écarts éventuels, départ et fermeture"];
  if(m==="RELAIS SIMPLE"&&["ART","DEL","THIRD"].includes(n))return ["Autorisation, identité et qualité du tiers accueilli","Accès et opération réellement effectués, horaires","Départ du tiers, fermeture et état des lieux","Absence, refus, incident ou impossibilité et motif"];
  if(m==="RELAIS"&&n==="OPEN")return ["Actions convenues et état initial","Actions effectuées ou impossibles avec motif","Résultat visible et état final laissé sur place"];
@@ -4042,6 +4126,7 @@ function clientReportText(){
  "Référence : "+(S.missionId||"-"),"Client : "+(S.name||"-"),
  "Mission : "+b2bCommercialMissionName(S.result?.mission||"-"),
  "Objet : "+(S.obj||"-"),"Lieu : "+(S.prep?.addr||S.city||"-"),
+ ...(S.result?.contract==="RELAIS"&&S.relaisV21&&S.relaisLieuType?["Nature du lieu : "+S.relaisLieuType]:[]),
  "Date / créneau : "+scheduleText(),"Passage : "+(S.passage||1),
  "Arrivée : "+(S.arrivalAt||"-"),"Départ : "+(S.departureAt||"-"),
  "","FAITS ET ACTIONS",S.facts||"-","","RESTITUTION SPÉCIFIQUE"];
@@ -4078,7 +4163,7 @@ function restitution(){
  <div class="neutral"><b>COMPLÉMENTS AU COMPTE RENDU</b><div class="muted">Saisissez uniquement les précisions non présentes dans les faits terrain. Si aucun complément n’est nécessaire, indiquez « Aucun complément » ; ne répétez pas les coches.</div>${reportQuestions().map((q,i)=>`<div class="field"><label>${esc(q)}</label><textarea id="reportAnswer${i}">${esc(S.reportAnswers?.[i]?.question===q?S.reportAnswers[i].answer:"")}</textarea></div>`).join("")}</div><button class="btn ghost" onclick="downloadClientReport()">TÉLÉCHARGER LE COMPTE RENDU CLIENT (.TXT)</button><div class="notice">Vérifier les pièces avant envoi. Le compte rendu client est distinct de l'archive interne.</div>
  ${interim
    ? `<button class="btn primary" onclick="continueMultiAfterRestitution()">ENREGISTRER L’INTERMÉDIAIRE ET PRÉPARER LE PASSAGE ${S.passage+1}</button>`
-   : `<button class="btn primary" onclick="closeMission()">VALIDER LA RESTITUTION FINALE</button>${extraMomentRule()&&!interim?`<button class="btn ghost" onclick="extraMomentInfo()" style="margin-top:10px">${S.result?.mission==="SUIVRE"?"3e OBSERVATION FACULTATIVE (+200 €)":"PASSAGE B2B SUPPLÉMENTAIRE À REQUALIFIER"}</button>`:""}`}
+   : `<button class="btn primary" onclick="closeMission()">VALIDER LA RESTITUTION FINALE</button>${extraMomentRule()&&!interim?`<button class="btn ghost" onclick="extraMomentInfo()" style="margin-top:10px">${S.result?.mission==="SUIVRE"?(S.result.contract==="RELAIS"&&S.relaisV21&&(S.result.isQuote||relaisCoverage(S.city)!=="INCLUS")?"OBSERVATION COMPLÉMENTAIRE — SUR DEVIS":"3e OBSERVATION FACULTATIVE (+200 €)"):"PASSAGE B2B SUPPLÉMENTAIRE À REQUALIFIER"}</button>`:""}`}
  </div>`);
  save();
 }
