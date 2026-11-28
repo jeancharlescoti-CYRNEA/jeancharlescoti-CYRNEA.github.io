@@ -1,4 +1,4 @@
-const CACHE='cyrnea-assistant-20261128-relais-v21-zones';
+const CACHE='cyrnea-assistant-20261128-relais-v21-pwa-secteur';
 const ASSETS=['./index.html','./terrain-clock.js','./change-inbox.js','./h2-integration.js','./manifest.webmanifest','./icons/icon-192.png'];
 
 self.addEventListener('install',event=>{
