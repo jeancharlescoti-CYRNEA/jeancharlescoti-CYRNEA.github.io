@@ -2330,8 +2330,17 @@ async function prepareClientTallyLink(){
  if(btn){btn.disabled=true;btn.textContent="PRÉPARATION DU LIEN…";}
  box.innerHTML='<div class="notice">Vérification de la référence de réservation sécurisée…</div>';
  try{
-  await registerTallyIntent();
-  const url=buildTallyUrl();
+  const registered=await registerTallyIntent();
+  let url=buildTallyUrl();
+  if(S.result?.contract==="RELAIS" && registered?.tally_url){
+    const server=new URL(registered.tally_url), local=new URL(url);
+    if(server.origin!=="https://tally.so"||server.pathname!=="/r/xXOqpk"||server.searchParams.get("secteur_confirme")!=="oui"||server.searchParams.get("commune_passage_1")!==relaisCanonicalCommune(S.city)||["reference_temporaire","mission","objet","tarif","creneau"].some(k=>server.searchParams.get(k)!==local.searchParams.get(k)))throw Error("Lien serveur RELAIS incohérent. Aucun lien client transmis.");
+    local.searchParams.set("secteur_confirme","oui");
+    const consent=server.searchParams.get("execution_anticipee_14j");
+    if(!["oui","non"].includes(consent))throw Error("Condition de rétractation non vérifiée.");
+    local.searchParams.set("execution_anticipee_14j",consent);
+    url=local.href;
+  }
   if(!/^https:\/\/tally\.so\/r\//.test(url))throw new Error("Adresse Tally invalide.");
   box.innerHTML='<div class="notice"><b>LIEN CLIENT SÉCURISÉ</b><p>La référence est enregistrée. Le client complètera lui-même Tally et validera ses déclarations. Le paiement ne confirme pas automatiquement la mission.</p>'
    +'<div class="field"><label>Adresse Tally complète (pour contrôle seulement)</label><input id="clientTallyUrl" readonly value="'+esc(url)+'" onclick="this.select()"></div>'
